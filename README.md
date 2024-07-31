@@ -1,15 +1,35 @@
 <div align="center">
 
-![[Image Source](https://64.media.tumblr.com/8ee331c1aa289ad48a18524d0416f16f/786891f78c89949a-87/s640x960/9e5101fbbdcaf382e733632d4a95751d622da49b.pnj)](./res/Fujimoto.jpg "Fujimoto from the movie Ponyo"){width=300 height=300px}
+<pre style="line-height: 1.1">
+  (\{\             .               ,@@@@                
+  { { \ ,~,  ^  .     ~        __ _ ),\\(\   _,::;
+ { {   \|`) <*>   +  o------o  .)\)\\_(((\),:::::;
+  { {  /(\  /~      /|     /|   `\`._,)))))::::::`,
+   {/{/; ,\/       o------o |     `.__/(((:::::::' 
+      [[ '         | |    | |        \  (`:::::::.
+       \` \        | o----+-o         @**\ `:::::; 
+       (/ \\       |/     |/         /    \ `::'    
+       `)  `\      o------o         '*~*~*~`         
+                                     | //
+░█▀▀░█░█░█▀▀░  ░▀█▀░█▄█░█▀█░█▀▄░     \ \\
+░█▀▀░█░█░█░░░█▀░░█░░█░█░█░█░█░█░█▀█   `.\\
+░▀░░░▀▀▀░▀▀▀░▀░░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀▀     \((
+</pre>
 
-# FUCrIMODo
+![[Image Source](https://64.media.tumblr.com/8ee331c1aa289ad48a18524d0416f16f/786891f78c89949a-87/s640x960/9e5101fbbdcaf382e733632d4a95751d622da49b.pnj)](./res/Fujimoto.jpg "Fujimoto from the movie Ponyo"){width=200 height=200px}
+
 **F**ind **U**nknown **C**rystals by **I**nversion of **M**L **O**ptimized **D**escriptors
 
 ***
 
 </div>
 
-## Description
+**FUCrIMODo** is a program that aims to retrieve the crystal structure from
+a SOAP descriptor. 
+This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
+
+# Table of Contents
+[TOC]
 
 ## Roadmap
 MISSING
