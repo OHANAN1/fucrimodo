@@ -1,6 +1,4 @@
-<div align="center">
-
-<pre style="line-height: 1.1">
+<pre style="line-height: 1.0">
   (\{\             .               ,@@@@                
   { { \ ,~,  ^  .     ~        __ _ ),\\(\   _,::;
  { {   \|`) <*>   +  o------o  .)\)\\_(((\),:::::;
@@ -15,6 +13,8 @@
 ░█▀▀░█░█░█░░░█▀░░█░░█░█░█░█░█░█░█▀█   `.\\
 ░▀░░░▀▀▀░▀▀▀░▀░░▀▀▀░▀░▀░▀▀▀░▀▀░░▀▀▀     \((
 </pre>
+
+<div align="center">
 
 ![[Image Source](https://64.media.tumblr.com/8ee331c1aa289ad48a18524d0416f16f/786891f78c89949a-87/s640x960/9e5101fbbdcaf382e733632d4a95751d622da49b.pnj)](./res/Fujimoto.jpg "Fujimoto from the movie Ponyo"){width=200 height=200px}
 
@@ -31,12 +31,26 @@ This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
 # Table of Contents
 [TOC]
 
-## Roadmap
+# Usage
+
+INCOMPLETE
+
+To retrieve the desired cartesian coordinates of a given SOAP descriptor 
+replace 'target_crystal' or 'target_soap_features' in fucrimodo/__main__.py
+Then in the commanline run
+
+´´´bash
+python fucrimodo
+'''
+
+# Customize
+
+# Roadmap
 MISSING
 
-## Authors and acknowledgment
+# Authors and acknowledgment
 - Main Author: Me - Louis
 - Co-Author: Martin Kuban
 
-## License
+# License
 MISSING
