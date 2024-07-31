@@ -1,4 +1,4 @@
-<pre style="line-height: 1.0">
+<pre style="line-height: 0.9">
   (\{\             .               ,@@@@                
   { { \ ,~,  ^  .     ~        __ _ ),\\(\   _,::;
  { {   \|`) <*>   +  o------o  .)\)\\_(((\),:::::;
@@ -36,12 +36,12 @@ This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
 INCOMPLETE
 
 To retrieve the desired cartesian coordinates of a given SOAP descriptor 
-replace 'target_crystal' or 'target_soap_features' in fucrimodo/__main__.py
+replace `target_crystal` or `target_soap_features` in fucrimodo/__main__.py
 Then in the commanline run
 
-´´´bash
+```bash
 python fucrimodo
-'''
+```
 
 # Customize
 
