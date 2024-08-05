@@ -1,3 +1,4 @@
+import ase
 from fucrimodo.core.multi_ga_search import MultiGenAlgSearch
 import random
 from fucrimodo.customs import population_selections as start_pop
@@ -8,6 +9,7 @@ from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.utils.save_current_script import save_current_script
 from configs.mutations import get_optimize_mutations, get_all_muts
+from ase.io import read as ase_read
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,14 +39,13 @@ def main(
     verbose = 3
     soap_species: list["str"] = run_data.soap_object.species  # type: ignore
 
-
     # ── Fitness functions ───────────────────────────────────────────────────
-    from configs.fitness_functions import get_soap_similarity_fitness_list, \
-        get_species_specific_soap_fitness_list
+    from configs.fitness_functions import get_soap_similarity_fitness_list, get_species_specific_soap_fitness_list
     species_specific_fitnesses = get_species_specific_soap_fitness_list(
         target_soap_features=target_soap_features,
         soap_species=soap_species,
-        soap_object=run_data.soap_object
+        soap_object=run_data.soap_object,
+        rbf_gamma=0.01
     )
     soap_fitness_list = get_soap_similarity_fitness_list(
         target_soap_features=target_soap_features,
@@ -83,110 +84,27 @@ def main(
         soap_species=soap_species
     )
 
-    # ╒══════════════════════════════════════════════════════════╕
-    #                       Define Stages
-    # ╘══════════════════════════════════════════════════════════╛
-
-    stage_list = []
-
-    for i in range(len(species_specific_fitnesses)):
-        stage_list.append(data_handeling.StageData(
-            number_of_generations=n_gens_exploration,
-            start_population_selection=start_pop.DopePopulationSelection(
-                atom_types=soap_species,
-                add_n=population_size//len(species_specific_fitnesses),
-                cell_bounds=cell_bounds[0],
-            ),
-            fitness_functions=species_specific_fitnesses[0:i+1],
-            crossover_list=[
-                cross.OnePointElementCrossover(closest_distances),
-                cross.OnePointPositionCrossover(closest_distances),
-                cross.UnitCellCrossover(closest_distances),
-                cross.StackCellsCrossover(closest_distances, cell_bounds[1]),
-            ],
-            crossover_probability=0.8,
-            mutation_list=all_muts_1,
-            mutation_probability=0.6,
-            additional_statistics_func=soap_fitness_mid.evaluate_individual,
-            add_stats_func_name="statistic_similarity",
-            break_condition=exploration_break
-        ))
-
-        stage_list.append(data_handeling.StageData(
-            number_of_generations=n_gens_exploration,
-            start_population_selection=start_pop.SelectAllPopulation(),
-            fitness_functions=species_specific_fitnesses[0:i+1] + [soap_fitness_mid],
-            crossover_list=[
-                cross.OnePointElementCrossover(closest_distances),
-                cross.OnePointPositionCrossover(closest_distances),
-                cross.UnitCellCrossover(closest_distances),
-                cross.StackCellsCrossover(closest_distances, cell_bounds[1]),
-            ],
-            crossover_probability=0.8,
-            mutation_list=all_muts_1,
-            mutation_probability=0.6,
-            additional_statistics_func=soap_fitness_mid.evaluate_individual,
-            add_stats_func_name="statistic_similarity",
-            break_condition=optimization_break
-        ))
-
-    stage_list.append(data_handeling.StageData(
-        number_of_generations=n_gen_optimization,
-        start_population_selection=start_pop.SelectAllPopulation(),
-        fitness_functions=species_specific_fitnesses,
-        crossover_list=[
-            cross.OnePointElementCrossover(closest_distances),
-            cross.OnePointPositionCrossover(closest_distances),
-        ],
-        crossover_probability=0.8,
-        mutation_list=all_opti_muts,
-        mutation_probability=0.9,
+    # Stages
+    from configs.stage_list import get_stage_list
+    stage_list = get_stage_list(
+        soap_fitness_list, 
+        species_specific_fitnesses,
+        soap_species,
+        cell_bounds,
+        closest_distances,
+        population_size,
+        exploration_break,
+        optimization_break,
+        all_muts_1,
+        all_opti_muts,
         additional_statistics_func=soap_fitness_mid.evaluate_individual,
         add_stats_func_name="statistic_similarity",
-        break_condition=optimization_break
-    ))
-
-    stage_list.append(data_handeling.StageData(
-        number_of_generations=n_gens_exploration,
-        start_population_selection=start_pop.SelectAllPopulation(),
-        fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
-        crossover_list=[
-            cross.OnePointElementCrossover(closest_distances),
-            cross.OnePointPositionCrossover(closest_distances),
-            cross.UnitCellCrossover(closest_distances),
-            cross.StackCellsCrossover(closest_distances, cell_bounds[1]),
-        ],
-        crossover_probability=0.8,
-        mutation_list=all_muts_1,
-        mutation_probability=0.5,
-        additional_statistics_func=soap_fitness_mid.evaluate_individual,
-        add_stats_func_name="statistic_similarity",
-        break_condition=exploration_break
-    ))
-
-    stage_list.append(data_handeling.StageData(
-        number_of_generations=n_gen_optimization,
-        start_population_selection=start_pop.SelectAllPopulation(),
-        fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
-        crossover_list=[
-            cross.OnePointElementCrossover(closest_distances),
-            cross.OnePointPositionCrossover(closest_distances),
-        ],
-        crossover_probability=0.8,
-        mutation_list=all_opti_muts,
-        mutation_probability=0.9,
-        additional_statistics_func=soap_fitness_mid.evaluate_individual,
-        add_stats_func_name="statistic_similarity",
-        break_condition=optimization_break
-    ))
-
-
+    )
 
     run_data.add_run_settings(
         stage_data_list=stage_list,
         verbose=verbose
     )
-
 
     ga_grid_search = multi_ga.MultiGenAlgSearch(
         run_data=run_data,
@@ -197,10 +115,28 @@ def main(
 
 
 if __name__ == "__main__":
+    import argparse
+    import sys
 
-    from ase.build import bulk
-    target_crystal = bulk('Cu', 'fcc', a=3.6, cubic=True)
-    target_atom_numbers = target_crystal.get_atomic_numbers()
+    parser = argparse.ArgumentParser(description='Test of parsers.')
+    parser.add_argument(
+        '-t', '--target_crystal', type=str,
+        help='Give the path to the target SOAP descriptor (file-type: all accepted by ase.io.read).'
+    )
+
+    args = parser.parse_args()
+
+    if args.target_crystal is None:
+        print("Please define path to target cystal with flag -t!")
+        sys.exit()
+
+
+    target_crystal = ase_read(args.target_crystal)
+    if isinstance(target_crystal, ase.Atoms):
+        target_atom_numbers = target_crystal.get_atomic_numbers()
+    else:
+        print("Given path to target could not be parsed to valid ase.Atoms object")
+        sys.exit()
 
     POPULATION_SIZE = 50
     cell_bounds = []
