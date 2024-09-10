@@ -4,9 +4,13 @@ import ase
 
 def get_start_pop_candidates(
         soap_species: list[str],
-        cell_bounds: CustomCellBounds,
         population_size: int
     ) -> list[ase.Atoms]:
+
+    cell_bounds = CustomCellBounds({
+        "a": [1, 4], "b": [1, 4], "c": [1, 4], 
+        "alpha": [20, 160], "beta": [20, 160], "gamma": [20, 160]
+    })
 
     start_pop_candidates = crystal_creation.create_one_atomic_crystals(
         atom_types=soap_species,
