@@ -206,33 +206,17 @@ class RunData:
     def __init__(
         self,
         save_dir: str,
+        soap_object: CustomSOAP,
         run_dir_name: str|None = None,
         save_n_best_crystals: int = 10,
-        soap_params: dict = {
-            "species": [],
-            "r_cut": 15,
-            "n_max": 8,
-            "l_max": 8,
-            "sigma": 0.5,
-        },
         log_enable: bool = True,
     ) -> None:
 
         self.save_n_best_crystals = save_n_best_crystals
 
         # Assign fixed soap parameters
-        soap_params["periodic"] = True
-        soap_params["sparse"] = False
-        soap_params["average"] = "inner"
-        self.soap_params = soap_params
-        self.soap_object = CustomSOAP(
-            species=soap_params["species"],
-            r_cut=soap_params["r_cut"],
-            n_max=soap_params["n_max"],
-            l_max=soap_params["l_max"],
-            sigma=soap_params["sigma"],
-            periodic=soap_params["periodic"],
-        )
+        self.soap_object = soap_object
+        self.soap_params = soap_object.get_init_params()
         self.stage_data_list = []
 
         self.run_dir = self.init_run_dir(save_dir, run_dir_name)

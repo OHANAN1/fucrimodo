@@ -35,6 +35,26 @@ class CustomSOAP():
             sparse = False
         )
 
+    def get_init_params(self) -> dict:
+        """
+        Returns a dictionary with parameters that where used to set up the 
+        class.
+
+        Example:
+
+        soap_params = custom_soap.get_init_params()
+        custom_soap_copy = CustomSOAP(**soap_params)
+        """
+        return {
+            "r_cut": self.r_cut,
+            "n_max": self.n_max,
+            "l_max": self.l_max,
+            "species": self.species,
+            "sigma": self.sigma,
+            "periodic": self.periodic,
+            "average": self.average
+        }
+
     def __is_valid(self, crystal: ase.Atoms) -> bool:
         if not isinstance(crystal, ase.Atoms):
             warnings.warn('Input is not an ASE Atoms object')

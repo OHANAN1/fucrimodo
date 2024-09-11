@@ -5,6 +5,7 @@ from fucrimodo.customs import population_selections as start_pop
 from fucrimodo.customs import crossovers as cross
 from fucrimodo.core import multi_ga_search as multi_ga
 from fucrimodo.core.utils import data_handeling
+from fucrimodo.core.utils import soap_parser
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.utils.save_current_script import save_current_script
@@ -69,41 +70,34 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test of parsers.')
     parser.add_argument(
-        '-t', '--target_crystal', type=str,
-        help='Give the path to the target SOAP descriptor (file-type: all accepted by ase.io.read).'
+        '-t', '--target_path', type=str,
+        help='Give the path to the file with the features that should be inverted ' \
+            'and the parameters that define the descriptor. (file-type: json).'
     )
-
     args = parser.parse_args()
 
-    if args.target_crystal is None:
-        print("Please define path to target cystal with flag -t!")
+    if args.target_path is None:
+        print(
+            "Please define path to the .json file with target features"
+            "and parameters to build the descriptor object, with flag -t!"
+        )
         sys.exit()
 
-    target_crystal = ase_read(args.target_crystal)
-    if isinstance(target_crystal, ase.Atoms):
-        target_atom_numbers = target_crystal.get_atomic_numbers()
-    else:
-        print("Given path to target could not be parsed to valid ase.Atoms object")
-        sys.exit()
+    target_features, soap_obj = soap_parser.load_soap_features_from_file(
+        args.target_path
+    )
 
     run_data = data_handeling.RunData(
         save_dir="data/processed/results/",
-        soap_params={
-            "species": np.unique(
-                target_crystal.get_chemical_symbols()).tolist(),
-            "r_cut": 15.0,
-            "n_max": 8,
-            "l_max": 8,
-            "sigma": 0.5,
-        },
+        soap_object=soap_obj,
         log_enable=log_enable,
         save_n_best_crystals=10,
     )
-    run_data.add_crystal_to_database(target_crystal, {"is_target": True})
-    save_current_script(run_data)
+    # run_data.add_crystal_to_database(target_crystal, {"is_target": True})
+    # save_current_script(run_data)
 
     main(
         run_data=run_data,
-        target_soap_features=run_data.soap_object.create(target_crystal),
-        secrets={"target_crystal": target_crystal}
+        target_soap_features=target_features,
+        secrets={}
     )
