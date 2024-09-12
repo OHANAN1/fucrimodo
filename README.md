@@ -22,12 +22,30 @@ This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
 
 INCOMPLETE
 
+### Quick start
+
 To retrieve the desired cartesian coordinates of a given SOAP descriptor
 replace `target_crystal` or `target_soap_features` in fucrimodo/__main__.py
 Then in the commanline run
 
 ```bash
 python fucrimodo
+```
+
+
+### Documentation
+
+Additional info can be found in the Documentation. To generate html docs
+run the following:
+```bash
+cd docs/
+make html
+```
+
+The docs will be generated at _build/html/ and can then be opened with the 
+browser of your choice. E.g.:
+```bash
+firefox _build/html/index.html
 ```
 
 ## Customize
