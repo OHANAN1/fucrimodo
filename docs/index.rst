@@ -16,7 +16,7 @@ This is done with the help of a novel multi-stage Genetic Algorithm (GA).
 
    modules/core/index
    modules/analysis/index
-
+   modules/customs/index
 
 Indices and tables
 ==================
