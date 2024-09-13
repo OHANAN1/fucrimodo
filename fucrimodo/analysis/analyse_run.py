@@ -1,6 +1,8 @@
 from typing import Any
-from src.fucrimodo.utils.cellbounds_custom import CustomCellBounds
-from src.utils.analyse_results.results_class import RunResults, StageResults
+
+from numpy.typing import NDArray
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.analysis.results_class import RunResults, StageResults
 from ase.db.core import Database
 import numpy as np
 import ase
@@ -606,7 +608,7 @@ def create_combined_statistics_development_plot(
         y_scale: str = "linear",
         height_ratios: list[float] = [2, 1],
         fig_size: tuple[int, int] = (18, 11),
-    ) -> tuple[Figure, list[Axes]]:
+    ) -> tuple[Figure, np.ndarray[Axes,Any]]:
     """
     Plots the main statistics values for the whole run.
     Use value_types to specify which values to plot.
@@ -623,6 +625,7 @@ def create_combined_statistics_development_plot(
         2, 1, figsize=fig_size, sharex=True,
         height_ratios=height_ratios, tight_layout=True
     )
+    assert type(ax) == np.ndarray, "Somehow axes where initialized falsely"
 
     ax_fit = ax[0]
     if y_lim is not None:

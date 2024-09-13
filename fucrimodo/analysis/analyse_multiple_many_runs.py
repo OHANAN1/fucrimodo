@@ -1,7 +1,7 @@
-from src.utils.analyse_results.results_class import RunResults
-from src.utils.analyse_results.analyse_run import AnalyseRun
-from src.fucrimodo.utils.cellbounds_custom import CustomCellBounds
-from src.utils.analyse_results.analyse_many_runs import ManyRunsResults, AnalyseManyRuns
+from fucrimodo.analysis.results_class import RunResults
+from fucrimodo.analysis.analyse_run import AnalyseRun
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.analysis.analyse_many_runs import ManyRunsResults, AnalyseManyRuns
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import tabulate
@@ -242,6 +242,7 @@ def create_analysis_plot(
             fig, axes = plt.subplots(
                 nrows=2, ncols=1, figsize=figsize, tight_layout=True, sharex=True
             )
+        assert type(axes) == np.ndarray, "Somehow axes where initialized falsely"
 
         ax_compl: Axes = axes[0]
         ax_incompl: Axes = axes[1]
@@ -342,6 +343,8 @@ def create_stats_key_hist(
         fig, ax = plt.subplots(
             nrows=1, ncols=2, figsize=(18, 7), sharex=True, tight_layout=True
         )
+
+    assert type(ax) == np.ndarray, "Somehow axes where initialized falsely"
     ax_comp: Axes = ax[0]
     analysis_multiple_many_runs.plot_stats_key_hist(
         ax=ax_comp,

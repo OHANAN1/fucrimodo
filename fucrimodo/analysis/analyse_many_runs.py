@@ -8,17 +8,15 @@ import numpy as np
 from tabulate import tabulate
 from icecream import ic
 import matplotlib.pyplot as plt
-from src.utils.analyse_results.results_class import RunResults
-from src.utils.analyse_results.analyse_run import AnalyseRun
-from src.fucrimodo.utils.cellbounds_custom import CustomCellBounds
-
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.analysis.results_class import RunResults
+from fucrimodo.analysis.analyse_run import AnalyseRun
 from datetime import datetime
 
 ic.enable()
 warnings.filterwarnings("default")
 
 # Data Class
-
 class ManyRunsResults():
     def __init__(
         self, 
@@ -569,6 +567,8 @@ Mean {self.main_stat_name} of completed runs: {overview_dict["mean_stat_only_com
                 2, 1, figsize=(19, 14), sharex=True,
                 height_ratios=[3, 1], tight_layout=True
             )
+            assert type(ax) == np.ndarray, "Somehow axes where initialized falsely"
+
             fig.suptitle("Similarity fitness development")
 
             ax_fit = ax[0]
@@ -687,6 +687,8 @@ Mean {self.main_stat_name} of completed runs: {overview_dict["mean_stat_only_com
                 best_crystal_value = best_crystal_tuple[1]
 
             fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+            assert type(ax) == np.ndarray, "Somehow axes where initialized falsely"
+
             fig.suptitle(
                 f"{run_name} - " + 
                 f"{self.main_stat_name}: {best_crystal_value:.3f} - " +
@@ -790,11 +792,8 @@ Mean {self.main_stat_name} of completed runs: {overview_dict["mean_stat_only_com
         """
         Plots two parameters against each other from the analysis results dict.
         Example:
-
-            fig, ax = plt.subplots()
-            plot_analysis_results_dict_keys(
-                ax, "n_generations", "best_similarity"
-            )
+        fig, ax = plt.subplots()
+        plot_analysis_results_dict_keys(ax, "n_generations", "best_similarity")
         """
         x_values = []
         y_values = []

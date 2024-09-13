@@ -1,17 +1,10 @@
-from icecream import ic
 import os
-from src.fucrimodo.utils import ase_database_tools as db_tools
+from fucrimodo.core.utils import ase_database_tools as db_tools
 import json
 import warnings
-import numpy as np
 from ase.db.core import Database
-import ase
-from ase.visualize import view
-from tabulate import tabulate
-
 
 class StageResults():
-
     def __init__(
         self, run_dir, file_name,
         crystals_db: Database | None = None,
