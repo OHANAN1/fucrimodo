@@ -2,7 +2,6 @@ import nbformat
 from nbformat.v4 import new_notebook, new_code_cell, new_markdown_cell
 import os
 import json
-import pandas as pd
 
 
 def get_run_info_string(run_info: dict) -> str:
