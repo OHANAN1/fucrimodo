@@ -16,7 +16,6 @@ author = 'Louis Boehm, Martin Kuban'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',  # Optional, für automatisch generierte Zusammenfassungen
-    'sphinx_autodoc_typehints', # Für automatische Typehints
 ]
 
 templates_path = ['_templates']
