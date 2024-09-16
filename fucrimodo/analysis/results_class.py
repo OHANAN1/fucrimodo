@@ -14,8 +14,8 @@ class StageResults():
 
     :param run_dir: Path to the directory where the run was saved
     :type run_dir: str
-    :param stage_id: ID of the stage that should be analyzed
-    :type stage_id: int
+    :param id: ID of the stage that should be analyzed
+    :type id: int
 
     :raises FileNotFoundError: One of the expected files was not found at 
         path :data:`run_dir`. 
@@ -34,7 +34,7 @@ class StageResults():
                 f"File stage_{id}.json does not exist in {run_dir}."
                 "Was the desired stage even performed?"
             )
-        self._stage_dict = self.__load_from_file(stage_file_path)
+        self._stage_dict = self.__load_stage_dict_from_file(stage_file_path)
 
         crystals_db_path = os.path.join(run_dir, "crystals.db")
         if not os.path.exists(crystals_db_path):
@@ -45,6 +45,14 @@ class StageResults():
         self._crystals, self._key_value_pairs = self.__get_crystal_data_from_db(
             crystals_db_path=crystals_db_path, stage_id=id
         )
+
+        run_info_path = os.path.join(run_dir, "run_info.json")
+        if not os.path.exists(crystals_db_path):
+            raise FileNotFoundError(
+                f"File run_info.json does not exist in {run_dir}."
+                "Was the correct directory selected?"
+            )
+        self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
 
         self._name = f"stage_{id}"
         self._id = id
@@ -82,7 +90,21 @@ class StageResults():
         """ID of the stage in the run"""
         return self._id
 
-    def __load_from_file(
+    @property
+    def n_generations(self) -> int:
+        """Number of generations that the stage performed."""
+        return self._stage_info_dict["number of generations"]
+
+    def __load_stage_info_from_file(
+        self, run_info_path: str
+    ) -> dict[str, Any]:
+        with open(run_info_path, "r") as f:
+            run_info_dict = json.load(f)
+
+        stage_info_dict = run_info_dict[f"stage_{self.id}"]
+        return stage_info_dict
+
+    def __load_stage_dict_from_file(
         self, stage_file_path: str
     ) -> dict[str, dict[str, list]]:
         with open(stage_file_path, "r") as f:
@@ -126,14 +148,27 @@ class RunResults():
             )
 
         self.run_dir = run_dir
-        if run_name is not None:
-            self.run_name = run_name
-        else:
-            self.run_name = os.path.basename(run_dir)
+        self.run_name = run_name
 
         data = self.__load_from_files(run_dir)
         self._stages, self._run_info = data
         self.n_stages = len(self.stages)
+
+    @property
+    def run_name(self) -> str:
+        """
+        Name of the run. If set to None, will automatically use the base 
+        name of the run directory.
+        """
+        return self._run_name
+
+    @run_name.setter
+    def run_name(self, value: str | None):
+        if value == None:
+            self._run_name = os.path.basename(self.run_dir)
+        else:
+            self._run_name = value
+
 
     @property
     def run_info(self) -> dict | None:

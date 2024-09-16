@@ -1,7 +1,7 @@
 import numpy as np
 from ase.db.core import Database
 
-from typing import Optional
+from typing import Any, Optional
 from dscribe.descriptors import SOAP
 import os
 from ase import db
@@ -10,6 +10,7 @@ from ase.data import atomic_numbers
 from numpy.typing import NDArray
 from typing import Sequence
 from sklearn.metrics.pairwise import cosine_similarity
+import warnings 
 
 
 def connect_to_existing_database(database_path: str) -> Database:
@@ -337,3 +338,44 @@ def get_unique_keys_of_db(
         for key in key_value_pairs:
             keys.add(key)
     return list(keys)
+
+
+def get_data_with_specific_key_value_from_db(
+    crystals_db: Database, key: str, value: Any
+) -> tuple[list[ase.Atoms], list[dict[str, Any]]]:
+    """
+    Returns the crystals and key value pairs from the database that have the
+    specified key and value.
+    """
+    crystals = []
+    key_value_pairs = []
+
+    def filter_stage(row):
+        if hasattr(row, "key_value_pairs"):
+            if "stage_id" in row.key_value_pairs.keys():
+                return row.key_value_pairs[key] == value
+            else:
+                return False
+        elif hasattr(row, "is_target"):
+            return False
+
+        else:
+            warnings.warn(
+                f"Could not find key {key} in row {row}."
+            )
+
+    for row in crystals_db.select(filter=filter_stage):
+        crystals.append(row.toatoms())
+        key_value_pairs.append(row.key_value_pairs)
+
+    if len(crystals) == 0:
+        raise ValueError(
+            f"Could not find any crystals for {key}."
+        )
+
+    if len(key_value_pairs) == 0:
+        raise ValueError(
+            f"Could not find any key value pairs for {key}."
+        )
+
+    return crystals, key_value_pairs
