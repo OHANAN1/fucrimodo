@@ -28,6 +28,9 @@ class StageResults():
         run_dir: str, 
         id: int,
     ) -> None:
+        self._name = f"stage_{id}"
+        self._id = id
+
         stage_file_path = os.path.join(run_dir, f"stage_{id}.json")
         if not os.path.exists(stage_file_path):
             raise FileNotFoundError(
@@ -53,9 +56,6 @@ class StageResults():
                 "Was the correct directory selected?"
             )
         self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
-
-        self._name = f"stage_{id}"
-        self._id = id
 
     @property
     def crystals(self) -> list[ase.Atoms]:
@@ -101,7 +101,7 @@ class StageResults():
         with open(run_info_path, "r") as f:
             run_info_dict = json.load(f)
 
-        stage_info_dict = run_info_dict[f"stage_{self.id}"]
+        stage_info_dict = run_info_dict["stage_info"][f"stage_{self.id}"]
         return stage_info_dict
 
     def __load_stage_dict_from_file(
