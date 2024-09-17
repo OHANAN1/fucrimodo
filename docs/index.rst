@@ -3,8 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-FUCrIMODo documentation
-=======================
+FUCrIMODo
+=========
+
+.. image:: _static/Fujimoto.jpg
+   :alt: Fujimoto from the Movie Ponyo by Studio Ghibli
+   :width: 400px
+   :align: center
 
 FUCrIMODo is a program that aims to retrieve the crystal structure from
 a SOAP descriptor.

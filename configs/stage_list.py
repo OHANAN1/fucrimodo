@@ -1,3 +1,4 @@
+from typing import Callable
 import ase
 from configs.crossover import get_exploration_crossovers
 from fucrimodo.core.multi_ga_search import MultiGenAlgSearch
@@ -31,10 +32,8 @@ def get_stage_list(
         "number_of_generations": 40,
         "crossover_probability": 0.8,
         "mutation_probability": 0.6,
-    },
-    additional_statistics_func = None,
-    add_stats_func_name = None,
-) -> list:
+    }
+    ) -> list:
 
     cell_bounds = []
     for l_max in [4, 6, 8]:
@@ -94,6 +93,11 @@ def get_stage_list(
     soap_fitness_weak = soap_fitness_list[0]
     soap_fitness_mid = soap_fitness_list[1]
     soap_fitness_strong = soap_fitness_list[2]
+
+    # ── Additional Statistics functions ─────────────────────────────────────
+    additional_statistics_func = soap_fitness_mid.evaluate_individual
+    add_stats_func_name = "reference_similarity"
+
 
     # ╒══════════════════════════════════════════════════════════╕
     #                       Define Stages

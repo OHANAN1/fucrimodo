@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NoReturn
 
 from numpy.typing import NDArray
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
@@ -25,9 +25,9 @@ def check_if_crystals_have_same_stoichiometry(
 ) -> tuple[bool, float | None]:
     """
     Checks if two crystals have the same composition.
-    Returns a tuple:
-    :same_composition: bool
-    :ratio: float
+    :returns: A tuple:
+        - bool: crystal 1 and 2 have the same stoichiometry
+        - float: ratio of elements, or None if not the same stoichiometry
     """
     cry1_atomic_num = crystal1.get_atomic_numbers()
     cry2_atomic_num = crystal2.get_atomic_numbers()
@@ -62,392 +62,361 @@ def check_if_crystals_have_same_stoichiometry(
         return False, None
 
 
-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                       Main classes                       ║
 # ╚══════════════════════════════════════════════════════════╝
 
 class AnalyseStage():
+    """
+    Object to loads and analysis the :class:`StageResults` class.
+    Best used in combination with :class:`AnalyseRun`, since it automatically 
+    loads every AnalyseStage class.
+
+    :param stage_results: If stage results are not already present, give the
+        run dictionary and stage id as tuple.
+
+    :raises KeyError: If a selected main_stats_key is not available.
+    """
     def __init__(
         self,
-        stage_results: StageResults,
-        main_stats_key: str = "SimilarityToTargetSOAPFitness_RBFSimilarity",
-        main_stat_name: str = "similarity",
-        analysis_results_dir_name: str = "analysis_results",
+        stage_results: StageResults | tuple[str, int],
         cell_bounds: CustomCellBounds | None = None,
     ) -> None:
-        self.main_stats_key = main_stats_key
-        self.main_stat_name = main_stat_name
-        self.analysis_results_dir_name = analysis_results_dir_name
+        self.stage_results = stage_results
         self.cell_bounds = cell_bounds
 
-        self.stage_results = stage_results
-        self.stage_id = self.stage_results.id
-        self.stage_name = self.stage_results.stage_file_path
+    @property
+    def stage_name(self) -> str:
+        return self.stage_results.name
 
-    def get_all_statistics_keys(self) -> list[str]:
-        statistic_keys = self.stage_results.stage_dict.keys()
-        return list(statistic_keys)
+    @property
+    def id(self) -> int:
+        return self.stage_results.id
 
-    def get_n_generations(self) -> int:
-        return len(self.get_statistics_values()["max"])
+    @property
+    def stage_results(self) -> StageResults:
+        return self._stage_results
+
+    @stage_results.setter
+    def stage_results(self, value: StageResults | tuple[str, int] ) -> None:
+        if type(value) == tuple[str, int]:
+            self._stage_results = StageResults(
+                run_dir=value[0], id=value[1]
+            )
+        elif type(value) == StageResults:
+            self._stage_results = value
+
+    @property
+    def valid_statistics_keys(self) -> list[str]:
+        return list(self._stage_results.stage_dict.keys())
 
     def get_statistics_values(
-        self, statistics_key: str | None = None
-    ) -> dict[str, list]:
+        self, statistics_key: str, value_type: str | None = None
+    ) -> dict[str, list] | list:
         """
-        Returns all found values for a specific statistic with
-        "max", "min", "avg" or "std"
+        Returns all found values for a specific statistic that was collected
+        during the stage.
+
+        :param statistics_key: Key of the statistic of interest
+        :param value_type: If not None, only the specified value type is
+            returned. Normally these types are: "max", "min", "avg" or "std".
+
+        :returns: The data associated with the given :data:`statistics_key`. 
+            Either a dict with keys 'max', 'min', 'avg' and 'std' for the 
+            selected statistic. Or only the list of values for the value type 
+            that is specified.
+
+        :raises KeyError: If the given :data:`statistics_key` could not be 
+            found in the data saved during the stage.
         """
-        if statistics_key is None:
-            statistics_key = self.main_stats_key
+        self.__is_valid_statics_keys(key=statistics_key, raise_error=True)
+        if value_type is not None:
+            stat_values = self._stage_results.stage_dict[statistics_key][value_type]
+        else:
+            stat_values = self._stage_results.stage_dict[statistics_key]
 
-        if not statistics_key in self.get_all_statistics_keys():
-            raise KeyError(
-                f"Stage: {self.stage_results.stage_file_path}\n"
-                f"Could not find key {statistics_key}."
-                f"Possible keys: {self.get_all_statistics_keys()}."
-            )
-        values_dict = self.stage_results.stage_dict[statistics_key]
-        return values_dict
+        return stat_values
 
-    def get_best_crystal(
-        self, statistics_key: str | None = None
-    ) -> tuple[ase.Atoms, float]:
+    def get_best_crystal_tuple(
+        self, statistics_key: str, invert: bool = False
+    ) -> tuple[ase.Atoms, float, dict[str, Any]]:
         """
-        Returns the best crystal for a given key.
-        Key needs to be in the crystals database.
+        Returns the crystal with the highest value for the given 
+        :data:`statistics key` that was found in the crystals database
+        key value pairs.
+
+        :param statistics_key: Key from the crystals database with the desired
+            statistic.
+        :param invert: If False the sorting will be inverted, meaning the 
+            crystal with the lowest value of the desired statistic is returned
+
+        :return:
+            - best crystal
+            - statistics value of crystal for the given statistics key
+            - key value pairs of the best crystal
         """
-        if statistics_key is None:
-            statistics_key = self.main_stats_key
-
-        # if not statistics_key in self.stage_results.key_value_pairs[0].keys():
-        #     raise KeyError(
-        #         f"Stage: {self.stage_results.name}\n"
-        #         f"Key {statistics_key} not found in key value pairs."
-        #     )
-
         statistic_values = []
         for key_value_pair in self.stage_results.key_value_pairs:
-            try:
-                statistic_values.append(key_value_pair[statistics_key])
-            except KeyError:
-                warnings.warn(
-                    f"Stage: {self.stage_results.stage_file_path}\n"
-                    f"Key {statistics_key} not found in key value pairs."
-                )
-                continue
+            statistic_values.append(key_value_pair[statistics_key])
 
-        best_crystal_index = np.argmax(statistic_values)
+        if invert == False:
+            crystal_index = np.argmax(statistic_values)
+        else: 
+            crystal_index = np.argmin(statistic_values)
 
         return (
-            self.stage_results.crystals[best_crystal_index], 
-            self.stage_results.key_value_pairs[
-                best_crystal_index
-            ][statistics_key]
+            self.stage_results.crystals[crystal_index],
+            self.stage_results.key_value_pairs[crystal_index][statistics_key],
+            self.stage_results.key_value_pairs[crystal_index]
         )
+
+    def __is_valid_statics_keys(
+        self, key: str | None, raise_error: bool = False
+    ) -> NoReturn | bool :
+        """
+        Checks if the provided key is found in the keys 
+        of :attr:`StageResults.stage_dict`.
+        None values are also counted as invalid.
+
+        :param key: Key that should be checked.
+        :param raise_error: If True will raise error if the key is not valid.
+
+        :raise KeyError: Only when :data:raise_error is True and provided key
+            is not valid.
+        """
+        valid_keys = self.valid_statistics_keys
+        if key in valid_keys:
+            return True
+        else:
+            if raise_error:
+                raise KeyError(
+                    f"Provided key {key} was not found in valid keys:\n" 
+                    f"{valid_keys}"
+                )
+            else:
+                return False
 
 
 class AnalyseRun():
+    """ 
+    Class to analyse the results that where collected during the run.
+
+    :param run_results: Either the :class:`RunResults` object that should be 
+        analyzed or the path to the run directory.
+
+    :raises FileNotFoundError: If expected files are missing.
+    """
     def __init__(
         self, 
-        run_results: RunResults,
-        main_stats_key: str = "SimilarityToTargetSOAPFitness_RBFSimilarity",
-        main_stat_name: str = "similarity",
-        analysis_results_dir_name: str = "analysis_results",
-        cell_bounds: CustomCellBounds | None = None,
-        target_crystal_id: int = 1,
-        min_num_stages: int | None = None
+        run_results: RunResults | str,
     ) -> None:
-        """ 
-        Analysis of the run results
-
-        If min stage is none the number of existing stages is used. 
-        Use min stage if you want to compare runs where its important that 
-        the runs have same lenght.
-        """
         self.run_results = run_results
-        self.main_stats_key = main_stats_key
-        self.main_stat_name = main_stat_name
-        self.analysis_results_dir_path = os.path.join(
-            self.run_results.run_dir, analysis_results_dir_name
-        )
-        if not os.path.exists(self.analysis_results_dir_path):
-            os.makedirs(self.analysis_results_dir_path)
+        self.stages = self.run_results
 
-        self.cell_bounds = cell_bounds
-        self.run_name = self.run_results.run_name
-        if min_num_stages is None:
-            self.min_num_stages = self.get_number_of_stages()
-        else:
-            self.min_num_stages = min_num_stages
-
-        self.stage_analysis_objects = []
-        for stage in self.run_results.stages:
-            self.stage_analysis_objects.append(
-                AnalyseStage(
-                    stage_results=stage,
-                    main_stats_key=self.main_stats_key,
-                    main_stat_name=self.main_stat_name,
-                    analysis_results_dir_name=analysis_results_dir_name,
-                    cell_bounds=self.cell_bounds
-                )
-            )
-
-        self.get_best_crystal_tuple(self.main_stats_key)
-        self.target_crystal = self.get_target_crystal(target_crystal_id)
-
-        ic(self.get_shared_statistics_keys())
-
-    def get_shared_statistics_keys(self) -> list[str]:
+    @property
+    def run_results(self) -> RunResults:
         """
-        Returns the statistics keys that are shared by all stages.
+        :class:`RunResults` object that collects and sorts all data that was 
+        saved during a run.
+        Can be set with the :class:`RunResults` object or the path to the run
+        directory that should be loaded.
         """
+        return self._run_results
+
+    @run_results.setter
+    def run_results(self, value: RunResults | str):
+        if type(value) == str:
+            self._run_results = RunResults(run_dir=value)
+        elif type(value) == RunResults:
+            self._run_results = value
+
+    @property
+    def stages(self) -> list[AnalyseStage]:
+        """
+        Ordered list of :class:`AnalyseStage` objects for each 
+        stage in the run.
+        """
+        return self._stages
+
+    @stages.setter
+    def stages(self, value: RunResults):
+        self._stages = []
+        for stage in value.stages:
+            self._stages.append(AnalyseStage(stage_results=stage))
+
+    def get_shared_statistic_keys(self) -> list[str]:
+        """List of the statistic keys that all stages share."""
         all_keys = []
-        for stage_analys in self.stage_analysis_objects:
-            all_keys.append(set(stage_analys.get_all_statistics_keys()))
+        for stage in self.stages:
+            all_keys.append(set(stage.stage_results.stage_dict.keys()))
         all_keys = set.intersection(*all_keys)
-
         return list(all_keys)
 
-    def get_target_crystal(self, target_crystal_id: int = 1) -> ase.Atoms:
-        """
-        Returns the target crystal.
-        """
-        target_crystal = self.run_results.target_crystal
-        return target_crystal
-
-    def was_completed(self) -> bool:
-        """
-        Returns True if the run was completed.
-        Curretly this means, if the run_info was saved and at least one stage
-        was saved.
-        """
-        if self.run_results.run_info is None:
-            return False
-
-        if self.get_number_of_stages() == 0:
-            return False
-
-        return True
-
     def get_number_of_stages(self) -> int:
-        return len(self.run_results.stages)
+        return self.run_results.n_stages
 
     def get_best_crystal_tuple(
         self, 
-        statistics_key: str | None = None, 
-        force_recalculate: bool = False
-    ) -> tuple[ase.Atoms, float, int] | None:
+        statistics_key: str, 
+        invert: bool = False
+    ) -> tuple[ase.Atoms, float, dict[str, Any], int]:
         """
-        Returns the best crystal for a given key.
-        Key needs to be in the crystals database.
-        Retuns: crystal, statistics_value, stage_id
-        or None if no best crystal or stages were found
+        Returns the crystal with the highest value for the given 
+        :data:`statistics key` that was found in the crystals database
+        key value pairs.
+
+        :param statistics_key: Key from the crystals database with the desired
+            statistic.
+        :param invert: If False the sorting will be inverted, meaning the 
+            crystal with the lowest value of the desired statistic is returned.
+
+        :return:
+            - best crystal
+            - statistics value of crystal for the given statistics key
+            - key value pairs of the best crystal
+            - id of the stage the crystal is from
         """
-        if self.get_number_of_stages() == 0:
-            warnings.warn("No stages found.")
-            return None
-
-        if statistics_key is None:
-            statistics_key = self.main_stats_key
-
-        if not hasattr(self, "best_crystal_tuple") or force_recalculate:
-            best_crystal_tuples = []
-            for stage_analys in self.stage_analysis_objects:
-                crystal, stat_value = stage_analys.get_best_crystal(
-                    statistics_key
-                )
-                stage_id = stage_analys.stage_id
-                best_crystal_tuples.append((crystal, stat_value, stage_id))
-
-            best_crystal_index = np.argmax(
-                [stat_value for _, stat_value, _ in best_crystal_tuples]
+        crystal_tuples = []
+        stat_values = []
+        for stage_analys in self.stages:
+            crystal, stat_val, key_value_pair = stage_analys.get_best_crystal_tuple(
+                statistics_key=statistics_key, invert=invert
             )
-            self.best_crystal_tuple = best_crystal_tuples[best_crystal_index]
-
-        return self.best_crystal_tuple
-
-    def target_and_best_have_same_stoichiometry(
-        self
-    ) -> tuple[bool, float | None]:
-        """
-        Tests if the target and the best crystal have the same stoichiometry.
-        Returns a tuple:
-        :same_stoichi: bool 
-        :ratio: float or None if the composition is not the same
-        """
-        target = self.run_results.target_crystal
-        best_crystal_tuple = self.get_best_crystal_tuple(self.main_stats_key)
-        if best_crystal_tuple is None:
-            return False, None
-        else:
-            best_crystal = best_crystal_tuple[0]
-            return check_if_crystals_have_same_stoichiometry(
-                target, best_crystal
+            crystal_tuples.append(
+                (crystal, stat_val, key_value_pair, stage_analys.id)
             )
+            stat_values.append(stat_val)
 
-    def target_and_best_have_same_composition(
-        self
-    ) -> bool:
-        """
-        Tests if the target and the best crystal have the same composition.
-        Returns a tuple:
-        :same_composition: bool 
-        :ratio: float or None if the composition is not the same
-        """
-        same_stoichi, ratio = self.target_and_best_have_same_stoichiometry()
-
-        if same_stoichi == False:
-            return False 
-        elif same_stoichi and (ratio == 1 or ratio == 1.0):
-            return True
+        if invert:
+            best_index = np.argmin(stat_values)
         else:
-            return False
+            best_index = np.argmax(stat_values)
+
+        return crystal_tuples[best_index]
+
+    def get_n_generations(self) -> int:
+        """Returns the total number of steps of the whole run."""
+        total_steps = 0
+        for stage_analys in self.stages:
+            total_steps += stage_analys.stage_results.n_generations
+        return total_steps
 
     def get_statistic_values_all_stages(
-        self, 
-        statistics_key: str | None, 
+        self,
+        statistics_key: str, 
         value_type: str | None = None
     ) -> dict[str, dict[str, list]] | dict[str, list]:
+        """Returns all found values for a specific statistic that was collected
+        during all stages. The desired statistic must be present in all 
+        stages.
+
+        :param statistics_key: Key of the statistic of interest. Must be 
+            present in all stages.
+        :param value_type: If not None, only the specified value type is
+            returned. Normally these types are: "max", "min", "avg" or "std".
+
+        :returns: A dict with with keys :attr:`AnalyseStage.id` as keys and the 
+            data associated with the given :data:`statistics_key` of the 
+            specific stage as value.
+            That is either a dict with keys 'max', 'min', 'avg' and 'std' for the 
+            selected statistic. Or only the list of values for the value type
+            that is specified.
+
+        :raises KeyError: If the given :data:`statistics_key` could not be 
+            found in all stages.
         """
-        Returns all found values for a specific statistic with a specific
-        value type.
-        types: normally "max", "min", "avg" or "std" are used.
-        if value_type = None, all value types are returned as a dict.
-
-        The keys are the stage ids.
-
-        If statistics_key = None, the main statistics key will be used.
-        """
-        if statistics_key is None:
-            statistics_key = self.main_stats_key
-
-        assert statistics_key in self.get_shared_statistics_keys(), (
+        assert statistics_key in self.get_shared_statistic_keys(), (
             f"Key {statistics_key} not in shared keys."
         )
 
         statistics_values = {}
-        for stage_analys in self.stage_analysis_objects:
-            stage_id = stage_analys.stage_id
-            values_dict = stage_analys.get_statistics_values(statistics_key)
-            if value_type is None:
-                statistics_values[stage_id] = values_dict
-            else:
-                statistics_values[stage_id] = values_dict[value_type]
+        for stage_analys in self.stages:
+            stage_id = stage_analys.id
+            values_dict = stage_analys.get_statistics_values(
+                statistics_key, value_type
+            )
+            statistics_values[stage_id] = values_dict
 
         return statistics_values
 
     def get_analysis_results_dict(
         self,
+        statistics_key: str,
+        target_crystal: ase.Atoms | None = None,
+        cellbounds: CustomCellBounds | None = None,
         round_values: int = 3,
     ) -> dict:
-        """
-        Returns a dictionary of the best crystals.
-        Keys:
-        "run_name": str
-        "was_completed": bool
-        "target_crystal": ase.Atoms
-        "best_crystal": ase.Atoms | None
-        "best_crystal_{main_stat_name}": float
-        "found_in_stage": int
-        "same_composition": bool
-        "same_stoichiometry": bool
-        "ratio": float
-        "n_generations": int
-        "target_in_bounds": bool
-        "density_target": float
-        "density_best": float
-        "n_atoms_target": int
-        "n_atoms_best": int
-        "volume_target": float
-        "volume_best": float
-        "n_gen_stage_{stage_id}": list[int] 
-        "best_value_stage_{stage_id}": list[int]
-        """
-        analysis_results_dict = {}
+        """Generates a dictionary with all kinds of statistics data.
 
+        :returns: Dictionary of analysed data with keys:
+            - run_name
+            - n_generations: Total number of generations.
+            - best_crystal: Crystal with the highest value for provided statistics key.
+            - best_crystal_value: The value for the providid statistics key.
+            - best_crystal_key_value_pairs: Key value pairs of the best crystal.
+            - best_crystal_density: Density of the best crystal.
+            - best_crystal_volume: Volume of the best crystal.
+            - best_crystal_n_atoms: Number of atoms of the best crystal.
+            - found_in_stage: Stage id the best crystal was found in.
+            if target crystal is provided:
+            - target_crystal
+            - target_crystal_n_atoms: Number of atoms of target crystal.
+            - target_crystal_volume: Volume of target crystal.
+            - same_stoichiometry: True if stoichiometry of target and best found crystal is the same.
+            - ratio: Ratio of atom types of best found crystals and target.
+            - same_composition: True if composition of target and best found crystal is the same.
+        """
         best_crystal_tuple = self.get_best_crystal_tuple(
-            statistics_key=self.main_stats_key
+            statistics_key=statistics_key
         )
-        same_stoichi, ratio = self.target_and_best_have_same_stoichiometry()
-        same_comp = self.target_and_best_have_same_composition()
+        best_cry, best_cry_value, best_cry_key_val_pair, stage_id = best_crystal_tuple
+        if isinstance(best_cry_value, float):
+            best_cry_value = round(best_cry_value, round_values)
 
-        if best_crystal_tuple is not None:
-            best_crystal, best_crystal_value, stage_id = best_crystal_tuple
-        else:
-            best_crystal, best_crystal_value, stage_id = None, None, None
-
-        if isinstance(best_crystal_value, float):
-            best_crystal_value = round(best_crystal_value, round_values)
-
-        analysis_results_dict["run_name"] = self.run_name
-        analysis_results_dict["was_completed"] = self.was_completed()
-
-        analysis_results_dict["target_crystal"] = self.target_crystal
-        analysis_results_dict["density_target"] = len(self.target_crystal) / self.target_crystal.get_volume()
-
-        analysis_results_dict["best_crystal"] = best_crystal
-        if best_crystal is not None:
-            analysis_results_dict["density_best"] = len(best_crystal) / best_crystal.get_volume()
-        else:
-            analysis_results_dict["density_best"] = None
-
-
-        analysis_results_dict["found_in_stage"] = stage_id
-        analysis_results_dict[f"best_{self.main_stat_name}"] = best_crystal_value
-        
-        analysis_results_dict["same_composition"] = same_comp
-        analysis_results_dict["same_stoichiometry"] = same_stoichi
-        analysis_results_dict["ratio"] = ratio
-
+        analysis_results_dict = {}
+        analysis_results_dict["run_name"] = self.run_results.run_name
         analysis_results_dict["n_generations"] = self.get_n_generations()
 
-        if self.cell_bounds is not None:
-            bounds = self.cell_bounds.is_within_bounds(self.target_crystal.cell)
-            analysis_results_dict["target_in_bounds"] = bounds
-        else:
-            analysis_results_dict["target_in_bounds"] = "-"
+        analysis_results_dict["best_crystal"] = best_cry
+        analysis_results_dict["best_crystal_key_value_pairs"] = best_cry_key_val_pair 
+        analysis_results_dict["best_crystal_value"] = best_cry_value
+        analysis_results_dict["best_crystal_density"] = len(best_cry) / best_cry.get_volume()
+        analysis_results_dict["best_crystal_volume"] = best_cry.get_volume()
+        analysis_results_dict["best_crystal_n_atoms"] = len(best_cry)
+        analysis_results_dict["found_in_stage"] = stage_id
 
-        analysis_results_dict["n_atoms_target"] = len(self.target_crystal)
-        analysis_results_dict["volume_target"] = self.target_crystal.get_volume()
-        if best_crystal is not None:
-            analysis_results_dict["volume_best"] = best_crystal.get_volume()
-            analysis_results_dict["n_atoms_best"] = len(best_crystal)
-        else:
-            analysis_results_dict["volume_best"] = None
-            analysis_results_dict["n_atoms_best"] = None
+        if target_crystal is not None:
+            same_stoichi, ratio = check_if_crystals_have_same_stoichiometry(
+                best_cry, target_crystal
+            )
+            same_comp=False
+            if (same_stoichi == True) and ratio == 1: 
+                same_comp = True
 
-        n_gen_each_stage = self.get_n_generations_each_stage()
-        best_value_each_stage = self.get_best_value_each_stage()
-        for stage_id in range(1, self.min_num_stages + 1):
-            if stage_id in n_gen_each_stage.keys():
-                n_gens = n_gen_each_stage[stage_id]
-            else:
-                n_gens = None
+            analysis_results_dict["target_crystal"] = target_crystal
+            analysis_results_dict["target_crystal_n_atoms"] = len(target_crystal)
+            analysis_results_dict["target_crystal_volume"] = target_crystal.get_volume()
 
-            analysis_results_dict[f"n_gen_stage_{stage_id}"] = n_gens
+            analysis_results_dict["same_stoichiometry"] = same_stoichi
+            analysis_results_dict["ratio"] = ratio
+            analysis_results_dict["same_composition"] = same_comp
 
-            if stage_id in best_value_each_stage.keys():
-                best_value = best_value_each_stage[stage_id]
-                if isinstance(best_value, float):
-                    best_value = round(best_value, round_values)
-            else:
-                best_value = None
-
-            analysis_results_dict[f"best_value_stage_{stage_id}"] = best_value
+            if cellbounds is not None:
+                analysis_results_dict["target_in_bounds"] = cellbounds.is_within_bounds(
+                    cell=target_crystal.cell
+                )
 
         return analysis_results_dict
 
     def plot_combined_statistics_development(
         self,
         ax: Axes,
+        statistics_key: str,
         display_stage_id: bool = True,
         stage_id_y_pos: float = 1.,
         stage_id_x_offset: float = 2.5,
         value_types: list[str] = ["max", "min", "avg"],
         colors: list[str] = ["red", "green", "royalblue"],
-        statistics_key: str | None = None,
         x_offset: int = 0,
         show_legend: bool = True,
         legend_params: dict = dict(
@@ -471,10 +440,6 @@ class AnalyseRun():
             boxstyle="square,pad=0.15", facecolor='white', alpha=1., 
             edgecolor='black', linewidth=2.
         )
-
-        if self.get_number_of_stages() == 0:
-            warnings.warn("Cannot plot, no stages found.")
-            return
 
         statistics_values = self.get_statistic_values_all_stages(
             statistics_key
@@ -526,18 +491,22 @@ class AnalyseRun():
             ax.legend(**legend_params)
 
 
-    def plot_best_crystal_and_target(self, ax_target, ax_best) -> None:
-        """
-        Plots the best crystal and the target crystal of a run.
-        """
+    def plot_best_crystal_and_target(
+        self, 
+        ax_target: Axes, 
+        ax_best: Axes, 
+        target_crystal: ase.Atoms,
+        statistics_key: str,
+    ) -> None:
+        """Plots the best crystal and the target crystal of a run."""
         plot_atoms(
-            atoms=self.target_crystal,
+            atoms=target_crystal,
             ax=ax_target,
             radii=0.5,
             rotation="20x,20y,0z"
         )
 
-        best_crystal_tuple = self.get_best_crystal_tuple(self.main_stats_key)
+        best_crystal_tuple = self.get_best_crystal_tuple(statistics_key)
         if best_crystal_tuple is not None:
             plot_atoms(
                 atoms=best_crystal_tuple[0],
@@ -550,65 +519,29 @@ class AnalyseRun():
         ax_best.set_axis_off()
 
 
-    def get_n_generations(self) -> int:
-        """
-        Returns the total number of steps of the whole run.
-        """
-        total_steps = 0
-        for stage_analys in self.stage_analysis_objects:
-            total_steps += stage_analys.get_n_generations()
-        return total_steps
-
-    def get_n_generations_each_stage(self) -> dict[int, int]:
-        """
-        Returns the number of generations for each stage.
-        """
-        n_generations = {}
-        for stage_analys in self.stage_analysis_objects:
-            n_generations[stage_analys.stage_id] = stage_analys.get_n_generations()
-        return n_generations
-
-    def get_best_value_each_stage(self) -> dict[int, float]:
-        """
-        Returns the highest similarity value for each stage.
-        """
-        highest_similarities = {}
-        for stage_analys in self.stage_analysis_objects:
-            try:
-                best_crystal_tuple = stage_analys.get_best_crystal(
-                    self.main_stats_key
-                )
-            except KeyError:
-                raise KeyError(
-                    f"Run: {self.run_name}\n"
-                    f"Key {self.main_stats_key} not found in stage {stage_analys.stage_id}."
-                )
-            highest_similarities[stage_analys.stage_id] = best_crystal_tuple[1]
-        return highest_similarities
-
-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Analysis Functions                    ║
 # ╚══════════════════════════════════════════════════════════╝
 
 def create_combined_statistics_development_plot(
-        run_analysis: AnalyseRun,
-        display_stage_id: bool = True,
-        stage_id_y_pos: float = 1.,
-        stage_id_x_offset: float = 2.5,
-        statistics_name: str | None = None,
-        statistics_symbol: str | None = None,
-        statistics_key: str | None = None,
-        x_lim: tuple[int, int] | None = None,
-        y_lim: tuple[float, float] | None = None,
-        save_fig: bool = False,
-        legend_params: dict = dict(
-            bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25
-        ),
-        y_scale: str = "linear",
-        height_ratios: list[float] = [2, 1],
-        fig_size: tuple[int, int] = (18, 11),
-    ) -> tuple[Figure, np.ndarray[Axes,Any]]:
+    run_analysis: AnalyseRun,
+    statistics_key: str,
+    display_stage_id: bool = True,
+    stage_id_y_pos: float = 1.,
+    stage_id_x_offset: float = 2.5,
+    statistics_name: str | None = None,
+    statistics_symbol: str | None = None,
+    x_lim: tuple[int, int] | None = None,
+    y_lim: tuple[float, float] | None = None,
+    save_fig: bool = False,
+    legend_params: dict = dict(
+        bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25
+    ),
+    y_scale: str = "linear",
+    height_ratios: list[float] = [2, 1],
+    fig_size: tuple[int, int] = (18, 11),
+    analysis_dir_path: str | None = None
+) -> tuple[Figure, np.ndarray[Axes,Any]]:
     """
     Plots the main statistics values for the whole run.
     Use value_types to specify which values to plot.
@@ -628,20 +561,16 @@ def create_combined_statistics_development_plot(
     assert type(ax) == np.ndarray, "Somehow axes where initialized falsely"
 
     ax_fit = ax[0]
-    if y_lim is not None:
-        ax_fit.set_ylim(y_lim)
-    if x_lim is not None:
-        ax_fit.set_xlim(x_lim)
+    if y_lim is not None: ax_fit.set_ylim(y_lim)
+    if x_lim is not None: ax_fit.set_xlim(x_lim)
+
     ax_fit.set_yscale(y_scale)
 
     if statistics_name is None:
-        statistics_name = run_analysis.main_stat_name
+        statistics_name = statistics_key
 
     if statistics_symbol is None:
         statistics_symbol = statistics_name[0]
-
-    if statistics_key is None:
-        statistics_key = run_analysis.main_stats_key
 
     ax_fit.set_ylabel(f"{statistics_name} {statistics_symbol}")
     run_analysis.plot_combined_statistics_development(
@@ -669,103 +598,10 @@ def create_combined_statistics_development_plot(
     )
 
     if save_fig:
-        fig.savefig(
-            os.path.join(
-                run_analysis.analysis_results_dir_path,
-                f"{statistics_key}_development.png"
-            )
-        )
+        save_name = f"{statistics_key}_development.png"
+        if analysis_dir_path is not None:
+            fig.savefig(os.path.join(analysis_dir_path, save_name))
+        else:
+            fig.savefig(save_name)
 
     return fig, ax
-
-
-# ╔══════════════════════════════════════════════════════════╗
-# ║                      Example Usage                       ║
-# ╚══════════════════════════════════════════════════════════╝
-
-def main(run_dir: str):
-    # Load the run
-    run_results = RunResults(
-        run_dir=run_dir
-    )
-
-    # Create the analysis object
-    analyse_run = AnalyseRun(
-        run_results=run_results,
-        # main_stats_key="soap_similarity_strong_RBFSimilarity",
-        main_stat_name="similarity",
-        analysis_results_dir_name="analysis_results",
-        cell_bounds=None,
-        target_crystal_id=1,
-    )
-
-    # create_combined_statistics_development_plot(
-    #     analyse_run,
-    #     display_stage_id=True,
-    #     stage_id_x_offset=0.85,
-    #     stage_id_y_pos=1.15,
-    #     statistics_name="Ref. Similarity",
-    #     statistics_symbol="S$_\\text{r}$",
-    #     save_fig=False,
-    #     y_lim=(-0.1, 1.1),
-    #     legend_params=dict(
-    #         bbox_to_anchor=(0.4, 1.03), loc="lower center", fontsize=25
-    #     )
-    # )
-    # plt.show()
-
-
-    fig, ax = create_combined_statistics_development_plot(
-        analyse_run,
-        display_stage_id=False,
-        statistics_key="Volume",
-        statistics_symbol="V",
-        statistics_name="Log of",
-        save_fig=True,
-        legend_params=dict(
-            bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25
-        ),
-        fig_size=(18, 9)
-    )
-    ax[0].set_yscale("log")
-    ax[0].set_ylim(1, 3500)
-    ax[0].set_ylabel("log(V)")
-    ax[0].hlines(
-        y=[512, 2744],
-        xmin=[0, 139],
-        xmax=[116, 144],
-        color="black", linestyle="-.", label="Max volume", linewidth=5
-    )
-    ax[0].legend(
-        bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25, ncols=4
-    )
-    fig.savefig(
-        os.path.join(
-            analyse_run.analysis_results_dir_path,
-            f"Volume_development.png"
-        )
-    )
-
-
-    # Get the analysis results dict
-    analysis_results_dict = analyse_run.get_analysis_results_dict()
-    import pprint
-    pprint.pprint(analysis_results_dict)
-
-if __name__ == "__main__":
-
-    import os
-    import sys
-
-    try:
-        run_dir = sys.argv[1]
-    except IndexError:
-        print("Please use as: python path/to/script.py path/to/run_dir")
-        sys.exit(1)
-
-    if not os.path.exists(run_dir):
-        print("Path does not exist")
-        sys.exit(1)
-
-    main(run_dir)
-
