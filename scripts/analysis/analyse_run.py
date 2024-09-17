@@ -1,6 +1,7 @@
 from fucrimodo.analysis.analyse_run import AnalyseRun
 from fucrimodo.analysis.results_class import RunResults
 from fucrimodo.analysis.analyse_run import create_combined_statistics_development_plot
+from fucrimodo.utils.script_helpers import let_user_select_statistics_key
 import matplotlib.pyplot as plt
 import ase
 
@@ -21,18 +22,12 @@ def main(
     # ── Create Analysis object ──────────────────────────────────────────────
     analyse_run = AnalyseRun(run_results=run_results)
 
+    # ── Ask User to give desired statistics key ─────────────────────────────
     if statistics_key is None:
-        # ── Ask User to give desired statistics key ─────────────────────────────
         print()
-        print("Please choose the statistics key you want to analyse.")
         possible_stat_keys = analyse_run.get_shared_statistic_keys()
-        for i, stat_key in enumerate(possible_stat_keys):
-            print(f"{i}: {stat_key}")
-
-        selected_index = input("Type one of the corresponding numbers on the left:")
-        assert type(selected_index) != int, "Please write an integer number"
-        assert int(selected_index)+1 <= len(possible_stat_keys), "The number you selected is to big."
-        statistics_key = possible_stat_keys[int(selected_index)]
+        statistics_key = let_user_select_statistics_key(possible_stat_keys)
+        print()
 
     # ── Initialize analysis_dir ─────────────────────────────────────────────
     analysis_dir=os.path.join(
