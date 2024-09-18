@@ -1,11 +1,17 @@
 Analyse Dokumentation
 =====================
 
+The analysis module can be used to analyse the data that was collected 
+during a run. 
+
+To make things consistent the files from the directory are first loaded into
+the classes provided by :class:`RunResults`.
+These classes can then be analysed by the classes in 
+:mod:`AnalyseRun`.
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    analyse_run
-   analyse_many_runs
-   analyse_multiple_many_runs
    results_class

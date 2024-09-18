@@ -26,6 +26,7 @@ def check_if_crystals_have_same_stoichiometry(
     """
     Checks if two crystals have the same composition.
     :returns: A tuple:
+
         - bool: crystal 1 and 2 have the same stoichiometry
         - float: ratio of elements, or None if not the same stoichiometry
     """

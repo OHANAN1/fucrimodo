@@ -8,12 +8,17 @@ FUCrIMODo
 
 .. image:: _static/Fujimoto.jpg
    :alt: Fujimoto from the Movie Ponyo by Studio Ghibli
-   :width: 400px
+   :width: 200px
    :align: center
 
 FUCrIMODo is a program that aims to retrieve the crystal structure from
 a SOAP descriptor.
 This is done with the help of a novel multi-stage Genetic Algorithm (GA).
+
+Information about GAs can be found at various sources. 
+The DEAP library for example provides a very good
+`documentation <https://deap.readthedocs.io/en/master/>`_ explaining 
+concepts but also technical details of such algorithms.
 
 .. toctree::
    :maxdepth: 1
@@ -22,6 +27,7 @@ This is done with the help of a novel multi-stage Genetic Algorithm (GA).
    modules/core/index
    modules/analysis/index
    modules/customs/index
+   modules/cli/index
 
 Indices and tables
 ==================
