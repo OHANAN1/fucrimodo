@@ -251,7 +251,7 @@ def myEaSimple(
         stream_str = get_stream_str(fitness_record)
 
         if global_record is not None:
-            stream_str += "\n --> Global Stats:\n"
+            stream_str += "--> Global Stats:\n"
             stream_str += get_stream_str(global_record)
 
         print(stream_str)
@@ -320,7 +320,7 @@ def myEaSimple(
 
                 stream_str = get_stream_str(fitness_record)
                 if global_record is not None:
-                    stream_str += "\n --> Global Stats:\n"
+                    stream_str += "--> Global Stats:\n"
                     stream_str += get_stream_str(global_record)
 
                 outer_pbar.write(stream_str)

@@ -164,7 +164,7 @@ class Runner:
         if self.statistics_key is None:
             print()
             self.statistics_key = self.__let_user_select_statistics_key(
-                possible_stat_keys=analyse_run.get_shared_statistic_keys()
+                possible_stat_keys=analyse_run.get_global_statistics_keys()
             )
             print()
 

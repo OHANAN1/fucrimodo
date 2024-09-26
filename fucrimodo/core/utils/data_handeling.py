@@ -59,8 +59,6 @@ class StageData:
         crossover_list: list[Crossover | tuple[Crossover, float]],  # noqa
         mutation_list: Sequence[Mutation | tuple[Mutation, float]],
         break_condition: BreakCondition,
-        additional_statistics_func: Callable[[ase.Atoms], float] | None = None,
-        add_stats_func_name: str | None = None,
     ) -> None:
         self.start_population_selection = start_population_selection
 
@@ -111,8 +109,6 @@ class StageData:
 
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
-        self.additional_statistics_func = additional_statistics_func
-        self.add_stats_func_name = add_stats_func_name
         self.break_condition = break_condition
         self.n_generations = number_of_generations
 
@@ -208,7 +204,7 @@ class StageData:
             json.dump(
                 {
                     "fitness_log": fitness_log_dict,
-                    "global_log": global_log_dict,
+                    "global_statistics_log": global_log_dict,
                 }, 
                 f, indent=4, default=convert_to_serializable
             )
