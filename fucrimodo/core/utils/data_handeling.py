@@ -30,9 +30,9 @@ def print_run_info_json(save_path: str):
     print(json.dumps(run_info, indent=4))
 
 def convert_to_serializable(obj):
-    if isinstance(obj, (np.int64, np.int32, np.int16, np.int8)):
+    if isinstance(obj, np.integer):
         return int(obj)
-    if isinstance(obj, (np.float64, np.float32, np.float16)):
+    if isinstance(obj, np.floating):
         return float(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
@@ -173,23 +173,45 @@ class StageData:
             )
             i += 1
 
+    def __unpack_logbook(
+        self, 
+        logbook: tools.Logbook, 
+        value_types: list[str] = ["min", "max", "avg", "std"],
+    ) -> dict:
+        log_dict = {}
+        for key in logbook.chapters.keys():
+            log_dict[key] = {}
+            for value_type in value_types:
+                log_dict[key][value_type] = logbook.chapters[key].select(
+                    value_type
+                )
+
+        return log_dict
+
     def save_log(
         self,
-        log: tools.Logbook,
-        log_capter_keys: list[str],
+        fitness_logbook: tools.Logbook,
+        global_logbook: tools.Logbook | None = None,
     ) -> None:
+        fitness_log_dict = self.__unpack_logbook(
+            logbook = fitness_logbook
+        )
+
+        global_log_dict = {}
+        if global_logbook is not None:
+            global_log_dict = self.__unpack_logbook(
+                logbook = global_logbook
+            )
+
         self.save_file_path = f"{self.run_dir}/stage_{self.stage_id}.json"
-
-        log_dict = {}
-        for key in log_capter_keys:
-            log_dict[key] = {}
-            log_dict[key]["min"] = log.chapters[key].select("min")
-            log_dict[key]["max"] = log.chapters[key].select("max")
-            log_dict[key]["avg"] = log.chapters[key].select("avg")
-            log_dict[key]["std"] = log.chapters[key].select("std")
-
         with open(self.save_file_path, "w") as f:
-            json.dump(log_dict, f, indent=4, default=convert_to_serializable)
+            json.dump(
+                {
+                    "fitness_log": fitness_log_dict,
+                    "global_log": global_log_dict,
+                }, 
+                f, indent=4, default=convert_to_serializable
+            )
 
 
 # ╒══════════════════════════════════════════════════════════╕
