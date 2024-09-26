@@ -7,6 +7,7 @@ from fucrimodo.core.utils.custom_soap import CustomSOAP
 import warnings
 from icecream import ic
 import numpy as np
+import ase
 
 def get_stream_str(
     record: dict, 
@@ -49,7 +50,7 @@ def create_offspring(
     toolbox: base.Toolbox,
     cxpb: float,
     mutpb: float,
-):
+) -> tuple[list[ase.Atoms], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     r"""Part of an evolutionary algorithm applying only the variation part
     (crossover **and** mutation). The modified individuals have their
     fitness invalidated. The individuals are cloned so returned population is
@@ -62,6 +63,11 @@ def create_offspring(
     :param mutpb: The probability of mutating an individual.
     :returns: A list of varied individuals that are independent of their
               parents.
+              And a dict with the crossover data and a dict with the mutation data.
+              This data contains the number of times the crossover or mutation
+              was called and how many times it was successful.
+              The keys are the names of the crossover or mutation operators
+              and the values are dicts with the keys "called" and "successful".
 
     The variation goes as follow. First, the parental population
     :math:`P_\mathrm{p}` is duplicated using the :meth:`toolbox.clone` method
@@ -86,6 +92,8 @@ def create_offspring(
     """
     offspring = [base.deepcopy(ind) for ind in population]
 
+    crossover_data = {}
+    mutation_data = {}
 
     # Apply crossover and mutation on the offspring
     iter_range = range(1, len(offspring), 2)
@@ -95,7 +103,7 @@ def create_offspring(
     ) as pbar:
         for i in iter_range:
             if random.random() < cxpb:
-                offspring[i - 1], offspring[i], success_bool = toolbox.mate( # type: ignore
+                offspring[i - 1], offspring[i], success_bool, crossover_name = toolbox.mate( # type: ignore
                     offspring[i - 1],
                     offspring[i]
                 )
@@ -103,6 +111,17 @@ def create_offspring(
                 if success_bool:
                     performed_crossover[i - 1] = 1
                     performed_crossover[i] = 1
+
+                if crossover_name in crossover_data.keys():
+                    crossover_data[crossover_name]["called"] += 1
+                else:
+                    crossover_data[crossover_name] = {
+                        "called": 1,
+                        "successful": 0
+                    }
+
+                if success_bool:
+                    crossover_data[crossover_name]["successful"] += 1
 
                 reset_individual(offspring[i])
                 reset_individual(offspring[i - 1])
@@ -116,11 +135,22 @@ def create_offspring(
     ) as pbar:
         for i in iter_range:
             if random.random() < mutpb:
-                offspring[i], success_bool = toolbox.mutate( # type: ignore
+                offspring[i], success_bool, mutation_name = toolbox.mutate( # type: ignore
                     offspring[i]
                 )
                 if success_bool:
                     performed_mutation[i] = 1
+
+                if mutation_name in mutation_data.keys():
+                    mutation_data[mutation_name]["called"] += 1
+                else:
+                    mutation_data[mutation_name] = {
+                        "called": 1,
+                        "successful": 0
+                    }
+
+                if success_bool:
+                    mutation_data[mutation_name]["successful"] += 1
 
                 reset_individual(offspring[i])
 
@@ -137,7 +167,7 @@ def create_offspring(
     ic("Modified {} individuals".format(len(modified_offspring)))
     ic("Only using modified individuals as offspring")
 
-    return modified_offspring
+    return modified_offspring, crossover_data, mutation_data
 
 
 def update_fitnesses(
@@ -200,7 +230,7 @@ def myEaSimple(
     halloffame: tools.HallOfFame | None = None,
     verbose=__debug__,
     progress_bar_title: str = "Evolving...",
-) -> tuple[list, tools.Logbook, None | tools.Logbook]:
+) -> tuple[list, tools.Logbook, None | tools.Logbook, dict[int, dict[str, dict[str, int]]], dict[int, dict[str, dict[str, int]]]]:
     """
     My own version of the DEAP eaSimple function.
     It uses break_condition, which is a function that takes the population
@@ -256,7 +286,8 @@ def myEaSimple(
 
         print(stream_str)
 
-
+    crossover_stage_data = {}
+    mutation_stage_data = {}
 
     iter_range = range(1, ngen + 1)
     with tqdm(iter_range, desc=progress_bar_title) as outer_pbar:
@@ -272,7 +303,10 @@ def myEaSimple(
 
             ic("Selected {} parents".format(len(parents)))
 
-            offspring = create_offspring(parents, toolbox, cxpb, mutpb)
+            offspring, cross_data, mut_data = create_offspring(parents, toolbox, cxpb, mutpb)
+
+            crossover_stage_data[gen] = cross_data
+            mutation_stage_data[gen] = mut_data
 
             nevals = update_fitnesses(offspring, toolbox, soap_obj)
 
@@ -335,4 +369,4 @@ def myEaSimple(
                 print()
                 break
 
-    return population, fitness_logbook, global_logbook
+    return population, fitness_logbook, global_logbook, crossover_stage_data, mutation_stage_data

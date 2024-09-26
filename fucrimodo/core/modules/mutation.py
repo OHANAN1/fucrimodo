@@ -27,10 +27,11 @@ class Mutation(ABC):
     def __repr__(self):
         class_name = self.__class__.__name__
         variables = vars(self)
-        variables.pop("closest_distances")
 
         variables_str = ' '
         for key, value in variables.items():
+            if key == "closest_distances" or key == "cell_bounds":
+                continue
             variables_str += f'{key}={value}, '
 
         variables_str = variables_str[:-2]

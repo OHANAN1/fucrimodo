@@ -131,7 +131,6 @@ class Stage:
         mstats = tools.MultiStatistics(
             **fitness_stats_dict
         )
-
         mstats.register("avg", np.mean)
         mstats.register("max", np.max)
         mstats.register("min", np.min)
@@ -170,19 +169,33 @@ class Stage:
         def crossover(
             parent1: ase.Atoms,
             parent2: ase.Atoms
-        ) -> tuple[ase.Atoms, ase.Atoms, bool]:
+        ) -> tuple[ase.Atoms, ase.Atoms, bool, str]:
             selected_crossover = random.choices(
                 crossover_list,
                 weights=crossover_weights
             )[0]
-            return selected_crossover.crossover(parent1, parent2)
 
-        def mutate(individual: ase.Atoms) -> tuple[ase.Atoms, bool]:
+            if hasattr(selected_crossover, "__repr__"):
+                crossover_name = selected_crossover.__repr__()
+            else:
+                crossover_name = selected_crossover.__class__.__name__
+
+            return selected_crossover.crossover(parent1, parent2) + \
+                (crossover_name,)
+
+        def mutate(individual: ase.Atoms) -> tuple[ase.Atoms, bool, str]:
             selected_mutation = random.choices(
                 mutation_list,
                 weights=mutation_weights
             )[0]
-            return selected_mutation.mutate(individual)
+
+            if hasattr(selected_mutation, "__repr__"):
+                mutation_name = selected_mutation.__repr__()
+            else:
+                mutation_name = selected_mutation.__class__.__name__
+
+            return selected_mutation.mutate(individual) + \
+                (mutation_name,)
 
         toolbox = base.Toolbox()
 
@@ -270,8 +283,7 @@ class Stage:
         soap_obj: CustomSOAP | None = None,
         global_statistics_dict: dict[str, Callable[[ase.Atoms], float]] | None = None,
     ) -> list[ase.Atoms]:
-        """
-        This is the main function of this class.
+        """This is the main function of this class.
         It runs the GeneticAlgorithm with the set parameters.
         It then analyses the gen alg run and adds the data to the
         saves the data with the stage_data.
@@ -316,7 +328,7 @@ class Stage:
             creator.Individual(ind) for ind in start_pop  # type: ignore
         ]
 
-        pop, fitness_logbook, global_logbook = myEaSimple(
+        pop, fitness_logbook, global_logbook, cross_log, mut_log = myEaSimple(
             population=population,
             toolbox=toolbox,
             cxpb=self.stage_data.crossover_probability,
@@ -333,6 +345,8 @@ class Stage:
         self.stage_data.save_log(
             fitness_logbook=fitness_logbook,
             global_logbook=global_logbook,
+            crossover_log=cross_log,
+            mutation_log=mut_log
         )
 
         hof_crystals, hof_key_value_pairs_list = self.get_hall_of_fame_data(
