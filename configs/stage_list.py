@@ -117,8 +117,6 @@ def get_stage_list(
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,
             break_condition=exploration_break,
-            additional_statistics_func = additional_statistics_func,
-            add_stats_func_name = add_stats_func_name
         ))
 
         stage_list.append(data_handeling.StageData(
@@ -127,8 +125,6 @@ def get_stage_list(
             fitness_functions=species_specific_fitnesses[0:i+1] + [soap_fitness_mid],
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,
-            additional_statistics_func=additional_statistics_func,
-            add_stats_func_name=add_stats_func_name,
             break_condition=optimization_break
         ))
 
@@ -138,8 +134,6 @@ def get_stage_list(
         fitness_functions=species_specific_fitnesses,
         crossover_list=explore_cross_1,
         mutation_list=all_opti_muts,
-        additional_statistics_func=additional_statistics_func,
-        add_stats_func_name=add_stats_func_name,
         break_condition=optimization_break
     ))
 
@@ -149,8 +143,6 @@ def get_stage_list(
         fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
         crossover_list=explore_cross_2,
         mutation_list=all_muts_1,
-        additional_statistics_func=additional_statistics_func,
-        add_stats_func_name=add_stats_func_name,
         break_condition=exploration_break
     ))
 
@@ -160,8 +152,6 @@ def get_stage_list(
         fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
         crossover_list=explore_cross_2,
         mutation_list=all_opti_muts,
-        additional_statistics_func=additional_statistics_func,
-        add_stats_func_name=add_stats_func_name,
         break_condition=optimization_break
     ))
 

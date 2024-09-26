@@ -30,9 +30,9 @@ def print_run_info_json(save_path: str):
     print(json.dumps(run_info, indent=4))
 
 def convert_to_serializable(obj):
-    if isinstance(obj, (np.int64, np.int32, np.int16, np.int8)):
+    if isinstance(obj, np.integer):
         return int(obj)
-    if isinstance(obj, (np.float64, np.float32, np.float16)):
+    if isinstance(obj, np.floating):
         return float(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
@@ -59,8 +59,6 @@ class StageData:
         crossover_list: list[Crossover | tuple[Crossover, float]],  # noqa
         mutation_list: Sequence[Mutation | tuple[Mutation, float]],
         break_condition: BreakCondition,
-        additional_statistics_func: Callable[[ase.Atoms], float] | None = None,
-        add_stats_func_name: str | None = None,
     ) -> None:
         self.start_population_selection = start_population_selection
 
@@ -111,8 +109,6 @@ class StageData:
 
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
-        self.additional_statistics_func = additional_statistics_func
-        self.add_stats_func_name = add_stats_func_name
         self.break_condition = break_condition
         self.n_generations = number_of_generations
 
@@ -173,23 +169,45 @@ class StageData:
             )
             i += 1
 
+    def __unpack_logbook(
+        self, 
+        logbook: tools.Logbook, 
+        value_types: list[str] = ["min", "max", "avg", "std"],
+    ) -> dict:
+        log_dict = {}
+        for key in logbook.chapters.keys():
+            log_dict[key] = {}
+            for value_type in value_types:
+                log_dict[key][value_type] = logbook.chapters[key].select(
+                    value_type
+                )
+
+        return log_dict
+
     def save_log(
         self,
-        log: tools.Logbook,
-        log_capter_keys: list[str],
+        fitness_logbook: tools.Logbook,
+        global_logbook: tools.Logbook | None = None,
     ) -> None:
+        fitness_log_dict = self.__unpack_logbook(
+            logbook = fitness_logbook
+        )
+
+        global_log_dict = {}
+        if global_logbook is not None:
+            global_log_dict = self.__unpack_logbook(
+                logbook = global_logbook
+            )
+
         self.save_file_path = f"{self.run_dir}/stage_{self.stage_id}.json"
-
-        log_dict = {}
-        for key in log_capter_keys:
-            log_dict[key] = {}
-            log_dict[key]["min"] = log.chapters[key].select("min")
-            log_dict[key]["max"] = log.chapters[key].select("max")
-            log_dict[key]["avg"] = log.chapters[key].select("avg")
-            log_dict[key]["std"] = log.chapters[key].select("std")
-
         with open(self.save_file_path, "w") as f:
-            json.dump(log_dict, f, indent=4, default=convert_to_serializable)
+            json.dump(
+                {
+                    "fitness_log": fitness_log_dict,
+                    "global_statistics_log": global_log_dict,
+                }, 
+                f, indent=4, default=convert_to_serializable
+            )
 
 
 # ╒══════════════════════════════════════════════════════════╕
@@ -210,9 +228,11 @@ class RunData:
         run_dir_name: str|None = None,
         save_n_best_crystals: int = 10,
         log_enable: bool = True,
+        global_statistics_dict: dict[str, Callable[[ase.Atoms], float]] | None = None,
     ) -> None:
 
         self.save_n_best_crystals = save_n_best_crystals
+        self._global_statistics_dict = global_statistics_dict
 
         # Assign fixed soap parameters
         self.soap_object = soap_object
@@ -226,6 +246,21 @@ class RunData:
         if log_enable:
             log_file_path = f"{self.run_dir}/run_log.log"
             debug_tools.setup_logging(log_file_path)
+
+    @property
+    def global_statistics_dict(
+        self
+    ) -> dict[str, Callable[[ase.Atoms], float]] | None:
+        """A dictionary with the global statistics functions.
+
+        Optional. Can be used to track statistics for all generations of
+        all stages. The statistics are tracked at the same time as the
+        fitness statistics. The statistics are saved in the log file.
+        The keys are the names of the functions and the values are the
+        functions themselves. The functions should take an ase.Atoms object
+        as input and return a float.
+        """
+        return self._global_statistics_dict
 
     def get_time_string(self) -> str:
         now = datetime.datetime.now()

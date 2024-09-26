@@ -1,3 +1,4 @@
+from enum import global_str
 from tqdm.gui import tqdm
 from fucrimodo.customs.crossovers import Crossover
 
@@ -19,37 +20,37 @@ from copy import deepcopy
 # ║                    Utility functions                     ║
 # ╚══════════════════════════════════════════════════════════╝
 
-def make_fitness_function_titles_unique(
-    fitness_functions: list[FitnessFunction],
-) -> None:
+def get_unique_keys(
+    keys: list[str],
+) -> list[str]:
     """
-    Checks if names of fitness functions are unique.
-    If not, appends a letter to the name to make it unique.
-    New name is then saved as db_title in the fitness function.
-    This is done to prevent overwriting of data in the database.
+    Checks if provided keys are unique. If not will append a letter to the key.
+
+    :param keys: List of keys that should be unique
+
+    :return: List of unique keys
+
+    :raises ValueError: If too many keys with the same name exit (more than 10)
     """
-    title_append_list = [
+    key_append_list = [
         "A", "B", "C", "D", "E", "F", "G", "H", "I", "J"
     ]
-    unique_titles = []
-    for i, fitness_function in enumerate(fitness_functions):
-        title = fitness_function.get_db_title()
-        step = 0
+    unique_keys = []
+    for key in keys:
 
-        new_title = title
-        while new_title in unique_titles:
-            new_title = title + "_" + title_append_list[i]
-            step += 1
-            if step == len(title_append_list):
+        new_key = key 
+        rerun_step = 0
+        while new_key in unique_keys:
+            new_key = key + "_" + key_append_list[rerun_step]
+            rerun_step += 1
+            if rerun_step == len(key_append_list):
                 raise ValueError(
                     "Too many fitness functions with the same name."
                 )
 
-        if new_title != title:
-            fitness_function.set_db_title(new_title)
-            unique_titles.append(new_title)
-        else:
-            unique_titles.append(title)
+        unique_keys.append(new_key)
+
+    return unique_keys
 
 
 #  ╒══════════════════════════════════════════════════════════╕
@@ -66,35 +67,59 @@ class Stage:
     def __init__(self, stage_data: data_handeling.StageData) -> None:
         self.stage_data = stage_data
 
-    def create_stats(
-        self,
-        fitness_functions: list[FitnessFunction],
-        add_stats_func: Callable[[ase.Atoms], float] | None = None,
-        add_stats_func_name: str | None = None
+    def __create_global_statistics(
+        self, global_stats_dict: dict[str, Callable[[ase.Atoms], float]]
+    ) -> tuple[tools.MultiStatistics, list[str]]:
+        capter_keys = []
+        stats_dict = {}
+
+        for key, func in global_stats_dict.items():
+            stats_dict[key] = tools.Statistics(
+                key=func
+            )
+            capter_keys.append(key)
+
+        mstats = tools.MultiStatistics(**stats_dict)
+        mstats.register("avg", np.mean)
+        mstats.register("max", np.max)
+        mstats.register("min", np.min)
+        mstats.register("std", np.std)
+
+        return mstats, capter_keys
+
+    def __create_fitness_statistics(
+        self
     ) -> tuple[tools.MultiStatistics, list[str]]:
         """
-        Creates a statistics object for the Genetic Algorithm.
-        Automatically registers the mean, max and min fitness.
-        For an additional evaluation function the mean, max and min value is
-        also registered.
-        Returns the statistics object and a list of the header names.
+        Creates the :class:`deap.tools.MultiStatistics` objects to track statistics.
+
+        Uses the :attr:`FitnessFunction.db_titles` of each fitness of the 
+        stage to set the chapter of the :class:`deap.tools.MultiStatistics` 
+        object.
+        If a name is set multiple times, a letter is appended to the name.
+        For the fitness functions and global statistics the mean, max, min
+        and std values are tracked for each generation.
+
+        :param fitness_functions: List of the fitness functions that are used
+            during the stage
+
+        :return: A tuple that contains the MultiStatistics object and a list of 
+            the chapter keys that are set for the fitness functions.
         """
         capter_keys = []
         fitness_stats_dict = {}
 
+        # Uses the index of the fitness to get the specific value that is stored
+        # in the individual.
         def get_specific_fit_val(ind, index):
             return ind.fitness.values[index]
 
-        fitness_stats_dict["TotalFitness"] = tools.Statistics(
-            key=lambda ind: ind.fitness.values
-        )
-        capter_keys.append("TotalFitness")
+        unique_fitness_names = get_unique_keys([
+            fitness_function.get_db_title() 
+            for fitness_function in self.stage_data.fitness_functions
+        ])
 
-        make_fitness_function_titles_unique(fitness_functions)
-
-        for i, fitness_function in enumerate(fitness_functions):
-            name = fitness_function.get_db_title()
-
+        for i, name in enumerate(unique_fitness_names):
             # use partial to prevent lambda usage in loop,
             # because lamda in loop is not good
             key_func = functools.partial(get_specific_fit_val, index=i)
@@ -103,35 +128,16 @@ class Stage:
             )
             capter_keys.append(name)
 
-        if add_stats_func is not None:
-            stats = tools.Statistics(key=lambda ind: add_stats_func(ind))
-            func_name = add_stats_func_name
-            if func_name is None:
-                func_name = add_stats_func.__name__
-
-            ic("Adding fitness_stats_dict to MultiStatistics")
-            ic(f"fitness_stats_dict: {fitness_stats_dict}")
-            ic(f"chapter_keys: {capter_keys}")
-            mstats = tools.MultiStatistics(
-                **fitness_stats_dict,
-                **{func_name: stats}
-            )
-            capter_keys.append(func_name)
-
-        else:
-            ic("Adding fitness_stats_dict to MultiStatistics")
-            ic(f"fitness_stats_dict: {fitness_stats_dict}")
-            ic(f"chapter_keys: {capter_keys}")
-            mstats = tools.MultiStatistics(
-                **fitness_stats_dict
-            )
+        mstats = tools.MultiStatistics(
+            **fitness_stats_dict
+        )
 
         mstats.register("avg", np.mean)
         mstats.register("max", np.max)
         mstats.register("min", np.min)
         mstats.register("std", np.std)
 
-        return mstats, capter_keys
+        return mstats, unique_fitness_names
 
     def create_gen_alg_toolbox(
         self,
@@ -195,8 +201,9 @@ class Stage:
         self,
         hall_of_fame: tools.HallOfFame,
         fitness_functions: list[FitnessFunction],
-        add_stats_func: Callable[[ase.Atoms], float] | None = None,
-        add_stats_func_name: str | None = None
+        fitness_keys: list[str],
+        global_statistics_dict: dict[str, Callable[[ase.Atoms], float]] | None = None,
+        global_stats_keys: list[str] | None = None
     ) -> tuple[list[ase.Atoms], list[dict]]:
         """
         Returns the best crystal and the key value pairs for the best crystal.
@@ -208,16 +215,12 @@ class Stage:
             key_value_pairs = {}
             key_value_pairs["type"] = "hof"
 
-            for fitness_function in fitness_functions:
-                key_value_pairs[fitness_function.get_db_title()] = (
-                    fitness_function.evaluate_individual(crystal)
-                )
+            for i, fitness_function in enumerate(fitness_functions):
+                key_value_pairs[fitness_keys[i]] = fitness_function.evaluate_individual(crystal)
 
-            if add_stats_func is not None:
-                if add_stats_func_name is None:
-                    add_stats_func_name = add_stats_func.__name__
-                value = add_stats_func(crystal)
-                key_value_pairs[add_stats_func_name] = value
+            if global_statistics_dict is not None and global_stats_keys is not None:
+                for i, func in enumerate(global_statistics_dict.values()):
+                    key_value_pairs[global_stats_keys[i]] = func(crystal)
 
             hof_key_value_pairs_list.append(key_value_pairs)
 
@@ -265,6 +268,7 @@ class Stage:
         adjust_fitness_functions: bool = True,
         title: str = "Gen Alg",
         soap_obj: CustomSOAP | None = None,
+        global_statistics_dict: dict[str, Callable[[ase.Atoms], float]] | None = None,
     ) -> list[ase.Atoms]:
         """
         This is the main function of this class.
@@ -297,11 +301,14 @@ class Stage:
             break_condition=self.stage_data.break_condition
         )
 
-        mstats, log_chapter_keys = self.create_stats(
-            fitness_functions=self.stage_data.fitness_functions,
-            add_stats_func=self.stage_data.additional_statistics_func,
-            add_stats_func_name=self.stage_data.add_stats_func_name
-        )
+        fitness_stats, fitness_keys = self.__create_fitness_statistics()
+        if global_statistics_dict is not None:
+            global_stats, global_stats_keys = self.__create_global_statistics(
+                global_stats_dict=global_statistics_dict
+            )
+        else:
+            global_stats = None
+            global_stats_keys = None
 
         hall_of_fame = tools.HallOfFame(self.stage_data.save_n_best_crystals)
 
@@ -309,40 +316,43 @@ class Stage:
             creator.Individual(ind) for ind in start_pop  # type: ignore
         ]
 
-        pop, log = myEaSimple(
+        pop, fitness_logbook, global_logbook = myEaSimple(
             population=population,
             toolbox=toolbox,
             cxpb=self.stage_data.crossover_probability,
             mutpb=self.stage_data.mutation_probability,
             ngen=self.stage_data.n_generations,
-            stats=mstats,
+            fitness_stats=fitness_stats,
+            global_stats=global_stats,
             halloffame=hall_of_fame,
             verbose=True,
             progress_bar_title=title,
             soap_obj=soap_obj,
         )
 
-        self.stage_data.save_log(log, log_chapter_keys)
+        self.stage_data.save_log(
+            fitness_logbook=fitness_logbook,
+            global_logbook=global_logbook,
+        )
 
         hof_crystals, hof_key_value_pairs_list = self.get_hall_of_fame_data(
             hall_of_fame=hall_of_fame,
             fitness_functions=self.stage_data.fitness_functions,
-            add_stats_func=self.stage_data.additional_statistics_func,
-            add_stats_func_name=self.stage_data.add_stats_func_name
+            fitness_keys=fitness_keys,
+            global_statistics_dict=global_statistics_dict,
+            global_stats_keys=global_stats_keys
         )
 
-        best_crystals, best_key_value_pairs_list = (
-            self.get_best_crystals_of_last_generation(
-                population=pop,
-                fitness_functions=self.stage_data.fitness_functions,
-                add_stats_func=self.stage_data.additional_statistics_func,
-                add_stats_func_name=self.stage_data.add_stats_func_name
-            )
-        )
+        # best_crystals, best_key_value_pairs_list = (
+        #     self.get_best_crystals_of_last_generation(
+        #         population=pop,
+        #         fitness_functions=self.stage_data.fitness_functions,
+        #         global_statistics_dict=global_statistics_dict,
+        #     )
+        # )
 
         self.stage_data.save_crystals_in_db(
-            hof_crystals + best_crystals,
-            hof_key_value_pairs_list + best_key_value_pairs_list
+            hof_crystals, hof_key_value_pairs_list
         )
 
         return pop
@@ -365,7 +375,6 @@ class MultiGenAlgSearch:
 
         self.run_data.add_start_time()
         for i in range(self.run_data.n_stages):
-
             id = i + 1
 
             # print("Running Stage: {}/{}".format(
@@ -382,16 +391,11 @@ class MultiGenAlgSearch:
                 n_generations=config_data.n_generations,
                 start_pop=start_pop,
                 title=f"Stage {id}/{self.run_data.n_stages}. Gen Alg",
-                soap_obj=self.run_data.soap_object
+                soap_obj=self.run_data.soap_object,
+                global_statistics_dict = self.run_data.global_statistics_dict
             )
 
-            individuals = []
-            for ind in final_pop:
-                # # Remove fitness values from individuals for next run
-                # if hasattr(ind, "fitness"):
-                #     del ind.fitness  # type: ignore
-
-                individuals.append(ind)
+            individuals = final_pop
 
         # NOTE: The following should not be here but be in the main file!
         print()

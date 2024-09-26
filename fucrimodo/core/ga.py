@@ -8,11 +8,12 @@ import warnings
 from icecream import ic
 import numpy as np
 
-def get_stream_str(record: dict) -> str:
+def get_stream_str(
+    record: dict, 
+    text_colors: list[str] = ["\033[30m", "\033[30m"], # black, black
+    bg_colors: list[str] = ["\033[43m", "\033[46m"], # yellow, cyan
+) -> str:
     RESET = "\033[0m"
-    BLACK_TEXT = "\033[30m"
-    YELLOW_BG = "\033[43m"
-    CYAN_BG = "\033[46m"
 
     max_key_len = int(max([len(key) for key in record.keys()]))
     stream_str = ""
@@ -20,9 +21,9 @@ def get_stream_str(record: dict) -> str:
     for key, value in record.items():
 
         if i % 2 == 0:
-            stream_str += f"{BLACK_TEXT}{CYAN_BG}"
+            stream_str += f"{text_colors[0]}{bg_colors[0]}"
         else:
-            stream_str += f"{BLACK_TEXT}{YELLOW_BG}"
+            stream_str += f"{text_colors[1]}{bg_colors[1]}"
 
         stream_str += f"{key:<{max_key_len}}: "
         for key2, value2 in value.items():
@@ -193,12 +194,13 @@ def myEaSimple(
     cxpb: float,
     mutpb: float,
     ngen: int,
+    fitness_stats: tools.MultiStatistics,
+    global_stats: None | tools.MultiStatistics = None,
     soap_obj: CustomSOAP | None = None,
-    stats=None,
     halloffame: tools.HallOfFame | None = None,
     verbose=__debug__,
     progress_bar_title: str = "Evolving...",
-):
+) -> tuple[list, tools.Logbook, None | tools.Logbook]:
     """
     My own version of the DEAP eaSimple function.
     It uses break_condition, which is a function that takes the population
@@ -220,23 +222,41 @@ def myEaSimple(
     for ind in population:
         reset_individual(ind)
 
-    logbook = tools.Logbook()
-    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])  # type: ignore # noqa
+    fitness_logbook = tools.Logbook()
+    fitness_logbook.header = ['gen', 'nevals'] + fitness_stats.fields # type: ignore # noqa
 
     nevals = update_fitnesses(population, toolbox, soap_obj)
 
     if halloffame is not None:
         halloffame.update(population)
 
-    record = stats.compile(population) if stats else {}
-    logbook.record(gen=0, nevals=nevals, **record)
+    fitness_record = fitness_stats.compile(population)
+    fitness_logbook.record(gen=0, nevals=nevals, **fitness_record)
+
+    if global_stats is not None:
+        global_logbook = tools.Logbook()
+        global_logbook.header = ['gen'] + (global_stats.fields)  # type: ignore # noqa
+
+        global_record = global_stats.compile(population)
+        global_logbook.record(gen=0, **global_record)
+    else:
+        global_logbook = None
+        global_record = None
 
     if verbose:
         print()
         print("Evolving...")
         print()
         print(f"Gen: 0, n_evals: {nevals}, pop_size: {len(population)}")
-        print(get_stream_str(record))
+        stream_str = get_stream_str(fitness_record)
+
+        if global_record is not None:
+            stream_str += "--> Global Stats:\n"
+            stream_str += get_stream_str(global_record)
+
+        print(stream_str)
+
+
 
     iter_range = range(1, ngen + 1)
     with tqdm(iter_range, desc=progress_bar_title) as outer_pbar:
@@ -245,7 +265,6 @@ def myEaSimple(
 
             ic("Evolving Gen: ", gen)
             ic("Population size: ", len(population))
-            # ic("Population: ", population)
 
             parents = toolbox.select_parents(  # type: ignore
                 population, len(population)
@@ -285,8 +304,12 @@ def myEaSimple(
             if halloffame is not None:
                 halloffame.update(new_population)
 
-            record = stats.compile(new_population) if stats else {}
-            logbook.record(gen=gen, nevals=nevals, **record)
+            fitness_record = fitness_stats.compile(new_population)
+            fitness_logbook.record(gen=gen, nevals=nevals, **fitness_record)
+
+            if global_stats is not None and global_logbook is not None:
+                global_record = global_stats.compile(new_population)
+                global_logbook.record(gen=gen, **global_record)
 
             population[:] = new_population
 
@@ -294,7 +317,13 @@ def myEaSimple(
                 outer_pbar.write(
                     f"Gen: {gen}, n_evals: {nevals}, pop_size: {len(population)}"
                 )
-                outer_pbar.write(get_stream_str(record))
+
+                stream_str = get_stream_str(fitness_record)
+                if global_record is not None:
+                    stream_str += "--> Global Stats:\n"
+                    stream_str += get_stream_str(global_record)
+
+                outer_pbar.write(stream_str)
                 outer_pbar.refresh()
                 outer_pbar.update(1)
 
@@ -306,4 +335,4 @@ def myEaSimple(
                 print()
                 break
 
-    return population, logbook
+    return population, fitness_logbook, global_logbook
