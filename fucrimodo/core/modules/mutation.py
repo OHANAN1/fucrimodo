@@ -27,6 +27,7 @@ class Mutation(ABC):
     def __repr__(self):
         class_name = self.__class__.__name__
         variables = vars(self)
+        variables.pop("closest_distances")
 
         variables_str = ' '
         for key, value in variables.items():

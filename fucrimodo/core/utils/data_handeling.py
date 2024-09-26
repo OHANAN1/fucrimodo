@@ -3,6 +3,7 @@ import json
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.core.utils import debug_tools
 from fucrimodo.core.modules import Mutation, Crossover, PopulationSelection, FitnessFunction, BreakCondition
+from fucrimodo.core.utils.class_parser import convert_class_to_writeable_dict
 import datetime
 import os
 import ase
@@ -187,6 +188,8 @@ class StageData:
     def save_log(
         self,
         fitness_logbook: tools.Logbook,
+        mutation_log: dict[int, dict[str, dict[str, int]]],
+        crossover_log: dict[int, dict[str, dict[str, int]]],
         global_logbook: tools.Logbook | None = None,
     ) -> None:
         fitness_log_dict = self.__unpack_logbook(
@@ -205,7 +208,9 @@ class StageData:
                 {
                     "fitness_log": fitness_log_dict,
                     "global_statistics_log": global_log_dict,
-                }, 
+                    "mutation_data": mutation_log,
+                    "crossover_data": crossover_log,
+                },
                 f, indent=4, default=convert_to_serializable
             )
 
@@ -398,48 +403,9 @@ class RunData:
             id = i + 1
 
             stage_params = self.get_stage_data(id).get_params_dict()
-            for key, value in stage_params.items():
-                if isinstance(value, float) or isinstance(value, int):
-                    stage_params[key] = value
-
-                elif isinstance(value, list):
-                    if len(value) == 0:
-                        stage_params[key] = "empty list"
-                        continue
-                    # if isinstance(value[0], tuple):
-                    #     value_dict = {}
-                    #     for i, item in enumerate(value):
-                    #         if isinstance(item[0], str):
-                    #             value_dict[item[0]] = item[1]
-                    #         else:
-                    #             value_dict[f"item_{id}"] = item
-                    #     stage_params[key] = value_dict
-
-                    elif isinstance(
-                            value[0], int
-                        ) or isinstance(
-                            value[0], float
-                        ):
-                        stage_params[key] = value
-                        continue
-
-                    value_dict = {}
-                    for item in value:
-                        if hasattr(item, "__dict__"):
-                            value_dict[item.__class__.__name__] = str(
-                                item.__dict__
-                            )
-                        else:
-                            value_dict[item.__class__.__name__] = item
-
-                    stage_params[key] = value_dict
-
-                elif hasattr(value, "__dict__"):
-                    stage_params[key] = {
-                        value.__class__.__name__: str(value.__dict__)
-                    }
-
-            stage_info[f"stage_{id}"] = stage_params
+            stage_info[f"stage_{id}"] = convert_class_to_writeable_dict(
+                stage_params
+            )
 
         run_info["stage_info"] = stage_info
 
