@@ -16,12 +16,16 @@ author = 'Louis Boehm, Martin Kuban'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',  # Optional, für automatisch generierte Zusammenfassungen
+    'nbsphinx', # Um Jupyter Notebooks zu rendern
 ]
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+autosummary_generate = True  # Erzeugt automatisch Zusammenfassungen
 
+# Führe Notebooks immer aus wenn sie gerendert werden
+nbsphinx_execute = 'always'
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
