@@ -101,7 +101,6 @@
 #         target_soap_features=target_features,
 #         secrets={}
 #     )
-
 from fucrimodo.cli.main import main
 
 if __name__ == "__main__":
