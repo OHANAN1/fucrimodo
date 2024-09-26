@@ -232,9 +232,11 @@ class RunData:
         run_dir_name: str|None = None,
         save_n_best_crystals: int = 10,
         log_enable: bool = True,
+        global_statistics_dict: dict[str, Callable[[ase.Atoms], float]] | None = None,
     ) -> None:
 
         self.save_n_best_crystals = save_n_best_crystals
+        self._global_statistics_dict = global_statistics_dict
 
         # Assign fixed soap parameters
         self.soap_object = soap_object
@@ -248,6 +250,21 @@ class RunData:
         if log_enable:
             log_file_path = f"{self.run_dir}/run_log.log"
             debug_tools.setup_logging(log_file_path)
+
+    @property
+    def global_statistics_dict(
+        self
+    ) -> dict[str, Callable[[ase.Atoms], float]] | None:
+        """A dictionary with the global statistics functions.
+
+        Optional. Can be used to track statistics for all generations of
+        all stages. The statistics are tracked at the same time as the
+        fitness statistics. The statistics are saved in the log file.
+        The keys are the names of the functions and the values are the
+        functions themselves. The functions should take an ase.Atoms object
+        as input and return a float.
+        """
+        return self._global_statistics_dict
 
     def get_time_string(self) -> str:
         now = datetime.datetime.now()
