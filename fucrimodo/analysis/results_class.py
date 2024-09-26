@@ -74,11 +74,31 @@ class StageResults():
         return self._key_value_pairs
 
     @property
-    def stage_dict(self) -> dict[str, Any]:
+    def stage_dict(self) -> dict[str, dict[str, dict[str, list]]]:
         """
         Holds the data that is saved in the stage_[:data:`id`].json file.
         """
         return self._stage_dict
+
+    @property
+    def fitness_log(self) -> dict[str, dict[str, list]]:
+        """The fitness values that where tracked during the stage.
+
+        Keys are the names of the fitness functions and the values are dicts
+        with the different value types that where tracked for each generation.
+        Normally the value types are 'mean', 'std', 'min', 'max'.
+        """
+        return self._stage_dict["fitness_log"]
+
+    @property
+    def global_statistics_log(self) -> dict[str, dict[str, list]]:
+        """The global statistics were tracked for each generation during the stage.
+
+        Keys are the names of the statistics and the values are dicts
+        with the different value types that where tracked for each generation.
+        Normally the value types are 'mean', 'std', 'min', 'max'.
+        """
+        return self._stage_dict["global_log"]
 
     @property
     def name(self) -> str:
@@ -106,7 +126,7 @@ class StageResults():
 
     def __load_stage_dict_from_file(
         self, stage_file_path: str
-    ) -> dict[str, dict[str, list]]:
+    ) -> dict[str, dict[str, dict[str, list]]]:
         with open(stage_file_path, "r") as f:
             stage_dict = json.load(f)
         return stage_dict

@@ -107,11 +107,11 @@ class AnalyseStage():
         elif type(value) == StageResults:
             self._stage_results = value
 
-    @property
-    def valid_statistics_keys(self) -> list[str]:
-        return list(self._stage_results.stage_dict.keys())
+    # @property
+    # def valid_global_statistics_keys(self) -> list[str]:
+    #     return list(self._stage_results.stage_dict.keys())
 
-    def get_statistics_values(
+    def get_global_statistics_values(
         self, statistics_key: str, value_type: str | None = None
     ) -> dict[str, list] | list:
         """
@@ -130,13 +130,16 @@ class AnalyseStage():
         :raises KeyError: If the given :data:`statistics_key` could not be 
             found in the data saved during the stage.
         """
-        self.__is_valid_statics_keys(key=statistics_key, raise_error=True)
-        if value_type is not None:
-            stat_values = self._stage_results.stage_dict[statistics_key][value_type]
-        else:
-            stat_values = self._stage_results.stage_dict[statistics_key]
+        self.__is_valid_global_statics_keys(
+            key=statistics_key, raise_error=True
+        )
+        stat_values = self._stage_results.global_statistics_log[statistics_key]
 
-        return stat_values
+        if value_type is None:
+            return stat_values
+        else:
+            return stat_values[value_type]
+
 
     def get_best_crystal_tuple(
         self, statistics_key: str, invert: bool = False
@@ -171,7 +174,7 @@ class AnalyseStage():
             self.stage_results.key_value_pairs[crystal_index]
         )
 
-    def __is_valid_statics_keys(
+    def __is_valid_global_statics_keys(
         self, key: str | None, raise_error: bool = False
     ) -> NoReturn | bool :
         """
@@ -185,7 +188,7 @@ class AnalyseStage():
         :raise KeyError: Only when :data:raise_error is True and provided key
             is not valid.
         """
-        valid_keys = self.valid_statistics_keys
+        valid_keys = self._stage_results.global_statistics_log.keys()
         if key in valid_keys:
             return True
         else:
@@ -245,13 +248,9 @@ class AnalyseRun():
         for stage in value.stages:
             self._stages.append(AnalyseStage(stage_results=stage))
 
-    def get_shared_statistic_keys(self) -> list[str]:
-        """List of the statistic keys that all stages share."""
-        all_keys = []
-        for stage in self.stages:
-            all_keys.append(set(stage.stage_results.stage_dict.keys()))
-        all_keys = set.intersection(*all_keys)
-        return list(all_keys)
+    def get_global_statistics_keys(self) -> list[str]:
+        """List of the global statistic keys that all stages share."""
+        return list(self.stages[0].stage_results.global_statistics_log.keys())
 
     def get_number_of_stages(self) -> int:
         return self.run_results.n_stages
@@ -302,7 +301,7 @@ class AnalyseRun():
             total_steps += stage_analys.stage_results.n_generations
         return total_steps
 
-    def get_statistic_values_all_stages(
+    def get_global_statistic_values_all_stages(
         self,
         statistics_key: str, 
         value_type: str | None = None
@@ -326,14 +325,14 @@ class AnalyseRun():
         :raises KeyError: If the given :data:`statistics_key` could not be 
             found in all stages.
         """
-        assert statistics_key in self.get_shared_statistic_keys(), (
+        assert statistics_key in self.get_global_statistics_keys(), (
             f"Key {statistics_key} not in shared keys."
         )
 
         statistics_values = {}
         for stage_analys in self.stages:
             stage_id = stage_analys.id
-            values_dict = stage_analys.get_statistics_values(
+            values_dict = stage_analys.get_global_statistics_values(
                 statistics_key, value_type
             )
             statistics_values[stage_id] = values_dict
@@ -442,7 +441,7 @@ class AnalyseRun():
             edgecolor='black', linewidth=2.
         )
 
-        statistics_values = self.get_statistic_values_all_stages(
+        statistics_values = self.get_global_statistic_values_all_stages(
             statistics_key
         )
 
