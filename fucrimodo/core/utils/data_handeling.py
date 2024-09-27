@@ -187,9 +187,9 @@ class StageData:
 
     def save_log(
         self,
+        mutation_log: dict[str, dict[str, list[int]]],
+        crossover_log: dict[str, dict[str, list[int]]],
         fitness_logbook: tools.Logbook,
-        mutation_log: dict[int, dict[str, dict[str, int]]],
-        crossover_log: dict[int, dict[str, dict[str, int]]],
         global_logbook: tools.Logbook | None = None,
     ) -> None:
         fitness_log_dict = self.__unpack_logbook(

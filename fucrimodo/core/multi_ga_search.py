@@ -328,12 +328,21 @@ class Stage:
             creator.Individual(ind) for ind in start_pop  # type: ignore
         ]
 
+        mut_log = {}
+        for mutation in self.stage_data.mutation_list:
+            mut_log[mutation.__repr__()] = {"called": [], "successful": []}
+        cross_log = {}
+        for cross in self.stage_data.crossover_list:
+            cross_log[cross.__repr__()] = {"called": [], "successful": []}
+
         pop, fitness_logbook, global_logbook, cross_log, mut_log = myEaSimple(
             population=population,
             toolbox=toolbox,
             cxpb=self.stage_data.crossover_probability,
             mutpb=self.stage_data.mutation_probability,
             ngen=self.stage_data.n_generations,
+            mutation_log=mut_log,
+            crossover_log=cross_log,
             fitness_stats=fitness_stats,
             global_stats=global_stats,
             halloffame=hall_of_fame,
