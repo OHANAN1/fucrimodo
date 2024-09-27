@@ -40,6 +40,9 @@ class Crossover(ABC):
 
         variables_str = ' '
         for key, value in variables.items():
+            if key == "closest_distances" or key == "cell_bounds":
+                continue
+
             variables_str += f'{key}={value}, '
 
         variables_str = variables_str[:-2]

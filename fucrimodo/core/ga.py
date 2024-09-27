@@ -7,6 +7,7 @@ from fucrimodo.core.utils.custom_soap import CustomSOAP
 import warnings
 from icecream import ic
 import numpy as np
+import ase
 
 def get_stream_str(
     record: dict, 
@@ -49,7 +50,7 @@ def create_offspring(
     toolbox: base.Toolbox,
     cxpb: float,
     mutpb: float,
-):
+) -> tuple[list[ase.Atoms], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     r"""Part of an evolutionary algorithm applying only the variation part
     (crossover **and** mutation). The modified individuals have their
     fitness invalidated. The individuals are cloned so returned population is
@@ -62,6 +63,11 @@ def create_offspring(
     :param mutpb: The probability of mutating an individual.
     :returns: A list of varied individuals that are independent of their
               parents.
+              And a dict with the crossover data and a dict with the mutation data.
+              This data contains the number of times the crossover or mutation
+              was called and how many times it was successful.
+              The keys are the names of the crossover or mutation operators
+              and the values are dicts with the keys "called" and "failed".
 
     The variation goes as follow. First, the parental population
     :math:`P_\mathrm{p}` is duplicated using the :meth:`toolbox.clone` method
@@ -86,6 +92,8 @@ def create_offspring(
     """
     offspring = [base.deepcopy(ind) for ind in population]
 
+    crossover_data = {}
+    mutation_data = {}
 
     # Apply crossover and mutation on the offspring
     iter_range = range(1, len(offspring), 2)
@@ -95,7 +103,7 @@ def create_offspring(
     ) as pbar:
         for i in iter_range:
             if random.random() < cxpb:
-                offspring[i - 1], offspring[i], success_bool = toolbox.mate( # type: ignore
+                offspring[i - 1], offspring[i], success_bool, crossover_name = toolbox.mate( # type: ignore
                     offspring[i - 1],
                     offspring[i]
                 )
@@ -103,6 +111,16 @@ def create_offspring(
                 if success_bool:
                     performed_crossover[i - 1] = 1
                     performed_crossover[i] = 1
+
+                if crossover_name in crossover_data.keys():
+                    crossover_data[crossover_name]["called"] += 1
+                else:
+                    crossover_data[crossover_name] = {
+                        "called": 1,
+                        "failed": 0
+                    }
+                if not success_bool:
+                    crossover_data[crossover_name]["failed"] += 1
 
                 reset_individual(offspring[i])
                 reset_individual(offspring[i - 1])
@@ -116,11 +134,22 @@ def create_offspring(
     ) as pbar:
         for i in iter_range:
             if random.random() < mutpb:
-                offspring[i], success_bool = toolbox.mutate( # type: ignore
+                offspring[i], success_bool, mutation_name = toolbox.mutate( # type: ignore
                     offspring[i]
                 )
                 if success_bool:
                     performed_mutation[i] = 1
+
+                if mutation_name in mutation_data.keys():
+                    mutation_data[mutation_name]["called"] += 1
+                else:
+                    mutation_data[mutation_name] = {
+                        "called": 1,
+                        "failed": 0
+                    }
+
+                if not success_bool:
+                    mutation_data[mutation_name]["failed"] += 1
 
                 reset_individual(offspring[i])
 
@@ -137,7 +166,7 @@ def create_offspring(
     ic("Modified {} individuals".format(len(modified_offspring)))
     ic("Only using modified individuals as offspring")
 
-    return modified_offspring
+    return modified_offspring, crossover_data, mutation_data
 
 
 def update_fitnesses(
@@ -188,19 +217,92 @@ def update_fitnesses(
     return len(invalid_ind)
 
 
+def setup_logbooks(
+    fitness_stats: tools.MultiStatistics,
+    global_stats: None | tools.MultiStatistics,
+) -> tuple[tools.Logbook, None | tools.Logbook]:
+    """
+    Creates the logbooks for the fitness and global statistics.
+
+    The fitness_logbook has the fields of the fitness_stats and the gen and 
+    nevals fields.
+    The global_logbook has the fields of the global_stats and the gen field.
+    If global_stats is None, the global_logbook is also None.
+    """
+
+    fitness_logbook = tools.Logbook()
+    fitness_logbook.header = ['gen', 'nevals'] + fitness_stats.fields # type: ignore # noqa
+
+    if global_stats is not None:
+        global_logbook = tools.Logbook()
+        global_logbook.header = ['gen'] + global_stats.fields  # type: ignore # noqa
+    else:
+        global_logbook = None
+
+    return fitness_logbook, global_logbook
+
+
+def record_statistics(
+    population: list[ase.Atoms],
+    nevals: int,
+    gen: int,
+    fitness_logbook: tools.Logbook,
+    fitness_stats: tools.MultiStatistics,
+    global_logbook: None | tools.Logbook = None,
+    global_stats: None | tools.MultiStatistics = None,
+) -> tuple[dict[str, dict[str, dict[str, int]]], dict[str, dict[str, dict[str, int]]] | None]:
+    """
+    Calculates the statistics of the population for the fitness and global stats.
+
+    :returns: A tuple with the fitness_record and the global_record.
+    """
+    fitness_record = fitness_stats.compile(population)
+    fitness_logbook.record(gen=gen, nevals=nevals, **fitness_record)
+
+    if global_stats is not None and global_logbook is not None:
+        global_record = global_stats.compile(population)
+        global_logbook.record(gen=gen, **global_record)
+    else:
+        global_record = None
+
+    return fitness_record, global_record
+    
+def record_modification_log(
+    modification_log: dict[str, dict[str, list[int]]],
+    modification_data: dict[str, dict[str, int]],
+) -> None:
+    """
+    Records the modification data in the modification_log.
+    """
+    for modification_name in modification_data.keys():
+        if modification_name in modification_log.keys():
+            data = modification_data[modification_name]
+            modification_log[modification_name]["called"].append(
+                data["called"]
+            )
+            modification_log[modification_name]["failed"].append(
+                data["failed"]
+            )
+        else:
+            warnings.warn(
+                f"Modification name {modification_name} not in modification log."
+            )
+
 def myEaSimple(
     population: list,
     toolbox: base.Toolbox,
     cxpb: float,
     mutpb: float,
     ngen: int,
+    mutation_log: dict[str, dict[str, list[int]]],
+    crossover_log: dict[str, dict[str, list[int]]],
     fitness_stats: tools.MultiStatistics,
     global_stats: None | tools.MultiStatistics = None,
     soap_obj: CustomSOAP | None = None,
     halloffame: tools.HallOfFame | None = None,
     verbose=__debug__,
     progress_bar_title: str = "Evolving...",
-) -> tuple[list, tools.Logbook, None | tools.Logbook]:
+) -> tuple[list, tools.Logbook, None | tools.Logbook, dict[str, dict[str, list[int]]], dict[str, dict[str, list[int]]]]:
     """
     My own version of the DEAP eaSimple function.
     It uses break_condition, which is a function that takes the population
@@ -217,31 +319,28 @@ def myEaSimple(
     - mutate(individual) -> tuple
     - break_condition(population) -> bool
     """
-
     # Delete possible fitness or soap_features attributes of the individuals
     for ind in population:
         reset_individual(ind)
 
-    fitness_logbook = tools.Logbook()
-    fitness_logbook.header = ['gen', 'nevals'] + fitness_stats.fields # type: ignore # noqa
-
+    fitness_logbook, global_logbook = setup_logbooks(
+        fitness_stats=fitness_stats,
+        global_stats=global_stats,
+    )
     nevals = update_fitnesses(population, toolbox, soap_obj)
 
     if halloffame is not None:
         halloffame.update(population)
 
-    fitness_record = fitness_stats.compile(population)
-    fitness_logbook.record(gen=0, nevals=nevals, **fitness_record)
-
-    if global_stats is not None:
-        global_logbook = tools.Logbook()
-        global_logbook.header = ['gen'] + (global_stats.fields)  # type: ignore # noqa
-
-        global_record = global_stats.compile(population)
-        global_logbook.record(gen=0, **global_record)
-    else:
-        global_logbook = None
-        global_record = None
+    fitness_record, global_record = record_statistics(
+        population=population,
+        nevals=nevals,
+        gen=0,
+        fitness_logbook=fitness_logbook,
+        fitness_stats=fitness_stats,
+        global_logbook=global_logbook,
+        global_stats=global_stats,
+    )
 
     if verbose:
         print()
@@ -251,12 +350,13 @@ def myEaSimple(
         stream_str = get_stream_str(fitness_record)
 
         if global_record is not None:
-            stream_str += "--> Global Stats:\n"
-            stream_str += get_stream_str(global_record)
+            stream_str += get_stream_str(
+                global_record, 
+                text_colors=["\033[30m", "\033[30m"], 
+                bg_colors=["\033[42m", "\033[45m"]
+            )
 
         print(stream_str)
-
-
 
     iter_range = range(1, ngen + 1)
     with tqdm(iter_range, desc=progress_bar_title) as outer_pbar:
@@ -272,7 +372,10 @@ def myEaSimple(
 
             ic("Selected {} parents".format(len(parents)))
 
-            offspring = create_offspring(parents, toolbox, cxpb, mutpb)
+            offspring, cross_data, mut_data = create_offspring(parents, toolbox, cxpb, mutpb)
+
+            record_modification_log(crossover_log, cross_data)
+            record_modification_log(mutation_log, mut_data)
 
             nevals = update_fitnesses(offspring, toolbox, soap_obj)
 
@@ -304,13 +407,15 @@ def myEaSimple(
             if halloffame is not None:
                 halloffame.update(new_population)
 
-            fitness_record = fitness_stats.compile(new_population)
-            fitness_logbook.record(gen=gen, nevals=nevals, **fitness_record)
-
-            if global_stats is not None and global_logbook is not None:
-                global_record = global_stats.compile(new_population)
-                global_logbook.record(gen=gen, **global_record)
-
+            fitness_record, global_record = record_statistics(
+                population=population,
+                nevals=nevals,
+                gen=0,
+                fitness_logbook=fitness_logbook,
+                fitness_stats=fitness_stats,
+                global_logbook=global_logbook,
+                global_stats=global_stats,
+            )
             population[:] = new_population
 
             if verbose:
@@ -320,8 +425,11 @@ def myEaSimple(
 
                 stream_str = get_stream_str(fitness_record)
                 if global_record is not None:
-                    stream_str += "--> Global Stats:\n"
-                    stream_str += get_stream_str(global_record)
+                    stream_str += get_stream_str(
+                        global_record, 
+                        text_colors=["\033[30m", "\033[30m"], 
+                        bg_colors=["\033[42m", "\033[45m"]
+                    )
 
                 outer_pbar.write(stream_str)
                 outer_pbar.refresh()
@@ -335,4 +443,4 @@ def myEaSimple(
                 print()
                 break
 
-    return population, fitness_logbook, global_logbook
+    return population, fitness_logbook, global_logbook, crossover_log, mutation_log
