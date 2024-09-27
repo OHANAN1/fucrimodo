@@ -330,10 +330,10 @@ class Stage:
 
         mut_log = {}
         for mutation in self.stage_data.mutation_list:
-            mut_log[mutation.__repr__()] = {"called": [], "successful": []}
+            mut_log[mutation.__repr__()] = {"called": [], "failed": []}
         cross_log = {}
         for cross in self.stage_data.crossover_list:
-            cross_log[cross.__repr__()] = {"called": [], "successful": []}
+            cross_log[cross.__repr__()] = {"called": [], "failed": []}
 
         pop, fitness_logbook, global_logbook, cross_log, mut_log = myEaSimple(
             population=population,

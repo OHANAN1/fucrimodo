@@ -67,7 +67,7 @@ def create_offspring(
               This data contains the number of times the crossover or mutation
               was called and how many times it was successful.
               The keys are the names of the crossover or mutation operators
-              and the values are dicts with the keys "called" and "successful".
+              and the values are dicts with the keys "called" and "failed".
 
     The variation goes as follow. First, the parental population
     :math:`P_\mathrm{p}` is duplicated using the :meth:`toolbox.clone` method
@@ -117,10 +117,10 @@ def create_offspring(
                 else:
                     crossover_data[crossover_name] = {
                         "called": 1,
-                        "successful": 0
+                        "failed": 0
                     }
-                if success_bool:
-                    crossover_data[crossover_name]["successful"] += 1
+                if not success_bool:
+                    crossover_data[crossover_name]["failed"] += 1
 
                 reset_individual(offspring[i])
                 reset_individual(offspring[i - 1])
@@ -145,11 +145,11 @@ def create_offspring(
                 else:
                     mutation_data[mutation_name] = {
                         "called": 1,
-                        "successful": 0
+                        "failed": 0
                     }
 
-                if success_bool:
-                    mutation_data[mutation_name]["successful"] += 1
+                if not success_bool:
+                    mutation_data[mutation_name]["failed"] += 1
 
                 reset_individual(offspring[i])
 
@@ -280,8 +280,8 @@ def record_modification_log(
             modification_log[modification_name]["called"].append(
                 data["called"]
             )
-            modification_log[modification_name]["successful"].append(
-                data["successful"]
+            modification_log[modification_name]["failed"].append(
+                data["failed"]
             )
         else:
             warnings.warn(
