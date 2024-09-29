@@ -1,6 +1,7 @@
-from fucrimodo.core.modules import Mutation
+from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.core.modules import Individual
 import ase.ga.standardmutations as ase_standard_mut
 import ase
 import ase.data as ase_data
@@ -35,8 +36,8 @@ class ReplaceAtomsMutation(Mutation):
 
     def perform_mutation(
         self,
-        crystal: ase.Atoms,
-    ) -> ase.Atoms | None:
+        crystal: Individual,
+    ) -> Individual | None:
 
         if len(crystal) < self.n_atoms_to_replace:
             return None
@@ -109,8 +110,8 @@ class AddAtomsMutation(Mutation):
 
     def perform_mutation(
         self,
-        crystal: ase.Atoms,
-    ) -> ase.Atoms | None:
+        crystal: Individual,
+    ) -> Individual | None:
 
         positions = crystal.get_positions()
 
@@ -169,7 +170,7 @@ class PermutationMutation(Mutation):
                 "n_top has to be an integer or the string 'all'"
             )
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         if len(crystal.numbers) == 1:
             return None
         if len(np.unique(crystal.numbers)) == 1:
@@ -206,7 +207,7 @@ class DeleteRandomAtomsMutation(Mutation):
         self.n_atoms_to_delete = n_atoms_to_delete
         self.closest_distances = closest_distances
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         offspring = crystal
         number_of_atoms = len(offspring.get_atomic_numbers())
 

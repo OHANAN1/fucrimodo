@@ -4,6 +4,7 @@ import numpy as np
 import ase
 from icecream import ic
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from fucrimodo.core.modules import Individual
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║            Abstract Base Class for Mutations             ║
@@ -37,11 +38,11 @@ class Mutation(ABC):
         variables_str = variables_str[:-2]
         return f'{class_name}({variables_str})'
 
-    def crystal_is_valid_object(self, crystal: ase.Atoms) -> bool:
+    def crystal_is_valid_object(self, crystal: Individual) -> bool:
         """
-        Tests if the crystal is a valid ase.Atoms object.
+        Tests if the crystal is a valid Individual object.
         """
-        if not isinstance(crystal, ase.Atoms):
+        if not isinstance(crystal, Individual):
             return False
 
         if not len(crystal) > 0:
@@ -61,7 +62,7 @@ class Mutation(ABC):
 
         return True
 
-    def crystal_is_physical(self, crystal: ase.Atoms) -> bool:
+    def crystal_is_physical(self, crystal: Individual) -> bool:
         """
         Tests if the crystal is physical.
         """
@@ -74,14 +75,14 @@ class Mutation(ABC):
         return True
 
     @abstractmethod
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         """
         Should calculate the offspring from parent, depending on mutation type.
         If this was not possible, return None.
         """
         pass
 
-    def mutate(self, crystal: ase.Atoms) -> tuple[ase.Atoms, bool]:
+    def mutate(self, crystal: Individual) -> tuple[Individual, bool]:
         """
         Should calculate the offspring from parent, depending on mutation type.
         Returns the offspring and a boolean if the mutation was successful.

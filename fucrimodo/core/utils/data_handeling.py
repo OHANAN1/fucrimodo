@@ -2,7 +2,7 @@ from typing import Callable, Optional, Sequence
 import json
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.core.utils import debug_tools
-from fucrimodo.core.modules import Mutation, Crossover, PopulationSelection, FitnessFunction, BreakCondition
+from fucrimodo.core.modules import PopulationSelection, FitnessFunction, Stage
 from fucrimodo.core.utils.class_parser import convert_class_to_writeable_dict
 import datetime
 import os
@@ -30,189 +30,11 @@ def print_run_info_json(save_path: str):
         run_info = json.load(f)
     print(json.dumps(run_info, indent=4))
 
-def convert_to_serializable(obj):
-    if isinstance(obj, np.integer):
-        return int(obj)
-    if isinstance(obj, np.floating):
-        return float(obj)
-    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 # ╒══════════════════════════════════════════════════════════╕
 #                      Stage Data Class
 # ╘══════════════════════════════════════════════════════════╛
 
-class StageData:
-    """
-    Class for storing and saving all the data about a stage.
-    Gets initialized and handled by the RunData class.
-    Contains paremeters specific to the stage
-    and the hyperparameters for th gridsearch needed to run the stage.
-    Stores the results of the structure search.
-    """
-
-    def __init__(
-        self,
-        number_of_generations: int,
-        fitness_functions: list[FitnessFunction | tuple[FitnessFunction, float | int]] | list[FitnessFunction] | list[tuple[FitnessFunction, float | int]],  # noqa
-        start_population_selection: PopulationSelection,
-        mutation_probability: float,
-        crossover_probability: float,
-        crossover_list: list[Crossover | tuple[Crossover, float]],  # noqa
-        mutation_list: Sequence[Mutation | tuple[Mutation, float]],
-        break_condition: BreakCondition,
-    ) -> None:
-        self.start_population_selection = start_population_selection
-
-        self.fitness_functions = []
-        self.fitness_weights = ()
-        for fit_tuple in fitness_functions:
-            if isinstance(fit_tuple, tuple):
-                assert len(fit_tuple) == 2
-                assert isinstance(fit_tuple[0], FitnessFunction)
-                assert isinstance(fit_tuple[1], float | int)
-                self.fitness_functions.append(fit_tuple[0])
-                self.fitness_weights += (fit_tuple[1],)
-
-            else:
-                assert isinstance(fit_tuple, FitnessFunction)
-                self.fitness_functions.append(fit_tuple)
-                self.fitness_weights += (1.,)
-
-        self.crossover_list = []
-        self.crossover_weights = []
-        for cross_tuple in crossover_list:
-            if isinstance(cross_tuple, tuple):
-                assert len(cross_tuple) == 2
-                assert isinstance(cross_tuple[0], Crossover)
-                assert isinstance(cross_tuple[1], float)
-                self.crossover_list.append(cross_tuple[0])
-                self.crossover_weights.append(cross_tuple[1])
-
-            else:
-                assert isinstance(cross_tuple, Crossover)
-                self.crossover_list.append(cross_tuple)
-                self.crossover_weights.append(1.)
-
-        self.mutation_list = []
-        self.mutation_weights = []
-        for mut_tuple in mutation_list:
-            if isinstance(mut_tuple, tuple):
-                assert len(mut_tuple) == 2
-                assert isinstance(mut_tuple[0], Mutation)
-                assert isinstance(mut_tuple[1], float)
-                self.mutation_list.append(mut_tuple[0])
-                self.mutation_weights.append(mut_tuple[1])
-
-            else:
-                assert isinstance(mut_tuple, Mutation)
-                self.mutation_list.append(mut_tuple)
-                self.mutation_weights.append(1.)
-
-        self.mutation_probability = mutation_probability
-        self.crossover_probability = crossover_probability
-        self.break_condition = break_condition
-        self.n_generations = number_of_generations
-
-    def add_run_settings(
-        self,
-        crystal_database: Database,
-        run_dir: str,
-        stage_id: int,
-        save_n_best_crystals: int,
-    ) -> None:
-        """
-        Adds the run settings to the stage data.
-        Gets called by the RunData class automatically.
-        """
-        self.run_dir = run_dir
-        self.stage_id = stage_id
-        self.crystal_database = crystal_database
-        self.save_n_best_crystals = save_n_best_crystals
-
-    def get_params_dict(self) -> dict:
-        """
-        Returns the parameters of the stage as a dictionary.
-        """
-        params_dict = {
-            "number of generations": self.n_generations,
-            "start pop generation": self.start_population_selection,
-            "fitness functions": self.fitness_functions,
-            "fitness weights": self.fitness_weights,
-            "crossover list": self.crossover_list,
-            "crossover weights": self.crossover_weights,
-            "crossover probability": self.crossover_probability,
-            "mutation list": self.mutation_list,
-            "mutation weights": self.mutation_weights,
-            "mutation probability": self.mutation_probability,
-            "break condition": self.break_condition,
-        }
-        return params_dict
-
-    def save_crystals_in_db(
-        self,
-        crystals: list[ase.Atoms],
-        key_value_pairs_list: list[dict],
-    ) -> None:
-        """
-        Saves the most similar crystals of the stage in the crystal
-        database of the run.
-        The tuple contains the crystal and the key value pairs of the crystal.
-        Also adds the stage id to the key value pairs.
-        """
-        i = 0
-        for crystal, key_value_pairs_dict in zip(
-            crystals, key_value_pairs_list
-        ):
-            key_value_pairs_dict["stage_id"] = self.stage_id
-            self.crystal_database.write(
-                crystal,
-                key_value_pairs_dict
-            )
-            i += 1
-
-    def __unpack_logbook(
-        self, 
-        logbook: tools.Logbook, 
-        value_types: list[str] = ["min", "max", "avg", "std"],
-    ) -> dict:
-        log_dict = {}
-        for key in logbook.chapters.keys():
-            log_dict[key] = {}
-            for value_type in value_types:
-                log_dict[key][value_type] = logbook.chapters[key].select(
-                    value_type
-                )
-
-        return log_dict
-
-    def save_log(
-        self,
-        mutation_log: dict[str, dict[str, list[int]]],
-        crossover_log: dict[str, dict[str, list[int]]],
-        fitness_logbook: tools.Logbook,
-        global_logbook: tools.Logbook | None = None,
-    ) -> None:
-        fitness_log_dict = self.__unpack_logbook(
-            logbook = fitness_logbook
-        )
-
-        global_log_dict = {}
-        if global_logbook is not None:
-            global_log_dict = self.__unpack_logbook(
-                logbook = global_logbook
-            )
-
-        self.save_file_path = f"{self.run_dir}/stage_{self.stage_id}.json"
-        with open(self.save_file_path, "w") as f:
-            json.dump(
-                {
-                    "fitness_log": fitness_log_dict,
-                    "global_statistics_log": global_log_dict,
-                    "mutation_data": mutation_log,
-                    "crossover_data": crossover_log,
-                },
-                f, indent=4, default=convert_to_serializable
-            )
 
 
 # ╒══════════════════════════════════════════════════════════╕
@@ -238,6 +60,7 @@ class RunData:
 
         self.save_n_best_crystals = save_n_best_crystals
         self._global_statistics_dict = global_statistics_dict
+        self.global_statistics = global_statistics_dict
 
         # Assign fixed soap parameters
         self.soap_object = soap_object
@@ -253,19 +76,53 @@ class RunData:
             debug_tools.setup_logging(log_file_path)
 
     @property
-    def global_statistics_dict(
-        self
-    ) -> dict[str, Callable[[ase.Atoms], float]] | None:
-        """A dictionary with the global statistics functions.
+    def global_statistics(self) -> tools.MultiStatistics | None:
+        return self._global_statistics
 
-        Optional. Can be used to track statistics for all generations of
-        all stages. The statistics are tracked at the same time as the
-        fitness statistics. The statistics are saved in the log file.
-        The keys are the names of the functions and the values are the
-        functions themselves. The functions should take an ase.Atoms object
-        as input and return a float.
+    @global_statistics.setter
+    def global_statistics(
+        self, global_stats_dict: dict[str, Callable[[ase.Atoms], float]] | None
+    ):
+        if global_stats_dict is None:
+            self._global_statistics = None
+            return
+
+        capter_keys = []
+        stats_dict = {}
+
+        for key, func in global_stats_dict.items():
+            stats_dict[key] = tools.Statistics(
+                key=func
+            )
+            capter_keys.append(key)
+
+        mstats = tools.MultiStatistics(**stats_dict)
+        mstats.register("avg", np.mean)
+        mstats.register("max", np.max)
+        mstats.register("min", np.min)
+        mstats.register("std", np.std)
+
+        self._global_statistics = mstats
+
+    @property
+    def global_logbook(self) -> tools.Logbook:
+        """A logbook for the global statistics.
+
+        The logbook is used to store the global statistics for all
+        generations of all stages. 
+        In addition to the global statistics, the logbook also stores
+        the stage id and the generation number for each entry.
         """
-        return self._global_statistics_dict
+        if not hasattr(self, "_global_log"):
+            self._global_log = tools.Logbook()
+
+            global_stats_fields = []
+            if self.global_statistics is not None:
+                global_stats_fields = self.global_statistics.fields
+
+            self._global_log.header = ['stage_id', 'gen'] + global_stats_fields # type: ignore
+
+        return self._global_log
 
     def get_time_string(self) -> str:
         now = datetime.datetime.now()
@@ -288,7 +145,7 @@ class RunData:
 
     def add_run_settings(
         self,
-        stage_data_list: list[StageData],
+        stage_data_list: list[Stage],
         verbose: int = 1
     ) -> None:
         """
@@ -352,13 +209,13 @@ class RunData:
 
         return run_dir
 
-    def add_stage_data(self, stage_data: StageData) -> None:
+    def add_stage_data(self, stage_data: Stage) -> None:
         """
         Adds the stage data to the class.
         """
         self.stage_data_list.append(stage_data)
 
-    def get_stage_data(self, stage_id: int) -> StageData:
+    def get_stage_data(self, stage_id: int) -> Stage:
         """
         Returns the StageData object of the stage with the given id.
         Adds the necessary run_data to the StageData object.
@@ -367,14 +224,14 @@ class RunData:
             raise ValueError("No stage data in run data.")
 
         stage_index = stage_id - 1
-        stage_data: StageData = self.stage_data_list[stage_index]
+        stage_data: Stage = self.stage_data_list[stage_index]
 
-        stage_data.add_run_settings(
-            run_dir=self.run_dir,
-            stage_id=stage_id,
-            crystal_database=self.crystal_database,
-            save_n_best_crystals=self.save_n_best_crystals
-        )
+        # stage_data.add_run_settings(
+        #     run_dir=self.run_dir,
+        #     stage_id=stage_id,
+        #     crystal_database=self.crystal_database,
+        #     save_n_best_crystals=self.save_n_best_crystals
+        # )
 
         return stage_data
 
@@ -402,7 +259,7 @@ class RunData:
         for i in range(self.n_stages):
             id = i + 1
 
-            stage_params = self.get_stage_data(id).get_params_dict()
+            stage_params = {} # self.get_stage_data(id).get_params_dict()
             stage_info[f"stage_{id}"] = convert_class_to_writeable_dict(
                 stage_params
             )

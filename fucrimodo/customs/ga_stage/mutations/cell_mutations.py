@@ -1,4 +1,5 @@
-from fucrimodo.core.modules import Mutation
+from fucrimodo.core.modules.individual import Individual
+from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 import ase
@@ -30,7 +31,7 @@ class ScaleUnitCellMutation(Mutation):
         self.closest_distances = closest_distances
         self.cell_bounds = cell_bounds
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         offspring = crystal
         cell = offspring.get_cell()[:]  # type: ignore
 
@@ -59,7 +60,7 @@ class StrainMutation(Mutation):
         self.cell_bounds = cell_bounds
         self.max_steps = 1
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         if self.cell_bounds is None:
             len_ang = crystal.get_cell_lengths_and_angles()
             a = len_ang[0]
@@ -122,7 +123,7 @@ class EnlargeMutation(Mutation):
         else:
             return Cell(possible_cell_vectors), possible_sides
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         offspring = crystal
         cell = offspring.get_cell()
         cell_vectors = cell[:]  # type: ignore
@@ -157,7 +158,7 @@ class NiggliReduceMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         build.niggli_reduce(crystal)
         return crystal
 
@@ -171,7 +172,7 @@ class MinimizeTiltMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         build.minimize_tilt(crystal)
         return crystal
 
@@ -189,7 +190,7 @@ class CutoutMutation(Mutation):
         self.cell_bounds = cell_bounds
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         if not self.cell_bounds.is_within_bounds(crystal.cell):
             return None
 
@@ -233,7 +234,7 @@ class RotationMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         v_rand = np.random.choice(['x', 'y', 'z'])
         a_rand = np.random.uniform(0, 90)
         crystal.rotate(a=a_rand, v=v_rand, rotate_cell=False)

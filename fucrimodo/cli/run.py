@@ -42,7 +42,7 @@ class Runner:
 
     def run(self):
         import random
-        from fucrimodo.core import multi_ga_search as multi_ga
+        from fucrimodo.core import multi_stage_search as multi_stage
         from fucrimodo.core.utils import data_handeling
 
         import numpy as np
@@ -80,7 +80,7 @@ class Runner:
 
         # ── Start Population Candidates ─────────────────────────────────────────
         from configs.population_generator import get_start_pop_candidates
-        start_pop_candidates = get_start_pop_candidates(
+        population = get_start_pop_candidates(
             soap_species=soap_species,
             population_size=20
         )
@@ -99,11 +99,16 @@ class Runner:
             verbose=verbose
         )
 
-        ga_search = multi_ga.MultiGenAlgSearch(
+        multi_stage_search = multi_stage.MultiStageSearch(
             run_data=run_data,
         )
-        ga_search.run(
-            start_pop_candidates=start_pop_candidates,
-        )
+
+        for stage in stage_list:
+            population = multi_stage_search.run(
+                stage=stage,
+                population=population,
+            )
+
+        run_data.save_run_info_json()
 
         # save_current_script(run_data)

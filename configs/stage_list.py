@@ -1,10 +1,9 @@
 from typing import Callable
 import ase
 from configs.crossover import get_exploration_crossovers
-from fucrimodo.core.multi_ga_search import MultiGenAlgSearch
+from fucrimodo.core.multi_stage_search import MultiStageSearch
 import random
 from fucrimodo.customs import population_selections as start_pop
-from fucrimodo.core import multi_ga_search as multi_ga
 from fucrimodo.core.utils import data_handeling
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
@@ -102,26 +101,23 @@ def get_stage_list(
     # ╒══════════════════════════════════════════════════════════╕
     #                       Define Stages
     # ╘══════════════════════════════════════════════════════════╛
+    from fucrimodo.customs.ga_stage import GAStage
 
     stage_list = []
 
     for i in range(len(species_specific_fitnesses)):
-        stage_list.append(data_handeling.StageData(
+        stage_list.append(GAStage(
+            id=1,
             **exploration_defaults,
-            start_population_selection=start_pop.DopePopulationSelection(
-                atom_types=soap_species,
-                add_n=population_size//len(species_specific_fitnesses),
-                cell_bounds=cell_bounds[0],
-            ),
             fitness_functions=species_specific_fitnesses[0:i+1],
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,
             break_condition=exploration_break,
         ))
 
-        stage_list.append(data_handeling.StageData(
+        stage_list.append(GAStage(
+            id=2,
             **optimization_defaults,
-            start_population_selection=start_pop.SelectAllPopulation(),
             fitness_functions=species_specific_fitnesses[0:i+1] + [soap_fitness_mid],
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,

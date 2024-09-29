@@ -1,4 +1,5 @@
-from fucrimodo.core.modules import Mutation
+from .abstract import Mutation
+from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import ase
 import random
@@ -57,7 +58,7 @@ class MultipleMutations(Mutation):
 
         return selected_mutations
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         offspring = crystal
 
         selected_mutations = self.__select_mutations()

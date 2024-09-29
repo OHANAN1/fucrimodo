@@ -1,6 +1,7 @@
 # TODO: Fix weird error
 # from matid import SymmetryAnalyzer
-from fucrimodo.core.modules import Mutation
+from fucrimodo.core.modules import Individual
+from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import ase
 
@@ -16,7 +17,7 @@ class GetConventionalCellMutation(Mutation):
         self.symmetry_tol = symmetry_tol
         self.closest_distances = closest_distances
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         raise NotImplementedError
         # analyzer = SymmetryAnalyzer(crystal.copy(), self.symmetry_tol)
         # conventional_cell = analyzer.get_conventional_system()
@@ -25,7 +26,7 @@ class GetConventionalCellMutation(Mutation):
         # atomic_numbers = conventional_cell.get_atomic_numbers()
         # cell = conventional_cell.get_cell()
         #
-        # offspring = ase.Atoms(
+        # offspring = Individual(
         #     atomic_numbers,
         #     positions=positions,
         #     cell=cell

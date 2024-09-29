@@ -1,5 +1,5 @@
-from fucrimodo.core.modules.mutation import Mutation
-from fucrimodo.customs import mutations as mut
+from fucrimodo.customs.ga_stage.mutations import Mutation
+from fucrimodo.customs.ga_stage import mutations as mut
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 

@@ -1,4 +1,5 @@
-from fucrimodo.core.modules import Mutation
+from .abstract import Mutation
+from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import ase
 from ase.ga import soft_mutation as ase_soft_mut
@@ -23,10 +24,10 @@ class RelaxationMutation(Mutation):
 
     def __relax_crystal(
         self,
-        crystal: ase.Atoms,
+        crystal: Individual,
         max_steps_relaxation: int,
         fmax: float = 0.05,
-    ) -> ase.Atoms:
+    ) -> Individual:
         calc = EMT2()
         crystal.calc = calc
         dyn = BFGS(crystal, logfile="-")
@@ -34,7 +35,7 @@ class RelaxationMutation(Mutation):
 
         return crystal
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         offspring = self.__relax_crystal(
             crystal, self.max_steps_relaxation, self.fmax
         )
@@ -49,7 +50,7 @@ class SoftMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = 1
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         crystal.info["confid"] = 0
         if len(crystal.numbers) == 1:
             return None

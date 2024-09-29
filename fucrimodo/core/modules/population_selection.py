@@ -23,4 +23,3 @@ class PopulationSelection(ABC):
     @abstractmethod
     def __repr__(self) -> str:
         pass
-

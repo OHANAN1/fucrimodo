@@ -1,4 +1,4 @@
-from fucrimodo.core.modules import Mutation
+from .abstract import Mutation
 from . import element_mutations as elem_mut
 from . import energy_optimisation_mutations as energy_mut
 from . import multi_mutation as multi_mut

@@ -1,4 +1,5 @@
-from fucrimodo.core.modules import Mutation
+from .abstract import Mutation
+from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import ase.ga.standardmutations as ase_standard_mut
 import ase
@@ -37,7 +38,7 @@ class RattleMutation(Mutation):
                 "n_top has to be an integer or the string 'all'"
             )
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
         if self.n_top == "all":
             n_top = len(crystal)
         else:
@@ -47,7 +48,7 @@ class RattleMutation(Mutation):
                 shuffled_crystal = crystal[
                     np.random.permutation(len(crystal))
                 ]
-                if isinstance(shuffled_crystal, ase.Atoms):
+                if isinstance(shuffled_crystal, Individual):
                     crystal = shuffled_crystal
                 else:
                     raise ValueError("Shuffling did not work")
@@ -85,7 +86,7 @@ class MirrorMutation(Mutation):
                 "n_top has to be an integer or the string 'all'"
             )
 
-    def perform_mutation(self, crystal: ase.Atoms) -> ase.Atoms | None:
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
 
         if self.n_top == "all":
             n_top = len(crystal)
