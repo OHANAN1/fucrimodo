@@ -14,7 +14,6 @@ from icecream import ic
 class GeneticAlgorithm:
     def __init__(
         self,
-        stage_id: int,
         fitness_functions: Sequence[FitnessFunction],
         fitness_weights: Sequence[float],
         crossover_list: Sequence[Crossover],
@@ -27,7 +26,6 @@ class GeneticAlgorithm:
         parent_selection: Callable,
         survivor_selection: Callable,
     ):
-        self.stage_id = stage_id
         self.fitness_functions = fitness_functions
         self.fitness_weights = fitness_weights
         self.crossover_list = crossover_list
@@ -219,6 +217,7 @@ class GeneticAlgorithm:
         population: Population,
         nevals: int,
         gen: int,
+        stage_id: int,
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> tuple[dict[str, dict[str, dict[str, int]]], dict[str, dict[str, dict[str, int]]] | None]:
@@ -233,7 +232,7 @@ class GeneticAlgorithm:
 
         if global_stats is not None and global_log is not None:
             global_record = global_stats.compile(population.individuals)
-            global_log.record(gen=gen, stage_id=self.stage_id, **global_record)
+            global_log.record(gen=gen, stage_id=stage_id, **global_record)
         else:
             global_record = None
 
@@ -369,6 +368,7 @@ class GeneticAlgorithm:
         offspring: list[Individual],
         nevals: int,
         gen: int,
+        stage_id: int,
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> None:
@@ -394,6 +394,7 @@ class GeneticAlgorithm:
             population=population,
             nevals=nevals,
             gen=gen,
+            stage_id=stage_id,
             global_stats=global_stats,
             global_log=global_log,
         )
@@ -401,6 +402,7 @@ class GeneticAlgorithm:
     def __initialize_evolution(
         self,
         population: Population,
+        stage_id: int,
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> None:
@@ -418,6 +420,7 @@ class GeneticAlgorithm:
             population=population,
             nevals=nevals,
             gen=0,
+            stage_id=stage_id,
             global_stats=global_stats,
             global_log=global_log
         )
@@ -425,15 +428,17 @@ class GeneticAlgorithm:
     def run(
         self,
         population: Population,
+        stage_id: int,
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> Population:
         self.__initialize_evolution(
             population=population, 
             global_stats=global_stats,
-            global_log=global_log
+            global_log=global_log,
+            stage_id=stage_id
         )
-        print(self.fitness_logbook.stream + "\t" + global_log.stream)
+        print(global_log.stream)
 
         generation = 0
         while not self.break_condition.check(
@@ -481,8 +486,9 @@ class GeneticAlgorithm:
                 nevals=nevals,
                 gen=generation,
                 global_stats=global_stats,
-                global_log=global_log
+                global_log=global_log,
+                stage_id=stage_id,
             )
-            print(self.fitness_logbook.stream + "\t" + global_log.stream)
+            print(global_log.stream)
 
         return population

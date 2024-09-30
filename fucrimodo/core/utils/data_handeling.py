@@ -109,7 +109,7 @@ class RunData:
         """A logbook for the global statistics.
 
         The logbook is used to store the global statistics for all
-        generations of all stages. 
+        generations of all stages.
         In addition to the global statistics, the logbook also stores
         the stage id and the generation number for each entry.
         """

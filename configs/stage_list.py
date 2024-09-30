@@ -104,7 +104,7 @@ def get_stage_list(
 
     for i in range(len(species_specific_fitnesses)):
         stage_list.append(GAStage(
-            id=1,
+            name=f"Build up Exploration {i+1}",
             **exploration_defaults,
             fitness_functions=species_specific_fitnesses[0:i+1],
             crossover_list=explore_cross_1,
@@ -113,7 +113,7 @@ def get_stage_list(
         ))
 
         stage_list.append(GAStage(
-            id=2,
+            name=f"Build up Optimization {i+1}",
             **optimization_defaults,
             fitness_functions=species_specific_fitnesses[0:i+1] + [soap_fitness_mid],
             crossover_list=explore_cross_1,
@@ -121,31 +121,31 @@ def get_stage_list(
             break_condition=optimization_break
         ))
 
-    # stage_list.append(data_handeling.StageData(
-    #     **optimization_defaults,
-    #     start_population_selection=start_pop.SelectAllPopulation(),
-    #     fitness_functions=species_specific_fitnesses,
-    #     crossover_list=explore_cross_1,
-    #     mutation_list=all_opti_muts,
-    #     break_condition=optimization_break
-    # ))
-    #
-    # stage_list.append(data_handeling.StageData(
-    #     **exploration_defaults,
-    #     start_population_selection=start_pop.SelectAllPopulation(),
-    #     fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
-    #     crossover_list=explore_cross_2,
-    #     mutation_list=all_muts_1,
-    #     break_condition=exploration_break
-    # ))
-    #
-    # stage_list.append(data_handeling.StageData(
-    #     **optimization_defaults,
-    #     start_population_selection=start_pop.SelectAllPopulation(),
-    #     fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
-    #     crossover_list=explore_cross_2,
-    #     mutation_list=all_opti_muts,
-    #     break_condition=optimization_break
-    # ))
+    stage_list.append(GAStage(
+        name="Exploration",
+        **optimization_defaults,
+        fitness_functions=species_specific_fitnesses,
+        crossover_list=explore_cross_1,
+        mutation_list=all_opti_muts,
+        break_condition=optimization_break
+    ))
+
+    stage_list.append(GAStage(
+        name="Exploration",
+        **exploration_defaults,
+        fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
+        crossover_list=explore_cross_2,
+        mutation_list=all_muts_1,
+        break_condition=exploration_break
+    ))
+
+    stage_list.append(GAStage(
+        name="Exploration",
+        **optimization_defaults,
+        fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
+        crossover_list=explore_cross_2,
+        mutation_list=all_opti_muts,
+        break_condition=optimization_break
+    ))
 
     return stage_list

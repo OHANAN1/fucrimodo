@@ -7,8 +7,9 @@ import ase
 from typing import Callable
 
 class Stage(ABC):
-    def __init__(self, id: int):
-        self._id = id
+    def __init__(self, name: str, description: str) -> None:
+        self._name = name
+        self._description = description
 
     @abstractmethod
     def run(
@@ -30,3 +31,13 @@ class Stage(ABC):
     @id.setter
     def id(self, value):
         self._id = value
+
+    @property
+    def name(self) -> str:
+        """User friendly name of the stage, used for analysis."""
+        return self._name
+
+    @property
+    def description(self) -> str:
+        """Optional description of the stage, used for analysis."""
+        return self._description
