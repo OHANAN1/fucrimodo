@@ -1,6 +1,7 @@
 import os
 import sys
-from fucrimodo.analysis.analyse_run import AnalyseRun
+from fucrimodo.analysis.analyse_run import AnalyseRun, AnalyseStage
+from fucrimodo.analysis.results_class import StageResults
 
 class CLICommand:
     """Analyse the data that was collected during a run."""
@@ -8,7 +9,7 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         add = parser.add_argument
-        add('analysis_type', help='Possible values: notebook, run')
+        add('analysis_type', help='Possible values: notebook, run, stage')
         add(
             'run_dir',
             help=\
@@ -56,9 +57,13 @@ class Runner:
             print("Path does not exist")
             sys.exit(1)
         if args.run_dir[-1] == "/":
-            self.run_dir = args.run_dir[:-1]
+            run_dir = args.run_dir[:-1]
         else:
-            self.run_dir = args.run_dir
+            run_dir = args.run_dir
+        if os.path.exists(run_dir) and type(run_dir) == str:
+            self.run_dir: str = run_dir
+        else:
+            raise ValueError("The provided run_dir is not a valid path.")
 
         if args.target_crystal_path is not None:
             from ase.io import read
@@ -81,6 +86,8 @@ class Runner:
             self.__notebook_gen()
         elif self.analysis_type == "run":
             self.__analyse_run()
+        elif self.analysis_type == "stage":
+            self.__analyse_stage()
         else:
             raise ValueError("Provided analysis type not found")
 
@@ -203,3 +210,44 @@ class Runner:
         )
         import pprint
         pprint.pprint(analysis_results_dict)
+
+    def __analyse_stage(self):
+        import matplotlib.pyplot as plt
+
+        while True:
+            print("Please select the stage you want to analyse:")
+            stage_id = input("Stage ID: ")
+
+            path_to_stage_dir = os.path.join(self.run_dir, f"stage_{stage_id}")
+            if not os.path.isdir(path_to_stage_dir):
+                print("The stage directory does not exist.")
+                continue
+            else:
+                break
+
+        stage_results = StageResults(self.run_dir, int(stage_id))
+
+        analyse_stage = AnalyseStage(
+            stage_results=stage_results,
+        )
+
+        print("select fitness value to analyse:")
+        print("Possible values:")
+        for i, key in enumerate(analyse_stage.stage_results.fitness_log.chapters.keys()):
+            print(f"{i}: {key}")
+        fitness_index = input("Please select the index of the fitness value you want to analyse: ")
+        fitness_key = list(analyse_stage.stage_results.fitness_log.chapters.keys())[int(fitness_index)]
+
+        gen = analyse_stage.stage_results.fitness_log.select("gen")
+
+        fig, ax = plt.subplots()
+        for fit_type in ["max", "min", "avg"]:
+            fitness = analyse_stage.stage_results.fitness_log.chapters[fitness_key].select(fit_type)
+            ax.plot(gen, fitness, label=f"{fit_type}")
+
+        ax.set_xlabel("Generation")
+        ax.set_ylabel(fitness_key)
+
+        plt.legend()
+        plt.show()
+

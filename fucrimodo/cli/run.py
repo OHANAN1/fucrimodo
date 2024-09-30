@@ -142,5 +142,6 @@ class Runner:
 
 
         run_data.save_run_info_json()
+        multi_stage_search.save_results()
 
         # save_current_script(run_data)

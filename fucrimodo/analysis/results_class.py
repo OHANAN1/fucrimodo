@@ -1,7 +1,9 @@
 import os
 from typing import Any
 
+import pickle
 import ase
+from deap import tools
 from fucrimodo.core.utils import ase_database_tools as db_tools
 import json
 import warnings
@@ -31,13 +33,13 @@ class StageResults():
         self._name = f"stage_{id}"
         self._id = id
 
-        stage_file_path = os.path.join(run_dir, f"stage_{id}.json")
-        if not os.path.exists(stage_file_path):
+        stage_dir_path = os.path.join(run_dir, f"stage_{id}")
+        if not os.path.exists(stage_dir_path):
             raise FileNotFoundError(
-                f"File stage_{id}.json does not exist in {run_dir}."
+                f"Directory stage_{id} does not exist in {run_dir}."
                 "Was the desired stage even performed?"
             )
-        self._stage_dict = self.__load_stage_dict_from_file(stage_file_path)
+        # self._stage_dict = self.__load_stage_dict_from_file(stage_file_path)
 
         crystals_db_path = os.path.join(run_dir, "crystals.db")
         if not os.path.exists(crystals_db_path):
@@ -55,7 +57,15 @@ class StageResults():
                 f"File run_info.json does not exist in {run_dir}."
                 "Was the correct directory selected?"
             )
-        self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
+        # self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
+        with open(os.path.join(stage_dir_path, "fitness.pickle"), "rb") as f:
+            self._fitness_log = pickle.load(f)
+
+        with open(os.path.join(stage_dir_path, "mutation.pickle"), "rb") as f:
+            self._mutation_log = pickle.load(f)
+
+        with open(os.path.join(stage_dir_path, "crossover.pickle"), "rb") as f:
+            self._crossover_log = pickle.load(f)
 
     @property
     def crystals(self) -> list[ase.Atoms]:
@@ -73,32 +83,42 @@ class StageResults():
         """
         return self._key_value_pairs
 
-    @property
-    def stage_dict(self) -> dict[str, dict[str, dict[str, list]]]:
-        """
-        Holds the data that is saved in the stage_[:data:`id`].json file.
-        """
-        return self._stage_dict
+    # @property
+    # def stage_dict(self) -> dict[str, dict[str, dict[str, list]]]:
+    #     """
+    #     Holds the data that is saved in the stage_[:data:`id`].json file.
+    #     """
+    #     return self._stage_dict
 
     @property
-    def fitness_log(self) -> dict[str, dict[str, list]]:
+    def fitness_log(self) -> tools.Logbook:
         """The fitness values that where tracked during the stage.
 
         Keys are the names of the fitness functions and the values are dicts
         with the different value types that where tracked for each generation.
         Normally the value types are 'mean', 'std', 'min', 'max'.
         """
-        return self._stage_dict["fitness_log"]
+        return self._fitness_log
 
     @property
-    def global_statistics_log(self) -> dict[str, dict[str, list]]:
-        """The global statistics were tracked for each generation during the stage.
+    def mutation_log(self) -> tools.Logbook:
+        """The mutation statistics that where tracked during the stage.
 
-        Keys are the names of the statistics and the values are dicts
+        Keys are the names of the mutations and the values are dicts
         with the different value types that where tracked for each generation.
         Normally the value types are 'mean', 'std', 'min', 'max'.
         """
-        return self._stage_dict["global_log"]
+        return self._mutation_log
+
+    @property
+    def crossover_log(self) -> tools.Logbook:
+        """The crossover statistics that where tracked during the stage.
+
+        Keys are the names of the crossovers and the values are dicts
+        with the different value types that where tracked for each generation.
+        Normally the value types are 'mean', 'std', 'min', 'max'.
+        """
+        return self._crossover_log
 
     @property
     def name(self) -> str:
@@ -113,16 +133,16 @@ class StageResults():
     @property
     def n_generations(self) -> int:
         """Number of generations that the stage performed."""
-        return self._stage_info_dict["number of generations"]
+        return self._fitness_log.select("gen")[-1]
 
-    def __load_stage_info_from_file(
-        self, run_info_path: str
-    ) -> dict[str, Any]:
-        with open(run_info_path, "r") as f:
-            run_info_dict = json.load(f)
-
-        stage_info_dict = run_info_dict["stage_info"][f"stage_{self.id}"]
-        return stage_info_dict
+    # def __load_stage_info_from_file(
+    #     self, run_info_path: str
+    # ) -> dict[str, Any]:
+    #     with open(run_info_path, "r") as f:
+    #         run_info_dict = json.load(f)
+    #
+    #     stage_info_dict = run_info_dict["stage_info"][f"stage_{self.id}"]
+    #     return stage_info_dict
 
     def __load_stage_dict_from_file(
         self, stage_file_path: str
@@ -174,6 +194,9 @@ class RunResults():
         self._stages, self._run_info = data
         self.n_stages = len(self.stages)
 
+        with open(os.path.join(run_dir, "global_logbook.json"), "r") as f:
+            self._global_statistics_log = json.load(f)
+
     @property
     def run_name(self) -> str:
         """
@@ -189,6 +212,15 @@ class RunResults():
         else:
             self._run_name = value
 
+    @property
+    def global_statistics_log(self) -> dict[str, dict[str, list]]:
+        """The global statistics were tracked for each generation during the run.
+
+        Keys are the names of the statistics and the values are dicts
+        with the different value types that where tracked for each generation.
+        Normally the value types are 'mean', 'std', 'min', 'max'.
+        """
+        return self._global_statistics_log
 
     @property
     def run_info(self) -> dict | None:

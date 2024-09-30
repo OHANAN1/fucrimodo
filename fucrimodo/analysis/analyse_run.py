@@ -106,40 +106,14 @@ class AnalyseStage():
             )
         elif type(value) == StageResults:
             self._stage_results = value
+        else:
+            raise ValueError(
+                f"Expected tuple or StageResults, got {type(value)}"
+            )
 
     # @property
     # def valid_global_statistics_keys(self) -> list[str]:
     #     return list(self._stage_results.stage_dict.keys())
-
-    def get_global_statistics_values(
-        self, statistics_key: str, value_type: str | None = None
-    ) -> dict[str, list] | list:
-        """
-        Returns all found values for a specific statistic that was collected
-        during the stage.
-
-        :param statistics_key: Key of the statistic of interest
-        :param value_type: If not None, only the specified value type is
-            returned. Normally these types are: "max", "min", "avg" or "std".
-
-        :returns: The data associated with the given :data:`statistics_key`. 
-            Either a dict with keys 'max', 'min', 'avg' and 'std' for the 
-            selected statistic. Or only the list of values for the value type 
-            that is specified.
-
-        :raises KeyError: If the given :data:`statistics_key` could not be 
-            found in the data saved during the stage.
-        """
-        self.__is_valid_global_statics_keys(
-            key=statistics_key, raise_error=True
-        )
-        stat_values = self._stage_results.global_statistics_log[statistics_key]
-
-        if value_type is None:
-            return stat_values
-        else:
-            return stat_values[value_type]
-
 
     def get_best_crystal_tuple(
         self, statistics_key: str, invert: bool = False
@@ -174,31 +148,6 @@ class AnalyseStage():
             self.stage_results.key_value_pairs[crystal_index]
         )
 
-    def __is_valid_global_statics_keys(
-        self, key: str | None, raise_error: bool = False
-    ) -> NoReturn | bool :
-        """
-        Checks if the provided key is found in the keys 
-        of :attr:`StageResults.stage_dict`.
-        None values are also counted as invalid.
-
-        :param key: Key that should be checked.
-        :param raise_error: If True will raise error if the key is not valid.
-
-        :raise KeyError: Only when :data:raise_error is True and provided key
-            is not valid.
-        """
-        valid_keys = self._stage_results.global_statistics_log.keys()
-        if key in valid_keys:
-            return True
-        else:
-            if raise_error:
-                raise KeyError(
-                    f"Provided key {key} was not found in valid keys:\n" 
-                    f"{valid_keys}"
-                )
-            else:
-                return False
 
 
 class AnalyseRun():
@@ -518,6 +467,60 @@ class AnalyseRun():
         ax_target.set_axis_off()
         ax_best.set_axis_off()
 
+    def get_global_statistics_values(
+        self, statistics_key: str, value_type: str | None = None
+    ) -> dict[str, list] | list:
+        """
+        Returns all found values for a specific statistic that was collected
+        during the stage.
+
+        :param statistics_key: Key of the statistic of interest
+        :param value_type: If not None, only the specified value type is
+            returned. Normally these types are: "max", "min", "avg" or "std".
+
+        :returns: The data associated with the given :data:`statistics_key`. 
+            Either a dict with keys 'max', 'min', 'avg' and 'std' for the 
+            selected statistic. Or only the list of values for the value type 
+            that is specified.
+
+        :raises KeyError: If the given :data:`statistics_key` could not be 
+            found in the data saved during the stage.
+        """
+        self.__is_valid_global_statics_keys(
+            key=statistics_key, raise_error=True
+        )
+        stat_values = self._stage_results.global_statistics_log[statistics_key]
+
+        if value_type is None:
+            return stat_values
+        else:
+            return stat_values[value_type]
+
+    def __is_valid_global_statics_keys(
+        self, key: str | None, raise_error: bool = False
+    ) -> NoReturn | bool :
+        """
+        Checks if the provided key is found in the keys 
+        of :attr:`StageResults.stage_dict`.
+        None values are also counted as invalid.
+
+        :param key: Key that should be checked.
+        :param raise_error: If True will raise error if the key is not valid.
+
+        :raise KeyError: Only when :data:raise_error is True and provided key
+            is not valid.
+        """
+        valid_keys = self._stage_results.global_statistics_log.keys()
+        if key in valid_keys:
+            return True
+        else:
+            if raise_error:
+                raise KeyError(
+                    f"Provided key {key} was not found in valid keys:\n" 
+                    f"{valid_keys}"
+                )
+            else:
+                return False
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Analysis Functions                    ║

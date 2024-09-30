@@ -118,15 +118,15 @@ class GAStage(Stage):
     def save_results(self, save_path: str, crystals_db: Database):
         import pickle
 
-        file_path = os.path.join(save_path, f"{self.id}_crossover.pickle")
+        file_path = os.path.join(save_path, "crossover.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.crossover_logbook, f)
 
-        file_path = os.path.join(save_path, f"{self.id}_mutation.pickle")
+        file_path = os.path.join(save_path, "mutation.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.mutation_logbook, f)
 
-        file_path = os.path.join(save_path, f"{self.id}_fitness.pickle")
+        file_path = os.path.join(save_path, "fitness.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.fitness_logbook, f)
 

@@ -1,6 +1,7 @@
 from .modules import Stage, Population
 from .utils import data_handeling
 import os
+import pickle
 
 class MultiStageSearch:
     def __init__(
@@ -9,6 +10,11 @@ class MultiStageSearch:
     ) -> None:
         self.run_data = run_data
         self.current_stage_id = 0
+
+    def save_results(self):
+        file_path = os.path.join(self.run_data.run_dir, "global_logbook.pickle")
+        with open(file_path, "wb") as f:
+            pickle.dump(self.run_data.global_logbook, f)
 
     def run(
         self,
