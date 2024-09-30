@@ -23,7 +23,6 @@ class Stage(ABC):
     def save_results(self, save_path: str, crystals_db: Database):
         pass
 
-
     @property
     def id(self) -> int:
         return self._id

@@ -327,8 +327,10 @@ class MultiStageSearch:
             global_log=self.run_data.global_logbook,
             global_stats=self.run_data.global_statistics, 
         )
+
         stage.save_results(
             save_path = self.run_data.run_dir,
             crystals_db = self.run_data.crystal_database
         )
+
         return population

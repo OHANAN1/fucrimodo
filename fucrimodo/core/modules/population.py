@@ -1,14 +1,11 @@
 from .individual import Individual
 
-class Population(list[Individual]):
+class Population:
     def __init__(self, individuals: list[Individual]):
         """
         A population of individuals.
         """
         self.individuals = individuals
-
-    def __iter__(self):
-        return iter(self.individuals)
 
     @property
     def individuals(self) -> list[Individual]:
