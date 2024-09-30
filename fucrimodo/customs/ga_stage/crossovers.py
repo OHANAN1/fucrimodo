@@ -229,7 +229,7 @@ class Crossover(ABC):
         Returns the two offsprings and a boolean if the crossover was successful.
         True if successful, False if not.
         """
-        ic("Performing {}.".format(self.__class__.__name__))
+        print("Performing {}.".format(self.__class__.__name__))
 
         if not hasattr(self, "max_steps") or self.max_steps == 0:
             self.max_steps = 1
@@ -337,11 +337,11 @@ class Crossover(ABC):
                 parent2.set_cell(offspring_2_cell)
                 parent2.set_pbc([True, True, True])
 
-                ic("Done! After {} steps.".format(step+1))
+                print("Done! After {} steps.".format(step+1))
                 return (parent1, parent2, True)
 
             else:
-                ic("Crossover failed.")
+                print("Crossover failed.")
                 return (parent1, parent2, False)
 
         except Exception as e:
@@ -722,7 +722,7 @@ class CutAndSpliceCrossover(Crossover):
             timeout=30
         )
         if result is None:
-            ic("Crossover took too long. I dont know why tho")
+            print("Crossover took too long. I dont know why tho")
             print("Crossover took too long. I dont know why tho")
 
             return (None, None)

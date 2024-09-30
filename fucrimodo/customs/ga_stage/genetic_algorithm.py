@@ -210,7 +210,7 @@ class GeneticAlgorithm:
 
         :return: The number of individuals with invalid fitnesses.
         """
-        ic("Updating fitnesses.")
+        print("Updating fitnesses.")
         invalid_ind = [ind for ind in individuals if not ind.fitness.valid]
         for ind in invalid_ind:
             ind.reset() # Ensures that all features are reset
@@ -284,6 +284,11 @@ class GeneticAlgorithm:
                 failed = not success_bool
                 offspring[i - 1].info["cross_info"] = [crossover_hash, failed]
                 offspring[i].info["cross_info"] = [crossover_hash, failed]
+        
+        # For uneven populations, the last individual is not crossed
+        # Assign the .info['cross_info'] attribute to the last individual
+        if len(offspring) % 2 == 1:
+            offspring[-1].info["cross_info"] = [None, True]
 
         for i in range(len(offspring)):
             # Reset info about mutation, use None and False to have a consistent 
@@ -314,7 +319,7 @@ class GeneticAlgorithm:
             if mut_info[1] == False or cross_info[1] == False:
                 modified_offspring.append(offspring[i])
 
-        ic("Modified {} individuals".format(len(modified_offspring)))
+        print("Modified {} individuals".format(len(modified_offspring)))
 
         return modified_offspring
 
@@ -440,6 +445,7 @@ class GeneticAlgorithm:
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> Population:
+        population_size = population.size
         self.__initialize_evolution(
             population=population, 
             global_stats=global_stats,
@@ -455,28 +461,38 @@ class GeneticAlgorithm:
             generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
-            ic("Evolving Gen: ", generation)
-            ic("Population size: ", population.size)
+            print("Evolving Gen: ", generation)
+            print("Population size: ", population.size)
 
             # ── Select Parents ───────────────────────────────────────────────
             parents = self.parent_selection(
-                population.individuals, 
-                population.size
+                individuals = population.individuals, 
+                k = population.size
             )
-            ic("Selected {} parents".format(len(parents)))
+            print("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
             offspring = self.__create_offspring(parents)
             nevals = self.__update_fitnesses(offspring)
 
             # Combine the offspring with the population to select the survivors
-            population_pool = population.individuals + offspring
-            ic("Created population pool")
+            population_pool = population.individuals 
+
+            # Only add the offspring that are not already in the population
+            for ind in offspring:
+                if ind not in population_pool:
+                    population_pool.append(ind)
+            print("Created population pool")
 
             new_population = self.survivor_selection(
-                population_pool, population.size
+                individuals = population_pool, k = population.size
             )
-            ic("Selected {} survivors".format(len(new_population)))
+            new_population = new_population[:population_size]
+            print("Selected {} survivors".format(len(new_population)))
+            if len(new_population) != population_size:
+                raise ValueError(
+                    "The number of survivors does not match the population size."
+                )
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(

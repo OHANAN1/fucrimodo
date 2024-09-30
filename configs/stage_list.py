@@ -91,10 +91,6 @@ def get_stage_list(
     soap_fitness_mid = soap_fitness_list[1]
     soap_fitness_strong = soap_fitness_list[2]
 
-    # ── Additional Statistics functions ─────────────────────────────────────
-    additional_statistics_func = soap_fitness_mid.evaluate_individual
-    add_stats_func_name = "reference_similarity"
-
     # ╒══════════════════════════════════════════════════════════╕
     #                       Define Stages
     # ╘══════════════════════════════════════════════════════════╛

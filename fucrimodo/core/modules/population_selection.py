@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import ase
 
+from .individual import Individual
+
 # ╔══════════════════════════════════════════════════════════╗
 # ║         Abstract Base Class for StartPopulation          ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -12,8 +14,8 @@ class PopulationSelection(ABC):
     @abstractmethod
     def select_start_pop(
         self,
-        individuals: list[ase.Atoms]
-    ) -> list[ase.Atoms]:
+        individuals: list[Individual]
+    ) -> list[Individual]:
         """
         Returns parts of the given crystals based on the selection strategy
         of the class.

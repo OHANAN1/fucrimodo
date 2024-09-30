@@ -88,7 +88,7 @@ class Mutation(ABC):
         Returns the offspring and a boolean if the mutation was successful.
         True if successful, False if not.
         """
-        ic("Performing {}.".format(self.__class__.__name__))
+        print("Performing {}.".format(self.__class__.__name__))
         try:
             if not hasattr(self, "max_steps") or self.max_steps == 0:
                 self.max_steps = 1
@@ -163,11 +163,11 @@ class Mutation(ABC):
                 crystal.set_cell(offspring_cell)
                 crystal.set_pbc([True, True, True])
 
-                ic("Done! After {} steps.".format(step+1))
+                print("Done! After {} steps.".format(step+1))
                 return crystal, True
 
             else:
-                ic("Mutation failed.")
+                print("Mutation failed.")
                 return crystal, False
 
         except Exception as e:

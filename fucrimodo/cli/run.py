@@ -1,6 +1,9 @@
 import os
 import sys
 
+from fucrimodo.core.modules.population import Population
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+
 class CLICommand:
     """Perform descriptor inversion on provided input file."""
 
@@ -53,9 +56,8 @@ class Runner:
         # ║                      Debug Settings                      ║
         # ╚══════════════════════════════════════════════════════════╝
 
-        log_enable = True
-        warnings.filterwarnings("ignore")
-        ic.disable()
+        log_enable = False
+        warnings.filterwarnings("always")
 
         random.seed(42)
         np.random.seed(42)
@@ -92,6 +94,7 @@ class Runner:
             save_n_best_crystals=10,
             global_statistics_dict=global_stats_dict,
         )
+        ic.enable()
 
         # ── Perform Run ─────────────────────────────────────────────────────────
         run_data.add_run_settings(
@@ -103,11 +106,40 @@ class Runner:
             run_data=run_data,
         )
 
-        for stage in stage_list:
+
+        cell_bounds = CustomCellBounds({
+                "a": [1, 4], "b": [1, 4], "c": [1, 4], 
+                "alpha": [20, 160], "beta": [20, 160], "gamma": [20, 160]
+            })
+        
+        from fucrimodo.customs import population_selections as start_pop
+        dope_sel = start_pop.DopePopulationSelection(
+            atom_types=soap_species,
+            add_n=12,
+            cell_bounds=cell_bounds,
+        )
+
+        for i in range(2):
+            stage = stage_list[i]
+
+            individuals = dope_sel.select_start_pop(
+                individuals=population.individuals,
+            )
+            population.individuals = individuals
+
             population = multi_stage_search.run(
                 stage=stage,
                 population=population,
             )
+
+        for i in range(2, len(stage_list)):
+            stage = stage_list[i]
+
+            population = multi_stage_search.run(
+                stage=stage,
+                population=population,
+            )
+
 
         run_data.save_run_info_json()
 
