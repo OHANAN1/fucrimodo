@@ -30,7 +30,6 @@ class MultiStageSearch:
         )
         os.mkdir(save_dir)
 
-
         print(f"Running stage {self.current_stage_id}:")
         print(f"Stage ID: {stage.id}")
         print(f"Poulation size: {population.size}")

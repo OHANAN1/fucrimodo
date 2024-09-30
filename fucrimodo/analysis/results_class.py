@@ -8,6 +8,7 @@ from fucrimodo.core.utils import ase_database_tools as db_tools
 import json
 import warnings
 from ase.db.core import Database
+import pickle
 
 class StageResults():
     """
@@ -194,8 +195,8 @@ class RunResults():
         self._stages, self._run_info = data
         self.n_stages = len(self.stages)
 
-        with open(os.path.join(run_dir, "global_logbook.json"), "r") as f:
-            self._global_statistics_log = json.load(f)
+        with open(os.path.join(run_dir, "global_logbook.pickle"), "rb") as f:
+            self._global_statistics_log = pickle.load(f)
 
     @property
     def run_name(self) -> str:
@@ -213,7 +214,7 @@ class RunResults():
             self._run_name = value
 
     @property
-    def global_statistics_log(self) -> dict[str, dict[str, list]]:
+    def global_statistics_log(self) -> tools.Logbook:
         """The global statistics were tracked for each generation during the run.
 
         Keys are the names of the statistics and the values are dicts

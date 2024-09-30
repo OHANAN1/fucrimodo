@@ -111,6 +111,9 @@ class AnalyseStage():
                 f"Expected tuple or StageResults, got {type(value)}"
             )
 
+    def get_fitness_keys(self) -> list[str]:
+        """Returns the fitness keys of the stage."""
+        return list(self.stage_results.fitness_log.chapters.keys())
     # @property
     # def valid_global_statistics_keys(self) -> list[str]:
     #     return list(self._stage_results.stage_dict.keys())
@@ -147,7 +150,6 @@ class AnalyseStage():
             self.stage_results.key_value_pairs[crystal_index][statistics_key],
             self.stage_results.key_value_pairs[crystal_index]
         )
-
 
 
 class AnalyseRun():
@@ -199,7 +201,7 @@ class AnalyseRun():
 
     def get_global_statistics_keys(self) -> list[str]:
         """List of the global statistic keys that all stages share."""
-        return list(self.stages[0].stage_results.global_statistics_log.keys())
+        return list(self.run_results.global_statistics_log.chapters.keys())
 
     def get_number_of_stages(self) -> int:
         return self.run_results.n_stages
@@ -250,43 +252,43 @@ class AnalyseRun():
             total_steps += stage_analys.stage_results.n_generations
         return total_steps
 
-    def get_global_statistic_values_all_stages(
-        self,
-        statistics_key: str, 
-        value_type: str | None = None
-    ) -> dict[str, dict[str, list]] | dict[str, list]:
-        """Returns all found values for a specific statistic that was collected
-        during all stages. The desired statistic must be present in all 
-        stages.
-
-        :param statistics_key: Key of the statistic of interest. Must be 
-            present in all stages.
-        :param value_type: If not None, only the specified value type is
-            returned. Normally these types are: "max", "min", "avg" or "std".
-
-        :returns: A dict with with keys :attr:`AnalyseStage.id` as keys and the 
-            data associated with the given :data:`statistics_key` of the 
-            specific stage as value.
-            That is either a dict with keys 'max', 'min', 'avg' and 'std' for the 
-            selected statistic. Or only the list of values for the value type
-            that is specified.
-
-        :raises KeyError: If the given :data:`statistics_key` could not be 
-            found in all stages.
-        """
-        assert statistics_key in self.get_global_statistics_keys(), (
-            f"Key {statistics_key} not in shared keys."
-        )
-
-        statistics_values = {}
-        for stage_analys in self.stages:
-            stage_id = stage_analys.id
-            values_dict = stage_analys.get_global_statistics_values(
-                statistics_key, value_type
-            )
-            statistics_values[stage_id] = values_dict
-
-        return statistics_values
+    # def get_global_statistic_values_all_stages(
+    #     self,
+    #     statistics_key: str, 
+    #     value_type: str | None = None
+    # ) -> dict[str, dict[str, list]] | dict[str, list]:
+    #     """Returns all found values for a specific statistic that was collected
+    #     during all stages. The desired statistic must be present in all 
+    #     stages.
+    #
+    #     :param statistics_key: Key of the statistic of interest. Must be 
+    #         present in all stages.
+    #     :param value_type: If not None, only the specified value type is
+    #         returned. Normally these types are: "max", "min", "avg" or "std".
+    #
+    #     :returns: A dict with with keys :attr:`AnalyseStage.id` as keys and the 
+    #         data associated with the given :data:`statistics_key` of the 
+    #         specific stage as value.
+    #         That is either a dict with keys 'max', 'min', 'avg' and 'std' for the 
+    #         selected statistic. Or only the list of values for the value type
+    #         that is specified.
+    #
+    #     :raises KeyError: If the given :data:`statistics_key` could not be 
+    #         found in all stages.
+    #     """
+    #     assert statistics_key in self.get_global_statistics_keys(), (
+    #         f"Key {statistics_key} not in shared keys."
+    #     )
+    #
+    #     statistics_values = {}
+    #     for stage_analys in self.stages:
+    #         stage_id = stage_analys.id
+    #         values_dict = stage_analys.get_global_statistics_values(
+    #             statistics_key, value_type
+    #         )
+    #         statistics_values[stage_id] = values_dict
+    #
+    #     return statistics_values
 
     def get_analysis_results_dict(
         self,
@@ -357,88 +359,87 @@ class AnalyseRun():
 
         return analysis_results_dict
 
-    def plot_combined_statistics_development(
-        self,
-        ax: Axes,
-        statistics_key: str,
-        display_stage_id: bool = True,
-        stage_id_y_pos: float = 1.,
-        stage_id_x_offset: float = 2.5,
-        value_types: list[str] = ["max", "min", "avg"],
-        colors: list[str] = ["red", "green", "royalblue"],
-        x_offset: int = 0,
-        show_legend: bool = True,
-        legend_params: dict = dict(
-            bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25
-        ),
-    ) -> None:
-        """
-        Plots the main statistics values for the whole run.
-        Use value_types to specify which values to plot.
-        Normally ("max", "min", "avg") and "std" are used.
-        Give the colors for the value types in the same order.
-
-        Use x_offset to change start position of the x-axis.
-        Can be used to plot multiple runs in the same plot.
-        NOTE: support for floats will be added later
-        """
-        assert len(value_types) == len(colors), (
-            "Need the same amount of colors as value types."
-        )
-        stage_bbox = dict(
-            boxstyle="square,pad=0.15", facecolor='white', alpha=1., 
-            edgecolor='black', linewidth=2.
-        )
-
-        statistics_values = self.get_global_statistic_values_all_stages(
-            statistics_key
-        )
-
-        x_start = x_offset
-        for stage_id, stat_val_dict in statistics_values.items():
-            if not isinstance(stat_val_dict, dict):
-                raise ValueError(
-                    f"Expected dict, got {type(stat_val_dict)}."
-                )
-
-            assert all(
-                value_type in stat_val_dict.keys()
-                for value_type in value_types
-            ), f"Value types {value_types} not in statistics values."
-
-            total_len = len(stat_val_dict[value_types[0]])
-
-            x_end = x_start + total_len
-            x = range(x_start, x_end)
-
-            if display_stage_id:
-                ax.text(
-                    x_start + stage_id_x_offset,
-                    stage_id_y_pos,
-                    str(stage_id),
-                    bbox=stage_bbox,
-                )
-
-            # only add lable once
-            if stage_id == 1:
-                for value_type, color in zip(value_types, colors):
-                    ax.plot(
-                        x, stat_val_dict[value_type], color=color, 
-                        label=value_type
-                    )
-            else:
-                for value_type, color in zip(value_types, colors):
-                    ax.plot(x, stat_val_dict[value_type], color=color)
-
-            x_start = x_end - 1
-            ax.axvline(x=x_start, color="black", linestyle="-", linewidth=2.)
-
-        ax.set_xlim(0, x_start)
-
-        if show_legend:
-            legend_params["ncol"] = len(value_types)
-            ax.legend(**legend_params)
-
+    # def plot_combined_statistics_development(
+    #     self,
+    #     ax: Axes,
+    #     statistics_key: str,
+    #     display_stage_id: bool = True,
+    #     stage_id_y_pos: float = 1.,
+    #     stage_id_x_offset: float = 2.5,
+    #     value_types: list[str] = ["max", "min", "avg"],
+    #     colors: list[str] = ["red", "green", "royalblue"],
+    #     x_offset: int = 0,
+    #     show_legend: bool = True,
+    #     legend_params: dict = dict(
+    #         bbox_to_anchor=(0.5, 1.03), loc="lower center", fontsize=25
+    #     ),
+    # ) -> None:
+    #     """
+    #     Plots the main statistics values for the whole run.
+    #     Use value_types to specify which values to plot.
+    #     Normally ("max", "min", "avg") and "std" are used.
+    #     Give the colors for the value types in the same order.
+    #
+    #     Use x_offset to change start position of the x-axis.
+    #     Can be used to plot multiple runs in the same plot.
+    #     NOTE: support for floats will be added later
+    #     """
+    #     assert len(value_types) == len(colors), (
+    #         "Need the same amount of colors as value types."
+    #     )
+    #     stage_bbox = dict(
+    #         boxstyle="square,pad=0.15", facecolor='white', alpha=1., 
+    #         edgecolor='black', linewidth=2.
+    #     )
+    #
+    #     statistics_values = self.get_global_statistic_values_all_stages(
+    #         statistics_key
+    #     )
+    #
+    #     x_start = x_offset
+    #     for stage_id, stat_val_dict in statistics_values.items():
+    #         if not isinstance(stat_val_dict, dict):
+    #             raise ValueError(
+    #                 f"Expected dict, got {type(stat_val_dict)}."
+    #             )
+    #
+    #         assert all(
+    #             value_type in stat_val_dict.keys()
+    #             for value_type in value_types
+    #         ), f"Value types {value_types} not in statistics values."
+    #
+    #         total_len = len(stat_val_dict[value_types[0]])
+    #
+    #         x_end = x_start + total_len
+    #         x = range(x_start, x_end)
+    #
+    #         if display_stage_id:
+    #             ax.text(
+    #                 x_start + stage_id_x_offset,
+    #                 stage_id_y_pos,
+    #                 str(stage_id),
+    #                 bbox=stage_bbox,
+    #             )
+    #
+    #         # only add lable once
+    #         if stage_id == 1:
+    #             for value_type, color in zip(value_types, colors):
+    #                 ax.plot(
+    #                     x, stat_val_dict[value_type], color=color, 
+    #                     label=value_type
+    #                 )
+    #         else:
+    #             for value_type, color in zip(value_types, colors):
+    #                 ax.plot(x, stat_val_dict[value_type], color=color)
+    #
+    #         x_start = x_end - 1
+    #         ax.axvline(x=x_start, color="black", linestyle="-", linewidth=2.)
+    #
+    #     ax.set_xlim(0, x_start)
+    #
+    #     if show_legend:
+    #         legend_params["ncol"] = len(value_types)
+    #         ax.legend(**legend_params)
 
     def plot_best_crystal_and_target(
         self, 
@@ -467,60 +468,61 @@ class AnalyseRun():
         ax_target.set_axis_off()
         ax_best.set_axis_off()
 
-    def get_global_statistics_values(
-        self, statistics_key: str, value_type: str | None = None
-    ) -> dict[str, list] | list:
-        """
-        Returns all found values for a specific statistic that was collected
-        during the stage.
+    # def get_global_statistics_values(
+    #     self, statistics_key: str, value_type: str | None = None
+    # ) -> dict[str, list] | list:
+    #     """
+    #     Returns all found values for a specific statistic that was collected
+    #     during the stage.
+    #
+    #     :param statistics_key: Key of the statistic of interest
+    #     :param value_type: If not None, only the specified value type is
+    #         returned. Normally these types are: "max", "min", "avg" or "std".
+    #
+    #     :returns: The data associated with the given :data:`statistics_key`. 
+    #         Either a dict with keys 'max', 'min', 'avg' and 'std' for the 
+    #         selected statistic. Or only the list of values for the value type 
+    #         that is specified.
+    #
+    #     :raises KeyError: If the given :data:`statistics_key` could not be 
+    #         found in the data saved during the stage.
+    #     """
+    #     self.__is_valid_global_statics_keys(
+    #         key=statistics_key, raise_error=True
+    #     )
+    #     stat_values = self._stage_results.global_statistics_log[statistics_key]
+    #
+    #     if value_type is None:
+    #         return stat_values
+    #     else:
+    #         return stat_values[value_type]
 
-        :param statistics_key: Key of the statistic of interest
-        :param value_type: If not None, only the specified value type is
-            returned. Normally these types are: "max", "min", "avg" or "std".
+    # def __is_valid_global_statics_keys(
+    #     self, key: str | None, raise_error: bool = False
+    # ) -> NoReturn | bool :
+    #     """
+    #     Checks if the provided key is found in the keys 
+    #     of :attr:`StageResults.stage_dict`.
+    #     None values are also counted as invalid.
+    #
+    #     :param key: Key that should be checked.
+    #     :param raise_error: If True will raise error if the key is not valid.
+    #
+    #     :raise KeyError: Only when :data:raise_error is True and provided key
+    #         is not valid.
+    #     """
+    #     valid_keys = self._stage_results.global_statistics_log.keys()
+    #     if key in valid_keys:
+    #         return True
+    #     else:
+    #         if raise_error:
+    #             raise KeyError(
+    #                 f"Provided key {key} was not found in valid keys:\n" 
+    #                 f"{valid_keys}"
+    #             )
+    #         else:
+    #             return False
 
-        :returns: The data associated with the given :data:`statistics_key`. 
-            Either a dict with keys 'max', 'min', 'avg' and 'std' for the 
-            selected statistic. Or only the list of values for the value type 
-            that is specified.
-
-        :raises KeyError: If the given :data:`statistics_key` could not be 
-            found in the data saved during the stage.
-        """
-        self.__is_valid_global_statics_keys(
-            key=statistics_key, raise_error=True
-        )
-        stat_values = self._stage_results.global_statistics_log[statistics_key]
-
-        if value_type is None:
-            return stat_values
-        else:
-            return stat_values[value_type]
-
-    def __is_valid_global_statics_keys(
-        self, key: str | None, raise_error: bool = False
-    ) -> NoReturn | bool :
-        """
-        Checks if the provided key is found in the keys 
-        of :attr:`StageResults.stage_dict`.
-        None values are also counted as invalid.
-
-        :param key: Key that should be checked.
-        :param raise_error: If True will raise error if the key is not valid.
-
-        :raise KeyError: Only when :data:raise_error is True and provided key
-            is not valid.
-        """
-        valid_keys = self._stage_results.global_statistics_log.keys()
-        if key in valid_keys:
-            return True
-        else:
-            if raise_error:
-                raise KeyError(
-                    f"Provided key {key} was not found in valid keys:\n" 
-                    f"{valid_keys}"
-                )
-            else:
-                return False
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Analysis Functions                    ║

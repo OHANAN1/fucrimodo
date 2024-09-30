@@ -168,6 +168,8 @@ class Runner:
         import matplotlib.pyplot as plt
         analyse_run = AnalyseRun(self.run_dir)
 
+        global_log = analyse_run.run_results.global_statistics_log
+
         if self.statistics_key is None:
             print()
             self.statistics_key = self.__let_user_select_statistics_key(
@@ -179,21 +181,26 @@ class Runner:
         if not os.path.isdir(analysis_dir):
             os.mkdir(analysis_dir)
 
-        from fucrimodo.analysis.analyse_run import create_combined_statistics_development_plot
-        create_combined_statistics_development_plot(
-            analyse_run,
-            statistics_key=self.statistics_key,
-            display_stage_id=True,
-            stage_id_x_offset=0.85,
-            stage_id_y_pos=1.15,
-            statistics_name="Ref. Similarity",
-            statistics_symbol="S$_\\text{r}$",
-            save_fig=False,
-            y_lim=(-0.1, 1.1),
-            legend_params=dict(
-                bbox_to_anchor=(0.4, 1.03), loc="lower center", fontsize=25
-            )
-        )
+        # Clean this up and put it in analysis class
+        gen = global_log.select("gen")
+        gen = [i for i in range(len(gen))]
+        stage_id = global_log.select("stage_id")
+
+        fig, ax = plt.subplots()
+        for fit_type in ["max", "min", "avg"]:
+            fitness = global_log.chapters[self.statistics_key].select(fit_type)
+            ax.plot(gen, fitness, label=f"{fit_type}")
+
+        current_stage = 1
+        for i, stage in enumerate(stage_id):
+            if stage != current_stage:
+                ax.axvline(x=i, color="black", linestyle="--", alpha=0.5)
+                current_stage = stage
+
+        ax.set_xlabel("Generation")
+        ax.set_ylabel(self.statistics_key)
+
+        plt.legend()
         plt.show()
 
         # Get the analysis results dict
@@ -205,11 +212,11 @@ class Runner:
         else:
             target_crystal = None
 
-        analysis_results_dict = analyse_run.get_analysis_results_dict(
-            statistics_key=self.statistics_key, target_crystal=target_crystal
-        )
-        import pprint
-        pprint.pprint(analysis_results_dict)
+        # analysis_results_dict = analyse_run.get_analysis_results_dict(
+        #     statistics_key=self.statistics_key, target_crystal=target_crystal
+        # )
+        # import pprint
+        # pprint.pprint(analysis_results_dict)
 
     def __analyse_stage(self):
         import matplotlib.pyplot as plt
@@ -231,22 +238,20 @@ class Runner:
             stage_results=stage_results,
         )
 
-        print("select fitness value to analyse:")
-        print("Possible values:")
-        for i, key in enumerate(analyse_stage.stage_results.fitness_log.chapters.keys()):
-            print(f"{i}: {key}")
-        fitness_index = input("Please select the index of the fitness value you want to analyse: ")
-        fitness_key = list(analyse_stage.stage_results.fitness_log.chapters.keys())[int(fitness_index)]
+        if self.statistics_key is None:
+            self.statistics_key = self.__let_user_select_statistics_key(
+                possible_stat_keys=analyse_stage.get_fitness_keys()
+            )
 
         gen = analyse_stage.stage_results.fitness_log.select("gen")
 
         fig, ax = plt.subplots()
         for fit_type in ["max", "min", "avg"]:
-            fitness = analyse_stage.stage_results.fitness_log.chapters[fitness_key].select(fit_type)
+            fitness = analyse_stage.stage_results.fitness_log.chapters[self.statistics_key].select(fit_type)
             ax.plot(gen, fitness, label=f"{fit_type}")
 
         ax.set_xlabel("Generation")
-        ax.set_ylabel(fitness_key)
+        ax.set_ylabel(self.statistics_key)
 
         plt.legend()
         plt.show()
