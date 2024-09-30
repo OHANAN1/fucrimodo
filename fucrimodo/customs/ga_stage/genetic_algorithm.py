@@ -25,6 +25,7 @@ class GeneticAlgorithm:
         break_condition: BreakCondition,
         parent_selection: Callable,
         survivor_selection: Callable,
+        save_n_best_crystals: int = 10,
     ):
         self.fitness_functions = fitness_functions
         self.fitness_weights = fitness_weights
@@ -37,6 +38,7 @@ class GeneticAlgorithm:
         self.break_condition = break_condition
         self.parent_selection = parent_selection
         self.survivor_selection = survivor_selection
+        self._hall_of_fame = tools.HallOfFame(save_n_best_crystals)
 
     @property
     def fitness_stats(self) -> tools.MultiStatistics:
@@ -152,6 +154,10 @@ class GeneticAlgorithm:
 
         return self._crossover_log
 
+    @property
+    def hall_of_fame(self) -> tools.HallOfFame:
+        return self._hall_of_fame
+
     def __perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual, bool, int]:
@@ -224,6 +230,7 @@ class GeneticAlgorithm:
         """
         Calculates the statistics of the population for the fitness and global 
         stats and stores them in the logbooks.
+        Also updates the hall of fame with the best individuals of the population.
 
         :returns: A tuple with the fitness_record and the global_record.
         """
@@ -235,6 +242,8 @@ class GeneticAlgorithm:
             global_log.record(gen=gen, stage_id=stage_id, **global_record)
         else:
             global_record = None
+
+        self.hall_of_fame.update(population.individuals)
 
         return fitness_record, global_record
 
@@ -415,7 +424,6 @@ class GeneticAlgorithm:
 
         nevals = self.__update_fitnesses(population.individuals)
 
-        # self.hall_of_fame.update(population)
         self.__record_statistics(
             population=population,
             nevals=nevals,
@@ -479,7 +487,6 @@ class GeneticAlgorithm:
             population.individuals = new_population
 
             # Track all data
-            # self.stage_data.hall_of_fame.update(population)
             self.__record_all_statistics_logs(
                 population=population,
                 offspring=offspring,

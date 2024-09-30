@@ -75,6 +75,24 @@ class GAStage(Stage):
 
         return objects, weights
 
+    def save_hall_of_fame(
+        self,
+        database: Database,
+        hall_of_fame: tools.HallOfFame,
+        fitness_functions: Sequence[FitnessFunction],
+    ) -> None:
+        """Saves the hall of fame to the database and adds the fitness to
+        each individual.
+        """
+        for ind in hall_of_fame:
+            key_value_pairs = {"stage_id": self.id}
+
+            for i in range(len(fitness_functions)):
+                fitness_name = fitness_functions[i].db_title
+                key_value_pairs[fitness_name] = ind.fitness.values[i]
+
+            database.write(ind, key_value_pairs)
+
     def run(
         self, 
         population: Population,
@@ -93,20 +111,27 @@ class GAStage(Stage):
         self.crossover_logbook = self.ga_runner.crossover_logbook
         self.mutation_logbook = self.ga_runner.mutation_logbook
         self.fitness_logbook = self.ga_runner.fitness_logbook
+        self.hall_of_fame = self.ga_runner.hall_of_fame
 
         return population
 
     def save_results(self, save_path: str, crystals_db: Database):
         import pickle
 
-        file_path = os.path.join(save_path, f"stage_{self.id}_crossover.pickle")
+        file_path = os.path.join(save_path, f"{self.id}_crossover.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.crossover_logbook, f)
 
-        file_path = os.path.join(save_path, f"stage_{self.id}_mutation.pickle")
+        file_path = os.path.join(save_path, f"{self.id}_mutation.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.mutation_logbook, f)
 
-        file_path = os.path.join(save_path, f"stage_{self.id}_fitness.pickle")
+        file_path = os.path.join(save_path, f"{self.id}_fitness.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.fitness_logbook, f)
+
+        self.save_hall_of_fame(
+            crystals_db, 
+            self.hall_of_fame, 
+            self.ga_runner.fitness_functions
+        )

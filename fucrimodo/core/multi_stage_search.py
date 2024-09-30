@@ -1,5 +1,6 @@
 from .modules import Stage, Population
 from .utils import data_handeling
+import os
 
 class MultiStageSearch:
     def __init__(
@@ -17,16 +18,23 @@ class MultiStageSearch:
         self.current_stage_id += 1
         stage.id = self.current_stage_id
 
-        print(f"Running stage {self.current_stage_id}: {stage.name}")
+        # Create a dict to store the results of the stage
+        save_dir = os.path.join(
+            self.run_data.run_dir, f"stage_{self.current_stage_id}"
+        )
+        os.mkdir(save_dir)
 
+
+        print(f"Running stage {self.current_stage_id}: {stage.name}")
         population = stage.run(
             population=population,
             global_log=self.run_data.global_logbook,
             global_stats=self.run_data.global_statistics, 
         )
 
+        print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
         stage.save_results(
-            save_path = self.run_data.run_dir,
+            save_path = save_dir,
             crystals_db = self.run_data.crystal_database
         )
 
