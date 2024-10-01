@@ -6,10 +6,9 @@ from .mutations import Mutation
 from .crossovers import Crossover
 from .break_conditions import BreakCondition
 from typing import Sequence
-from deap import tools, base
+from deap import tools
 import numpy as np
 import random
-from icecream import ic
 
 class GeneticAlgorithm:
     def __init__(
@@ -62,7 +61,7 @@ class GeneticAlgorithm:
                 return ind.fitness.values[index]
 
             fitness_names = [
-                fitness_function.get_db_title() 
+                fitness_function.db_title
                 for fitness_function in self.fitness_functions
             ]
             if len(fitness_names) != len(set(fitness_names)):
@@ -117,7 +116,7 @@ class GeneticAlgorithm:
             self._mutation_log = tools.Logbook()
 
             stats_header = [
-                mut.__hash__() for mut in self.mutation_list
+                str(mut.__hash__()) for mut in self.mutation_list
             ]
             self._mutation_log.header = ['gen'] + stats_header # type: ignore
 
@@ -143,7 +142,7 @@ class GeneticAlgorithm:
             self._crossover_log = tools.Logbook()
 
             stats_header = [
-                cross.__hash__() for cross in self.crossover_list
+                str(cross.__hash__()) for cross in self.crossover_list
             ]
             self._crossover_log.header = ['gen'] + stats_header # type: ignore
 

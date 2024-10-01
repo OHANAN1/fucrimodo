@@ -22,11 +22,11 @@ class GAStage(Stage):
         crossover_probability: float,
         break_condition: BreakCondition,
         description: str = "",
-        n_crystals_to_save: int = 10,
         parent_selection: Callable = functools.partial(
             tools.selTournament, tournsize=5
         ),
         survivor_selection: Callable = tools.selNSGA2,
+        save_n_crystals: int = 10,
     ):
         super().__init__(name, description)
 
@@ -115,18 +115,18 @@ class GAStage(Stage):
 
         return population
 
-    def save_results(self, save_path: str, crystals_db: Database):
+    def save_results(self, save_dir: str, crystals_db: Database):
         import pickle
 
-        file_path = os.path.join(save_path, "crossover.pickle")
+        file_path = os.path.join(save_dir, "crossover.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.crossover_logbook, f)
 
-        file_path = os.path.join(save_path, "mutation.pickle")
+        file_path = os.path.join(save_dir, "mutation.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.mutation_logbook, f)
 
-        file_path = os.path.join(save_path, "fitness.pickle")
+        file_path = os.path.join(save_dir, "fitness.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.fitness_logbook, f)
 

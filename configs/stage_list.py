@@ -1,21 +1,7 @@
-from typing import Callable
-import ase
 from configs.crossover import get_exploration_crossovers
-from fucrimodo.core.multi_stage_search import MultiStageSearch
-import random
-from fucrimodo.customs import population_selections as start_pop
-from fucrimodo.core.utils import data_handeling
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.utils.save_current_script import save_current_script
 from configs.mutations import get_optimize_mutations, get_all_muts
-from ase.io import read as ase_read
-
-import numpy as np
-from numpy.typing import NDArray
-from icecream import ic
-import warnings
-
 
 
 def get_stage_list(

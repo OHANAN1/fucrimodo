@@ -114,6 +114,7 @@ class AnalyseStage():
     def get_fitness_keys(self) -> list[str]:
         """Returns the fitness keys of the stage."""
         return list(self.stage_results.fitness_log.chapters.keys())
+
     # @property
     # def valid_global_statistics_keys(self) -> list[str]:
     #     return list(self._stage_results.stage_dict.keys())

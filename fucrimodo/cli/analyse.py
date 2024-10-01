@@ -238,21 +238,65 @@ class Runner:
             stage_results=stage_results,
         )
 
+        possible_stat_keys = analyse_stage.get_fitness_keys() + ["mutation", "crossover"]
         if self.statistics_key is None:
             self.statistics_key = self.__let_user_select_statistics_key(
-                possible_stat_keys=analyse_stage.get_fitness_keys()
+                possible_stat_keys=possible_stat_keys
             )
 
-        gen = analyse_stage.stage_results.fitness_log.select("gen")
+        if self.statistics_key == "mutation":
 
-        fig, ax = plt.subplots()
-        for fit_type in ["max", "min", "avg"]:
-            fitness = analyse_stage.stage_results.fitness_log.chapters[self.statistics_key].select(fit_type)
-            ax.plot(gen, fitness, label=f"{fit_type}")
+            mut_log = analyse_stage.stage_results.mutation_log
+            gen = mut_log.select("gen")
 
-        ax.set_xlabel("Generation")
-        ax.set_ylabel(self.statistics_key)
+            print("Possible mutation keys:")
+            for i, mut_hash in enumerate(mut_log.chapters.keys()):
+                print(f"\t{i}: {mut_hash}")
 
-        plt.legend()
-        plt.show()
+            print()
+            mut_hash_index = input("Please select the index you want to analyse: ")
+            mut_hash = list(mut_log.chapters.keys())[int(mut_hash_index)]
+
+            fig, ax = plt.subplots()
+            for stat_type in ['called', 'failed', 'survivor']:
+                mutation = mut_log.chapters[mut_hash].select(stat_type)
+                ax.plot(gen, mutation, label=f"{stat_type}")
+
+            ax.set_xlabel("Generation")
+            ax.set_ylabel("mutation")
+            ax.set_title(f"Mutation: {mut_hash}")
+
+            plt.legend()
+            plt.show()
+        
+        elif self.statistics_key == "crossover":
+            gen = analyse_stage.stage_results.fitness_log.select("gen")
+
+            cross_log = analyse_stage.stage_results.crossover_log
+
+            fig, ax = plt.subplots()
+            for cross_hash in cross_log.chapters.keys():
+                for stat_type in ['called', 'failed', 'survivor']:
+                    crossover = cross_log.chapters[cross_hash].select(stat_type)
+                    ax.plot(gen, crossover, label=f"{cross_hash} {stat_type}")
+
+            ax.set_xlabel("Generation")
+            ax.set_ylabel("crossover")
+
+            plt.legend()
+            plt.show()
+
+        else:
+            gen = analyse_stage.stage_results.fitness_log.select("gen")
+
+            fig, ax = plt.subplots()
+            for fit_type in ["max", "min", "avg"]:
+                fitness = analyse_stage.stage_results.fitness_log.chapters[self.statistics_key].select(fit_type)
+                ax.plot(gen, fitness, label=f"{fit_type}")
+
+            ax.set_xlabel("Generation")
+            ax.set_ylabel(self.statistics_key)
+
+            plt.legend()
+            plt.show()
 

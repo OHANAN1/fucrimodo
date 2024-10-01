@@ -46,7 +46,6 @@ class Runner:
     def run(self):
         import random
         from fucrimodo.core import multi_stage_search as multi_stage
-        from fucrimodo.core.utils import data_handeling
 
         import numpy as np
         from icecream import ic
@@ -87,23 +86,23 @@ class Runner:
             population_size=20
         )
 
-        run_data = data_handeling.RunData(
-            save_dir="data/processed/results/",
-            soap_object=self.soap_obj,
-            log_enable=log_enable,
-            save_n_best_crystals=10,
-            global_statistics_dict=global_stats_dict,
-        )
+        # run_data = data_handeling.RunData(
+        #     save_dir="data/processed/results/",
+        #     soap_object=self.soap_obj,
+        #     log_enable=log_enable,
+        #     save_n_best_crystals=10,
+        # )
         ic.enable()
 
         # ── Perform Run ─────────────────────────────────────────────────────────
-        run_data.add_run_settings(
-            stage_data_list=stage_list,
-            verbose=verbose
-        )
+        # run_data.add_run_settings(
+        #     stage_data_list=stage_list,
+        #     verbose=verbose
+        # )
 
         multi_stage_search = multi_stage.MultiStageSearch(
-            run_data=run_data,
+            save_dir="data/processed/results/",
+            global_statistics_dict=global_stats_dict,
         )
 
 
@@ -122,7 +121,7 @@ class Runner:
         for i in range(2):
             stage = stage_list[i]
 
-            individuals = dope_sel.select_start_pop(
+            individuals = dope_sel.select(
                 individuals=population.individuals,
             )
             population.individuals = individuals
@@ -132,16 +131,15 @@ class Runner:
                 population=population,
             )
 
-        for i in range(2, len(stage_list)):
-            stage = stage_list[i]
+        # for i in range(2, len(stage_list)):
+        #     stage = stage_list[i]
+        #
+        #     population = multi_stage_search.run(
+        #         stage=stage,
+        #         population=population,
+        #     )
 
-            population = multi_stage_search.run(
-                stage=stage,
-                population=population,
-            )
-
-
-        run_data.save_run_info_json()
+        # run_data.save_run_info_json()
         multi_stage_search.save_results()
 
         # save_current_script(run_data)
