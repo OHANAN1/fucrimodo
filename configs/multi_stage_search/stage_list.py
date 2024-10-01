@@ -1,7 +1,7 @@
-from configs.crossover import get_exploration_crossovers
+from .crossover import get_exploration_crossovers
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from configs.mutations import get_optimize_mutations, get_all_muts
+from .mutations import get_optimize_mutations, get_all_muts
 
 
 def get_stage_list(
@@ -34,7 +34,7 @@ def get_stage_list(
 
 
     # ── Fitness functions ───────────────────────────────────────────────────
-    from configs.fitness_functions import get_soap_similarity_fitness_list, get_species_specific_soap_fitness_list
+    from .fitness_functions import get_soap_similarity_fitness_list, get_species_specific_soap_fitness_list
     species_specific_fitnesses = get_species_specific_soap_fitness_list(
         target_soap_features=target_soap_features,
         soap_species=soap_species,
@@ -53,7 +53,7 @@ def get_stage_list(
 
 
     # ── Break conditions ────────────────────────────────────────────────────
-    from configs.break_conditions import exploration_break, optimization_break
+    from .break_conditions import exploration_break, optimization_break
 
     # ── Mutations ───────────────────────────────────────────────────────────
     all_opti_muts = get_optimize_mutations(closest_distances=closest_distances)
