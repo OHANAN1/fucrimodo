@@ -2,16 +2,14 @@ from .individual import Individual
 
 class Population:
     def __init__(self, individuals: list[Individual]):
-        """
-        A population of individuals.
+        """Stores the list of individuals in the population that is used
+        in the optimization algorithm.
         """
         self.individuals = individuals
 
     @property
     def individuals(self) -> list[Individual]:
-        """
-        A list of all individuals in the population.
-        """
+        """The list of all individuals in the population."""
         return self._individuals
 
     @individuals.setter
@@ -20,7 +18,5 @@ class Population:
 
     @property
     def size(self) -> int:
-        """
-        The number of individuals in the population.
-        """
+        """Returns the number of individuals in the population."""
         return len(self._individuals)

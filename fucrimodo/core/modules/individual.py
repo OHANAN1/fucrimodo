@@ -6,6 +6,7 @@ from operator import mul, truediv
 from collections.abc import Sequence
 import sys
 
+
 class FitnessStorage(object):
     """Workaround for the DEAP Fitness class.
 
@@ -23,9 +24,9 @@ class FitnessStorage(object):
     def __init__(self, weights = None):
         self.weights = weights
         self.wvalues = ()
-        if not isinstance(self.weights, Sequence):
-            raise TypeError("Attribute weights of %r must be a sequence."
-                            % self.__class__)
+        if self.weights is not None and not isinstance(self.weights, Sequence):
+            raise TypeError(
+                "Attribute weights of %r must be a sequence."% self.__class__)
 
     def getValues(self):
         if self.weights is None:
@@ -37,7 +38,8 @@ class FitnessStorage(object):
         if self.weights is None:
             self.wvalues = values
         else:
-            assert len(values) == len(self.weights), "Assigned values have not the same length than fitness weights"
+            assert len(values) == len(self.weights), \
+                "Assigned values have not the same length than fitness weights"
             try:
                 self.wvalues = tuple(map(mul, values, self.weights))
             except TypeError:
@@ -129,12 +131,14 @@ class FitnessStorage(object):
 class Individual(ase.Atoms):
     """
     An individual in the population. Inherits from :class:`ase.Atoms`.
-    Is initialized with the same arguments as the :class:`ase.Atoms` class.
-    Different attributes can be applied to the individual:
+    Is initialized with the same arguments as the :class:`ase.Atoms` class 
+    and has additional attributes for the fitness values and additional
+    information.
 
-        - fitness: A storage for the fitness values of the individual.
-        - features: A dictionary with additional features of the individual.
-            For example, the SOAP features of the individual.
+    :param args: Arguments for the :class:`ase.Atoms` class.
+        Common args are :data:'symbols', :data:'positions', :data:'cell',
+        :data:'pbc', etc.
+    :param kwargs: Keyword arguments for the :class:`ase.Atoms` class.
     """
     def __init__(
         self, *args, **kwargs
@@ -142,17 +146,24 @@ class Individual(ase.Atoms):
         super().__init__(*args, **kwargs)
         self.info = {}
 
-    def reset(self):
-        self.features = None
-        del self.fitness.values
-
     @property
     def fitness_weights(self) -> Sequence[float] | None:
-        return self._fitness_weights
+        """The weights for the fitness values.
+
+        The weights are used to calculate the weighted fitness values.
+        Must be set, otherwise the fitness values are not calculated.
+        
+        When the weights are set, the FitnessStorage object is reset to delete
+        old values and set the new weights.
+        """
+        if not hasattr(self, "_fitness_weights"):
+            return None
+        else:
+            return self._fitness_weights
 
     @fitness_weights.setter
     def fitness_weights(self, value: Sequence[float] | None):
-        """Set the weights for the fitness values.
+        """Sets the weights for the fitness values.
 
         Automatically resets the FitnessStorage object to delete old values
         and set the new weights.
@@ -206,3 +217,7 @@ class Individual(ase.Atoms):
     @features.setter
     def features(self, value: dict | None):
         self._features = value
+
+    def reset(self):
+        self.features = None
+        del self.fitness.values

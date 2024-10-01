@@ -421,7 +421,7 @@ class DopePopulationSelection(PopulationSelection):
         self.atom_types = atom_types
         self.cell_bounds = cell_bounds
 
-    def select_start_pop(
+    def select(
         self,
         individuals: list[Individual]
     ) -> list[Individual]:

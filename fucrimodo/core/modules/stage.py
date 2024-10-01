@@ -2,11 +2,19 @@ from abc import ABC, abstractmethod
 from .population import Population
 from ase.db.core import Database
 from deap import tools
-import numpy as np
-import ase
-from typing import Callable
 
 class Stage(ABC):
+    """Abstract base class for stages in the optimization algorithm.
+
+    Stages are used to define the different steps in the optimization
+    algorithm. Each stage can perform a defined optimization algorithm, for
+    example a genetic algorithm or a swarm search algorithm.
+    Stages should not be run directly, but should be used with the 
+    multi-stage optimization algorithm.
+
+    :param name: User friendly name of the stage, used for analysis.
+    :param description: Optional description of the stage, used for analysis.
+    """
     def __init__(self, name: str, description: str) -> None:
         self._name = name
         self._description = description
@@ -21,11 +29,24 @@ class Stage(ABC):
         pass
 
     @abstractmethod
-    def save_results(self, save_path: str, crystals_db: Database):
+    def save_results(self, save_dir: str, crystals_db: Database):
+        """Method to save the results of the stage to a given directory and
+        ASE database.
+
+        This method should save the results of the optimization algorithm so it
+        can be analyzed later. How the results are saved is up to the
+        implementation of the stage.
+        If necessary the analysis scripts must be adjusted to read the saved
+        results.
+        """
         pass
 
     @property
     def id(self) -> int:
+        """Unique identifier for the stage.
+
+        Is set automatically by the MultiStageSearch algorithm.
+        """
         return self._id
 
     @id.setter
