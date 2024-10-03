@@ -28,6 +28,7 @@ class FitnessStorage(object):
             raise TypeError(
                 "Attribute weights of %r must be a sequence."% self.__class__)
 
+    # TODO: Make this code more python like and consistent
     def getValues(self):
         if self.weights is None:
             return self.wvalues

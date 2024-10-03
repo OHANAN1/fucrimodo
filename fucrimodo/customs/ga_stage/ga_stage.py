@@ -75,7 +75,7 @@ class GAStage(Stage):
 
         return objects, weights
 
-    def save_hall_of_fame(
+    def __save_hall_of_fame(
         self,
         database: Database,
         hall_of_fame: tools.HallOfFame,
@@ -92,6 +92,33 @@ class GAStage(Stage):
                 key_value_pairs[fitness_name] = ind.fitness.values[i]
 
             database.write(ind, key_value_pairs)
+
+    @property
+    def info_dict(self) -> dict:
+        info_dict = {}
+
+        info_dict["mutations"] = {
+            "names": [mut.__class__.__name__ for mut in self.ga_runner.mutation_list],
+            "weights": list(self.ga_runner.mutation_weights),
+            "reprs": [mut.__repr__() for mut in self.ga_runner.mutation_list],
+            "hashes": [mut.__hash__() for mut in self.ga_runner.mutation_list],
+        }
+
+        info_dict["crossovers"] = {
+            "names": [cross.__class__.__name__ for cross in self.ga_runner.crossover_list],
+            "weights": list(self.ga_runner.crossover_weights),
+            "reprs": [cross.__repr__() for cross in self.ga_runner.crossover_list],
+            "hashes": [cross.__hash__() for cross in self.ga_runner.crossover_list],
+        }
+
+        info_dict["fitness_functions"] = {
+            "names": [func.__class__.__name__ for func in self.ga_runner.fitness_functions],
+            "weights": list(self.ga_runner.fitness_weights),
+            "reprs": [func.__repr__() for func in self.ga_runner.fitness_functions],
+            "hashes": [func.__hash__() for func in self.ga_runner.fitness_functions],
+        }
+
+        return info_dict
 
     def run(
         self, 
@@ -130,7 +157,7 @@ class GAStage(Stage):
         with open(file_path, "wb") as f:
             pickle.dump(self.fitness_logbook, f)
 
-        self.save_hall_of_fame(
+        self.__save_hall_of_fame(
             crystals_db, 
             self.hall_of_fame, 
             self.ga_runner.fitness_functions

@@ -58,15 +58,26 @@ class StageResults():
                 f"File run_info.json does not exist in {run_dir}."
                 "Was the correct directory selected?"
             )
-        # self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
-        with open(os.path.join(stage_dir_path, "fitness.pickle"), "rb") as f:
-            self._fitness_log = pickle.load(f)
 
-        with open(os.path.join(stage_dir_path, "mutation.pickle"), "rb") as f:
-            self._mutation_log = pickle.load(f)
+        with open(os.path.join(stage_dir_path, "info.json"), "r") as f:
+            self._info_dict = json.load(f)
 
-        with open(os.path.join(stage_dir_path, "crossover.pickle"), "rb") as f:
-            self._crossover_log = pickle.load(f)
+        # Load data of the stage based on the type of the stage
+        if self._info_dict["type"] == "GAStage":
+            # self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
+            with open(os.path.join(stage_dir_path, "fitness.pickle"), "rb") as f:
+                self._fitness_log = pickle.load(f)
+
+            with open(os.path.join(stage_dir_path, "mutation.pickle"), "rb") as f:
+                self._mutation_log = pickle.load(f)
+
+            with open(os.path.join(stage_dir_path, "crossover.pickle"), "rb") as f:
+                self._crossover_log = pickle.load(f)
+
+        else:
+            raise NotImplementedError(
+                f"Stage type {self._info_dict['type']} not implemented."
+            )
 
     @property
     def crystals(self) -> list[ase.Atoms]:
@@ -135,6 +146,11 @@ class StageResults():
     def n_generations(self) -> int:
         """Number of generations that the stage performed."""
         return self._fitness_log.select("gen")[-1]
+
+    @property
+    def info_dict(self) -> dict[str, Any]:
+        """Information about the stage that was saved in the info.json file."""
+        return self._info_dict
 
     # def __load_stage_info_from_file(
     #     self, run_info_path: str

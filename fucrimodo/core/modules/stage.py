@@ -41,6 +41,29 @@ class Stage(ABC):
         """
         pass
 
+    def type(self) -> str:
+        """Return the type of the stage.
+
+        This method is used to determine the type of the stage in the analysis
+        scripts.
+        """
+        return self.__class__.__name__
+
+    @property
+    @abstractmethod
+    def info_dict(self) -> dict:
+        """Contains all information about the stage that is necessary to
+        recreate the stage (manually or automatically).
+
+        Information must be savable to a JSON file.
+        What information is saved is up to the implementation of the stage.
+        If necessary the analysis scripts must be adjusted to read the saved
+        information.
+        The :class:`MultiStageSearch` algorithm extends this dictionary with
+        the :attr:`id`, :attr:`type`, :attr:`name` and :attr:`description`.
+        """
+        pass
+
     @property
     def id(self) -> int:
         """Unique identifier for the stage.

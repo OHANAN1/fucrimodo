@@ -1,4 +1,3 @@
-
 def convert_class_to_writeable_dict(stage_params):
     for key, value in stage_params.items():
         if isinstance(value, float) or isinstance(value, int):
@@ -8,14 +7,14 @@ def convert_class_to_writeable_dict(stage_params):
             if len(value) == 0:
                 stage_params[key] = "empty list"
                 continue
-            # if isinstance(value[0], tuple):
-            #     value_dict = {}
-            #     for i, item in enumerate(value):
-            #         if isinstance(item[0], str):
-            #             value_dict[item[0]] = item[1]
-            #         else:
-            #             value_dict[f"item_{id}"] = item
-            #     stage_params[key] = value_dict
+            if isinstance(value[0], tuple):
+                value_dict = {}
+                for i, item in enumerate(value):
+                    if isinstance(item[0], str):
+                        value_dict[item[0]] = item[1]
+                    else:
+                        value_dict[f"item_{id}"] = item
+                stage_params[key] = value_dict
 
             elif isinstance(
                     value[0], int

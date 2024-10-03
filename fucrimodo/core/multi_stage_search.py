@@ -9,6 +9,7 @@ from .modules import Stage, Population
 import os
 import pickle
 import datetime
+import json
 
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.
@@ -97,46 +98,6 @@ class MultiStageSearch:
 
         return self._global_log
 
-    def save_results(self):
-        file_path = os.path.join(self.run_dir, "global_logbook.pickle")
-        with open(file_path, "wb") as f:
-            pickle.dump(self.global_logbook, f)
-
-    def run(self, population: Population, stage: Stage) -> Population:
-        """Method to run a stage of the optimization algorithm.
-
-        This method runs a stage of the optimization algorithm and makes the
-        stage save the results of the optimization algorithm.
-        Manages the stage ID and directory where the results are saved.
-
-        :param population: Population that should be optimized.
-        :param stage: Stage that should be run.
-        """
-        # Update the current stage ID and assign it to the stage to make it 
-        # identifiable in the results
-        self.current_stage_id += 1
-        stage.id = self.current_stage_id
-
-        # Create a directory for the stage first, to ensure data can be saved
-        save_dir = self.__set_up_stage_dir(self.current_stage_id)
-
-        # Run the stage and save the results
-        print(f"Running stage {self.current_stage_id}:")
-        print(f"Stage ID: {stage.id}")
-        print(f"Poulation size: {population.size}")
-        population = stage.run(
-            population=population,
-            global_log=self.global_logbook,
-            global_stats=self.global_statistics, 
-        )
-
-        print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
-        stage.save_results(
-            save_dir = save_dir,
-            crystals_db = self.crystal_database
-        )
-        return population
-
     def __create_global_statistics(
         self, 
         global_stats_dict: dict[str, Callable[[Individual], float]] | None
@@ -186,16 +147,77 @@ class MultiStageSearch:
         date_string = now.strftime("%Y_%m_%d_H%H_%M_%S")
         return date_string
 
-    def __set_up_stage_dir(self, stage_id: int) -> str:
-        """Method to create a directory for the stage with the given ID.
+    def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
+        """Method to set up the stage for a run.
 
-        In the run directory a new directory is created with the name of the
-        stage ID.
+        Adds the stage ID to the stage and creates a directory for the stage.
+        For this a new directory is created in the run directory with the name 
+        "stage_{:data:`stage_id`}".
+        Takes the :attr:`Stage.info_dict` of the stage and adds the 
+        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and 
+        :attr:`Stage.description` to the dictionary. 
+        Then saves the dictionary as a JSON file in the stage directory.
 
-        :param stage_id: ID of the stage for which the directory should be
-            created.
+        :param stage: Stage that should be set up.
+        :param stage_id: A unique ID that should be assigned to the stage.
         """
+        # Assign the stage ID to the stage
+        stage.id = stage_id
+
+        # Create a directory for the stage in the run directory
         stage_dir = os.path.join(self.run_dir, f"stage_{stage_id}")
         os.mkdir(stage_dir)
 
+        # Add info to the run directory of the stage in the stage directory
+        stage_info_dict = stage.info_dict.copy()
+        stage_info_dict.update({
+            "id": stage.id,
+            "type": stage.type(),
+            "name": stage.name,
+            "description": stage.description,
+        })
+
+        file_path = os.path.join(stage_dir, "info.json")
+        with open(file_path, "w") as f:
+            json.dump(stage_info_dict, f, indent=4)
+
         return stage_dir
+
+    def save_results(self):
+        file_path = os.path.join(self.run_dir, "global_logbook.pickle")
+        with open(file_path, "wb") as f:
+            pickle.dump(self.global_logbook, f)
+
+    def run(self, population: Population, stage: Stage) -> Population:
+        """Method to run a stage of the optimization algorithm.
+
+        This method runs a stage of the optimization algorithm and makes the
+        stage save the results of the optimization algorithm.
+        Manages the stage ID and directory where the results are saved.
+
+        :param population: Population that should be optimized.
+        :param stage: Stage that should be run.
+        """
+        # Update the current stage ID, to ensure the stages have unique IDs
+        self.current_stage_id += 1
+
+        # Create a directory for the stage first, to ensure data can be saved
+        stage_dir = self.__set_up_stage(stage, self.current_stage_id)
+
+        # Run the stage and save the results
+        print(f"Running stage {self.current_stage_id}:")
+        print(f"Stage ID: {stage.id}")
+        print(f"Poulation size: {population.size}")
+        population = stage.run(
+            population=population,
+            global_log=self.global_logbook,
+            global_stats=self.global_statistics, 
+        )
+
+        print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
+        stage.save_results(
+            save_dir = stage_dir,
+            crystals_db = self.crystal_database
+        )
+        return population
+
