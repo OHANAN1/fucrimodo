@@ -118,6 +118,28 @@ class AnalyseStage():
     # @property
     # def valid_global_statistics_keys(self) -> list[str]:
     #     return list(self._stage_results.stage_dict.keys())
+    def get_name_from_hash(self, info_key: str, hash: int | str) -> str:
+        """Looks um the human readable name of a operater from a given hash.
+
+        The :data:`info_key` must be present in the info_dict of the stage.
+        E.g. "crossovers" or "mutations".
+
+        :param info_key: Key of the info_dict that should be used.
+        :param hash: Hash of the operator that should be looked up.
+
+        :raises KeyError: If the given hash is not found in the info_dict.
+
+        :returns: Human readable name of the operator.
+        """
+        if info_key not in self.stage_results.info_dict.keys():
+            raise KeyError(
+                f"Key {info_key} not in info_dict."
+                f"Available keys: {self.stage_results.info_dict.keys()}"
+            )
+
+        # convert hash to int if it is a string and look up the index
+        index = self.stage_results.info_dict[info_key]["hashes"].index(int(hash))
+        return self.stage_results.info_dict[info_key]["names"][index]
 
     def get_best_crystal_tuple(
         self, statistics_key: str, invert: bool = False

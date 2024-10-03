@@ -10,6 +10,7 @@ import warnings
 from ase.db.core import Database
 import pickle
 
+
 class StageResults():
     """
     Collects and structures the data that was collected during a given
@@ -65,10 +66,10 @@ class StageResults():
         # Load data of the stage based on the type of the stage
         if self._info_dict["type"] == "GAStage":
             # self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
-            with open(os.path.join(stage_dir_path, "fitness.pickle"), "rb") as f:
-                self._fitness_log = pickle.load(f)
+            with open(os.path.join(stage_dir_path, "fitness.json"), "rb") as f:
+                self._fitness = pickle.load(f)
 
-            with open(os.path.join(stage_dir_path, "mutation.pickle"), "rb") as f:
+            with open(os.path.join(stage_dir_path, "mutations.json"), "rb") as f:
                 self._mutation_log = pickle.load(f)
 
             with open(os.path.join(stage_dir_path, "crossover.pickle"), "rb") as f:

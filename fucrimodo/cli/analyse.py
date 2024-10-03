@@ -249,12 +249,16 @@ class Runner:
             mut_log = analyse_stage.stage_results.mutation_log
             gen = mut_log.select("gen")
 
-            print("Possible mutation keys:")
+            print("Possible Mutations:")
+            print(f"\tindex\thash\t\tname")
             for i, mut_hash in enumerate(mut_log.chapters.keys()):
-                print(f"\t{i}: {mut_hash}")
+                print(
+                    f"\t{i}:\t{mut_hash}\t{analyse_stage.get_name_from_hash(
+                        info_key='mutations', hash=mut_hash)}"
+                )
 
             print()
-            mut_hash_index = input("Please select the index you want to analyse: ")
+            mut_hash_index = input("Please select the index of the mutation you want to analyse: ")
             mut_hash = list(mut_log.chapters.keys())[int(mut_hash_index)]
 
             fig, ax = plt.subplots()
@@ -264,7 +268,8 @@ class Runner:
 
             ax.set_xlabel("Generation")
             ax.set_ylabel("mutation")
-            ax.set_title(f"Mutation: {mut_hash}")
+            ax.set_title(f"Mutation: {analyse_stage.get_name_from_hash(
+                        info_key='mutations', hash=mut_hash)}")
 
             plt.legend()
             plt.show()
