@@ -1,5 +1,5 @@
-from .analyse_run import AnalyseRun, AnalyseStage
-from .results_class import StageResults, RunResults
+from .analysis_classes import AnalyseRun, AnalyseStage
+from .results_classes import StageResults, RunResults
 
 __all__ = [
     "AnalyseRun",

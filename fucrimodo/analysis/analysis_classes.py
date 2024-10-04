@@ -1,8 +1,9 @@
+from operator import xor
 from typing import Any, NoReturn
 
 from numpy.typing import NDArray
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from fucrimodo.analysis.results_class import RunResults, StageResults
+from fucrimodo.analysis.results_classes import RunResults, StageResults
 from ase.db.core import Database
 import numpy as np
 import ase
@@ -14,6 +15,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from icecream import ic
+import pandas as pd
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Utility functions                     ║
@@ -87,19 +89,17 @@ class AnalyseStage():
         self.cell_bounds = cell_bounds
 
     @property
-    def stage_name(self) -> str:
-        return self.stage_results.name
-
-    @property
-    def id(self) -> int:
-        return self.stage_results.id
-
-    @property
     def stage_results(self) -> StageResults:
         return self._stage_results
 
     @stage_results.setter
     def stage_results(self, value: StageResults | tuple[str, int] ) -> None:
+        """Loads the stage results class.
+        
+        If set with a :class:`StageResults` object, the object is directly
+        used. If set with a tuple, the run directory and stage id are used to
+        load the stage results.
+        """
         if type(value) == tuple[str, int]:
             self._stage_results = StageResults(
                 run_dir=value[0], id=value[1]
@@ -111,35 +111,127 @@ class AnalyseStage():
                 f"Expected tuple or StageResults, got {type(value)}"
             )
 
-    def get_fitness_keys(self) -> list[str]:
-        """Returns the fitness keys of the stage."""
-        return list(self.stage_results.fitness_log.chapters.keys())
+    @property
+    def analysis_types(self) -> list[str]:
+        """Returns a list of all analysis types that can be performed.
 
-    # @property
-    # def valid_global_statistics_keys(self) -> list[str]:
-    #     return list(self._stage_results.stage_dict.keys())
-    def get_name_from_hash(self, info_key: str, hash: int | str) -> str:
-        """Looks um the human readable name of a operater from a given hash.
+        Possible types depend on the type of stage that is analysed.
+        This is determined by the str in :attr:`StageResults.info_dict["type"]`.
+        For example if a GAStage is analysed, the possible types are:
 
-        The :data:`info_key` must be present in the info_dict of the stage.
-        E.g. "crossovers" or "mutations".
-
-        :param info_key: Key of the info_dict that should be used.
-        :param hash: Hash of the operator that should be looked up.
-
-        :raises KeyError: If the given hash is not found in the info_dict.
-
-        :returns: Human readable name of the operator.
+            - "fitness"
+            - "crossovers"
+            - "mutations"
         """
-        if info_key not in self.stage_results.info_dict.keys():
-            raise KeyError(
-                f"Key {info_key} not in info_dict."
-                f"Available keys: {self.stage_results.info_dict.keys()}"
+        # Load up which type is saved in the info_dict
+        determinded_type = self.stage_results.info_dict["type"]
+
+        # Return the possible analysis types depending on the stage type
+        if determinded_type == "GAStage":
+            return ["fitness", "crossover", "mutation"]
+        else:
+            raise NotImplementedError(
+                "Only GAStage is implemented so far. But the stage type found "
+                f"in the :attr:`StageResults.info_dict` is {determinded_type}"
             )
 
-        # convert hash to int if it is a string and look up the index
-        index = self.stage_results.info_dict[info_key]["hashes"].index(int(hash))
-        return self.stage_results.info_dict[info_key]["names"][index]
+    def plot_results(
+        self, 
+        analysis_type: str,
+        ax: Axes, 
+        row: int,
+        x_key: str = "gen",
+        x_label: str = "Generation",
+        y_keys: list[str] | None = None,
+        y_label: str = ""
+    ) -> None:
+        """Plots the data of the results of a crossover operator.
+
+        :param analysis_type: Type of analysis that should be performed.
+            Possible are stored in :attr:`analysis_types` and depend on the
+            type of stage that is analysed.
+        :param ax: Matplotlib axis object to plot on.
+        :param row: Index of the row in the crossover results dataframe of
+            which the results data should be plotted.
+        :param x_key: Key of the x-axis data. Normally the generation is used
+            as x-axis, with the key "gen".
+        :param y_keys: List of keys of the y-axis data that should be plotted.
+            If None, all columns of the results dataframe are plotted.
+            To get the column names use
+            :code:`self.stage_results.crossovers.loc[row, "results"].columns`.
+
+        :raises IndexError: If the given crossover index is out of range.
+        """
+        # Load name and results_df depending on the analysis type
+        if analysis_type == "fitness":
+            name = self.stage_results.fitnesses.at[row, "names"]
+            results_df: pd.DataFrame = self.stage_results.fitnesses.loc[
+                row, "results"
+            ]
+
+        elif analysis_type == "mutation":
+            name = self.stage_results.mutations.at[row, "names"]
+            results_df: pd.DataFrame = self.stage_results.mutations.loc[
+                row, "results"
+            ]
+
+        elif analysis_type == "crossover":
+            name = self.stage_results.crossovers.at[row, "names"]
+            results_df: pd.DataFrame = self.stage_results.crossovers.loc[
+                row, "results"
+            ]
+
+        else:
+            raise ValueError(
+                "The given analysis type is not valid for this Stage.\n"
+                f"Possible types: {self.analysis_types}"
+            )
+
+        # Plot the selected results data
+        results_df.plot(
+            ax=ax,
+            x=x_key,
+            y=y_keys,
+            title=f"{analysis_type}: {name}"
+        )
+
+        # Set labels of the plot
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+
+    def get_overview_table(self, analysis_type: str) -> str:
+        """Creates an overview table of the operators with their index, names
+        and representations.
+
+        :param analysis_type: Type of analysis that should be performed.
+            Possible are stored in :attr:`analysis_types` and depend on the
+            type of stage that is analysed.
+
+        :raises ValueError: If the given analysis type is not valid.
+        """
+        if analysis_type == "fitness":
+            info_df = pd.DataFrame(
+                self.stage_results.fitnesses, 
+                columns=["names", "reprs"] # type: ignore
+            )
+        elif analysis_type == "mutation":
+            info_df = pd.DataFrame(
+                self.stage_results.mutations, 
+                columns=["names", "reprs"] # type: ignore
+            )
+        elif analysis_type == "crossover":
+            info_df = pd.DataFrame(
+                self.stage_results.crossovers, 
+                columns=["names", "reprs"] # type: ignore
+            )
+        else:
+            raise ValueError(
+                "The given analysis type is not valid for this Stage.\n"
+                f"Possible types: {self.analysis_types}"
+            )
+
+        # Return the overview table as string
+        return str(info_df)
 
     def get_best_crystal_tuple(
         self, statistics_key: str, invert: bool = False
@@ -257,7 +349,12 @@ class AnalyseRun():
                 statistics_key=statistics_key, invert=invert
             )
             crystal_tuples.append(
-                (crystal, stat_val, key_value_pair, stage_analys.id)
+                (
+                    crystal, 
+                    stat_val, 
+                    key_value_pair, 
+                    stage_analys.stage_results.id
+                )
             )
             stat_values.append(stat_val)
 
@@ -633,3 +730,44 @@ def create_combined_statistics_development_plot(
             fig.savefig(save_name)
 
     return fig, ax
+
+if __name__ == "__main__":
+
+    import sys
+
+    try:
+        run_dir = sys.argv[1]
+    except IndexError:
+        print("Please use as: python path/to/script.py path/to/run_dir")
+        sys.exit(1)
+
+    if not os.path.exists(run_dir):
+        print("Path does not exist")
+        sys.exit(1)
+
+    run = StageResults(run_dir, 1)
+    analysis = AnalyseStage(run)
+
+    print(analysis.get_overview_table(analysis_type="fitness"))
+    print()
+    print(analysis.get_overview_table(analysis_type="mutation"))
+    print()
+    print(analysis.get_overview_table(analysis_type="crossover"))
+
+    fig, axes = plt.subplots(1, 1)
+    analysis.plot_results(
+        analysis_type="mutation",
+        ax=axes,
+        row=0,
+        y_label="Number of events"
+    )
+
+    fig, axes = plt.subplots(1, 1)
+    analysis.plot_results(
+        analysis_type="fitness",
+        ax=axes,
+        row=0,
+        y_label="fitness"
+    )
+
+    plt.show()

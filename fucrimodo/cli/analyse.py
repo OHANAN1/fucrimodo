@@ -1,7 +1,8 @@
 import os
 import sys
-from fucrimodo.analysis.analyse_run import AnalyseRun, AnalyseStage
-from fucrimodo.analysis.results_class import StageResults
+from fucrimodo.analysis.analysis_classes import AnalyseRun, AnalyseStage
+from fucrimodo.analysis.results_classes import StageResults
+import pandas as pd
 
 class CLICommand:
     """Analyse the data that was collected during a run."""
@@ -9,7 +10,7 @@ class CLICommand:
     @staticmethod
     def add_arguments(parser):
         add = parser.add_argument
-        add('analysis_type', help='Possible values: notebook, run, stage')
+        add('analysis_object', help='Possible values: notebook, run, stage')
         add(
             'run_dir',
             help=\
@@ -28,11 +29,29 @@ class CLICommand:
             '(file-type: all types accepted by ase.io.read. e.g. xyz, xsf).'
         )
         add(
-            '-s', '--statistics_key', type=str,
+            '-s', '--stage_id', type=str,
             help=\
-            'Key of the statistic that should be analyzed. ' \
-            'If not provided, but necessary, the script will display all ' \
-            'possible keys and will prompt the user select one.'
+            'ID of the stage that should be analyzed. ' \
+            'If not provided, the user will be prompted to select a stage.' \
+            'Only relevant if analysis_object is "stage".'
+        )
+        add(
+            '-t', '--analysis_type', type=str,
+            help=\
+            'Type of analysis that should be performed. ' \
+            'Depending on the analysis object, different types of analysis ' \
+            'can be performed. ' \
+            'For the analysis object "stage", the following types are possible: ' \
+            'mutation, crossover, fitness'
+        )
+        add(
+            '-i', '--index', type=int,
+            help=\
+            'Index of the item that should be analyzed. ' \
+            'Depending on the analysis object and type, different items can be ' \
+            'analyzed. ' \
+            'E.g. for the analysis object "stage" and type "mutation", the index ' \
+            'refers to the mutation operator that should be analyzed.'
         )
 
     @staticmethod
@@ -49,9 +68,11 @@ class Runner:
 
     def parse(self, args):
         self.args = args
+        self.analysis_object = args.analysis_object
         self.analysis_type = args.analysis_type
         self.verbose = args.verbose
-        self.statistics_key = args.statistics_key
+        self.stage_id = args.stage_id
+        self.index = args.index
 
         if not os.path.exists(args.run_dir):
             print("Path does not exist")
@@ -76,48 +97,44 @@ class Runner:
                 )
         self.target_crystal_path = args.target_crystal_path
 
-    def run(self):
-        print(f"Running Analyse script with arguments: ")
-        print(f"\tanalysis_type: \t{self.analysis_type}")
-        print(f"\trun_dir: \t{self.run_dir}")
-        print(f"\tverbose: \t{self.verbose}")
 
-        if self.analysis_type == "notebook":
-            self.__notebook_gen()
-        elif self.analysis_type == "run":
-            self.__analyse_run()
-        elif self.analysis_type == "stage":
-            self.__analyse_stage()
-        else:
-            raise ValueError("Provided analysis type not found")
+    def __let_user_select_key(
+        self, 
+        selector: list[str] | pd.DataFrame | str,
+        header: str = "Please select one of the following keys:",
+    ) -> int:
+        """Prompts the user to select one of the items in the selection.
 
-    def __let_user_select_statistics_key(
-        self, possible_stat_keys: list[str]
-    ) -> str:
-        """Prompts the user to select one of the possible keys
+        :param header: The header that should be displayed. Something like
+        :param selector: The object that contains the possible selections.
+            If it is a list, the items will be displayed with an index next
+            to them. If it is a pandas DataFrame, the string representation
+            of the DataFrame will be displayed.
+            If it is a string, the string will be displayed.
 
-        :param possible_stat_keys: list of statistic keys that can be used to analyse the run(s).
+        :returns: The user selected index.
 
-        :returns: The selected statistics key.
-
-        :raise AssertionError: If user input is not an integer 
-            or if integer is to big.
+        :raise AssertionError: If user input is not an integer.
         """
 
+        # Display the header
         print("_____________________________________________________")
-        print("Please choose the statistics key you want to analyse.")
+        print(header)
         print()
-        for i, stat_key in enumerate(possible_stat_keys):
-            print(f"\t{i}: {stat_key}")
+
+        if type(selector) == list:
+            for i, key in enumerate(selector):
+                print(f"\t{i}: {key}")
+        elif type(selector) == pd.DataFrame or type(selector) == str:
+            print(selector)
+        else:
+            raise ValueError("Selector type not recognized.")
 
         print()
-        selected_index = input("Type one of the corresponding numbers on the left: ")
+        selected_index = input("Selected Index (number on left): ")
         assert type(selected_index) != int, "Please write an integer number"
-        assert int(selected_index)+1 <= len(possible_stat_keys), "The number you selected is to big."
 
-        statistics_key = possible_stat_keys[int(selected_index)]
-        print(f" -> Selected Key: {statistics_key}")
-        return statistics_key
+        return int(selected_index)
 
     def __notebook_gen(self):
         """Methode to generate the results notebook."""
@@ -221,86 +238,49 @@ class Runner:
     def __analyse_stage(self):
         import matplotlib.pyplot as plt
 
-        while True:
+        if self.stage_id is None:
             print("Please select the stage you want to analyse:")
-            stage_id = input("Stage ID: ")
+            self.stage_id = int(input("Stage ID: "))
+            print()
 
-            path_to_stage_dir = os.path.join(self.run_dir, f"stage_{stage_id}")
-            if not os.path.isdir(path_to_stage_dir):
-                print("The stage directory does not exist.")
-                continue
-            else:
-                break
-
-        stage_results = StageResults(self.run_dir, int(stage_id))
-
+        stage_results = StageResults(self.run_dir, int(self.stage_id))
         analyse_stage = AnalyseStage(
             stage_results=stage_results,
         )
 
-        possible_stat_keys = analyse_stage.get_fitness_keys() + ["mutation", "crossover"]
-        if self.statistics_key is None:
-            self.statistics_key = self.__let_user_select_statistics_key(
-                possible_stat_keys=possible_stat_keys
+        if self.analysis_type is None:
+            selected_index = self.__let_user_select_key(
+                selector=analyse_stage.analysis_types,
+                header="Please select the type of analysis you want to perform:"
+            )
+            self.analysis_type = analyse_stage.analysis_types[selected_index]
+
+        if self.index is None:
+            self.index = self.__let_user_select_key(
+                selector=analyse_stage.get_overview_table(self.analysis_type),
+                header=f"Please select the index of the {self.analysis_type} you want to analyse:"
             )
 
-        if self.statistics_key == "mutation":
+        fig, ax = plt.subplots()
+        analyse_stage.plot_results(
+            analysis_type=self.analysis_type, 
+            row=self.index,
+            ax=ax
+        )
+        plt.legend()
+        plt.show()
+            
+    def run(self):
+        print(f"Running Analyse script with arguments: ")
+        print(f"\tanalysis_object: \t{self.analysis_type}")
+        print(f"\trun_dir: \t{self.run_dir}")
+        print(f"\tverbose: \t{self.verbose}")
 
-            mut_log = analyse_stage.stage_results.mutation_log
-            gen = mut_log.select("gen")
-
-            print("Possible Mutations:")
-            print(f"\tindex\thash\t\tname")
-            for i, mut_hash in enumerate(mut_log.chapters.keys()):
-                print(
-                    f"\t{i}:\t{mut_hash}\t{analyse_stage.get_name_from_hash(
-                        info_key='mutations', hash=mut_hash)}"
-                )
-
-            print()
-            mut_hash_index = input("Please select the index of the mutation you want to analyse: ")
-            mut_hash = list(mut_log.chapters.keys())[int(mut_hash_index)]
-
-            fig, ax = plt.subplots()
-            for stat_type in ['called', 'failed', 'survivor']:
-                mutation = mut_log.chapters[mut_hash].select(stat_type)
-                ax.plot(gen, mutation, label=f"{stat_type}")
-
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("mutation")
-            ax.set_title(f"Mutation: {analyse_stage.get_name_from_hash(
-                        info_key='mutations', hash=mut_hash)}")
-
-            plt.legend()
-            plt.show()
-        
-        elif self.statistics_key == "crossover":
-            gen = analyse_stage.stage_results.fitness_log.select("gen")
-
-            cross_log = analyse_stage.stage_results.crossover_log
-
-            fig, ax = plt.subplots()
-            for cross_hash in cross_log.chapters.keys():
-                for stat_type in ['called', 'failed', 'survivor']:
-                    crossover = cross_log.chapters[cross_hash].select(stat_type)
-                    ax.plot(gen, crossover, label=f"{cross_hash} {stat_type}")
-
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("crossover")
-
-            plt.legend()
-            plt.show()
-
+        if self.analysis_object == "notebook":
+            self.__notebook_gen()
+        elif self.analysis_object == "run":
+            self.__analyse_run()
+        elif self.analysis_object == "stage":
+            self.__analyse_stage()
         else:
-            gen = analyse_stage.stage_results.fitness_log.select("gen")
-
-            fig, ax = plt.subplots()
-            for fit_type in ["max", "min", "avg"]:
-                fitness = analyse_stage.stage_results.fitness_log.chapters[self.statistics_key].select(fit_type)
-                ax.plot(gen, fitness, label=f"{fit_type}")
-
-            ax.set_xlabel("Generation")
-            ax.set_ylabel(self.statistics_key)
-
-            plt.legend()
-            plt.show()
+            raise ValueError("Provided analysis type not found")

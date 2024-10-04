@@ -7,8 +7,8 @@ from deap import tools
 from fucrimodo.core.utils import ase_database_tools as db_tools
 import json
 import warnings
-from ase.db.core import Database
 import pickle
+import pandas as pd
 
 
 class StageResults():
@@ -34,104 +34,109 @@ class StageResults():
     ) -> None:
         self._name = f"stage_{id}"
         self._id = id
+        self._run_dir = run_dir
 
-        stage_dir_path = os.path.join(run_dir, f"stage_{id}")
-        if not os.path.exists(stage_dir_path):
+        # Load the stage data from the stage directory
+        self.dir_path = os.path.join(run_dir, f"stage_{id}")
+        if not os.path.exists(self.dir_path):
             raise FileNotFoundError(
                 f"Directory stage_{id} does not exist in {run_dir}."
                 "Was the desired stage even performed?"
             )
-        # self._stage_dict = self.__load_stage_dict_from_file(stage_file_path)
 
-        crystals_db_path = os.path.join(run_dir, "crystals.db")
-        if not os.path.exists(crystals_db_path):
-            raise FileNotFoundError(
-                f"File crystals.db does not exist in {run_dir}."
-                "Was the correct directory selected?"
-            )
+        # Load the info dict of the stage
+        self._info_dict = self.__load_dict_from_file("info.json")
+
+        # Load the crystals and key value pairs associated with the stage
+        # from the database safed in the run dir
+        crystals_db_path = os.path.join(self._run_dir, "crystals.db")
         self._crystals, self._key_value_pairs = self.__get_crystal_data_from_db(
-            crystals_db_path=crystals_db_path, stage_id=id
+            crystals_db_path=crystals_db_path
         )
-
-        run_info_path = os.path.join(run_dir, "run_info.json")
-        if not os.path.exists(crystals_db_path):
-            raise FileNotFoundError(
-                f"File run_info.json does not exist in {run_dir}."
-                "Was the correct directory selected?"
-            )
-
-        with open(os.path.join(stage_dir_path, "info.json"), "r") as f:
-            self._info_dict = json.load(f)
-
-        # Load data of the stage based on the type of the stage
-        if self._info_dict["type"] == "GAStage":
-            # self._stage_info_dict = self.__load_stage_info_from_file(run_info_path)
-            with open(os.path.join(stage_dir_path, "fitness.json"), "rb") as f:
-                self._fitness = pickle.load(f)
-
-            with open(os.path.join(stage_dir_path, "mutations.json"), "rb") as f:
-                self._mutation_log = pickle.load(f)
-
-            with open(os.path.join(stage_dir_path, "crossover.pickle"), "rb") as f:
-                self._crossover_log = pickle.load(f)
-
-        else:
-            raise NotImplementedError(
-                f"Stage type {self._info_dict['type']} not implemented."
-            )
 
     @property
     def crystals(self) -> list[ase.Atoms]:
-        """
-        A list of all crystals that where saved during when the stage was 
-        performed.
-        """
+        """A list of all crystals that where saved during the stage."""
         return self._crystals
 
     @property
     def key_value_pairs(self) -> list[dict[str, Any]]:
-        """
-        A list of the key value pairs of all crystals in the stage.
+        """A list of the key value pairs of all crystals in the stage.
+
         Has the same lenght as :attr:`StageResults.crystals`.
         """
         return self._key_value_pairs
 
-    # @property
-    # def stage_dict(self) -> dict[str, dict[str, dict[str, list]]]:
-    #     """
-    #     Holds the data that is saved in the stage_[:data:`id`].json file.
-    #     """
-    #     return self._stage_dict
+    @property
+    def fitnesses(self) -> pd.DataFrame:
+        """The fitness information and statistics that where tracked during the stage.
+
+        A Dataframe with columns `names`, `weights`, `reprs`, `hashes` and
+        `results`.
+        Each row corresponds to a specific fitness operator.
+        The results entries are dataframes with columns `max`, `min`,
+        `avg`, `std` and `gen`.
+        """
+        # Check if the fitnesses where already loaded
+        if not hasattr(self, "_fitnesses"):
+            # Load the fitnesses dict from the fitnesses.json file
+            fit_dict = self.__load_dict_from_file("fitnesses.json")
+
+            # Load each of the results entries in a Dataframe
+            for i in range(len(fit_dict["results"])):
+                fit_dict["results"][i] = pd.DataFrame(fit_dict["results"][i])
+
+            # Create the fitnesses Dataframe
+            self._fitnesses = pd.DataFrame(fit_dict)
+
+        return self._fitnesses
 
     @property
-    def fitness_log(self) -> tools.Logbook:
-        """The fitness values that where tracked during the stage.
+    def mutations(self) -> pd.DataFrame:
+        """The mutation information and statistics that where tracked during the stage.
 
-        Keys are the names of the fitness functions and the values are dicts
-        with the different value types that where tracked for each generation.
-        Normally the value types are 'mean', 'std', 'min', 'max'.
+        A pandas dataframe with keys `names`, `weights`, `reprs`, `hashes` and
+        `results`.
+        Each row corresponds to a specific mutation operator.
+        The results entry is a Dataframe with columns `called`, `failed`,
+        `survivor` and `gen`.
         """
-        return self._fitness_log
+        # Check if the mutations where already loaded
+        if not hasattr(self, "_mutations"):
+            # Get the dict from the mutations.json file
+            mut_dict = self.__load_dict_from_file("mutations.json")
+
+            # Load each of the results entries in a Dataframe
+            for i in range(len(mut_dict["results"])):
+                mut_dict["results"][i] = pd.DataFrame(mut_dict["results"][i])
+
+            # Create the mutations Dataframe
+            self._mutations = pd.DataFrame(mut_dict)
+        return self._mutations
 
     @property
-    def mutation_log(self) -> tools.Logbook:
-        """The mutation statistics that where tracked during the stage.
+    def crossovers(self) -> pd.DataFrame:
+        """The crossover information and statistics that where tracked during the stage.
 
-        Keys are the names of the mutations and the values are dicts
-        with the different value types that where tracked for each generation.
-        Normally the value types are 'mean', 'std', 'min', 'max'.
+        A pandas Dataframe with keys `names`, `weights`, `reprs`, `hashes` and 
+        `results`.
+        Each row corresponds to a specific crossover operator.
+        The results entry is a Dataframe with columns `called`, `failed`,
+        `survivor` and `gen`.
         """
-        return self._mutation_log
+        # Check if the crossovers where already loaded
+        if not hasattr(self, "_crossovers"):
+            # Load the crossovers dict from the crossovers.json file
+            cross_dict = self.__load_dict_from_file("crossovers.json")
 
-    @property
-    def crossover_log(self) -> tools.Logbook:
-        """The crossover statistics that where tracked during the stage.
+            # Load each of the results entries in a Dataframe
+            for i in range(len(cross_dict["results"])):
+                cross_dict["results"][i] = pd.DataFrame(cross_dict["results"][i])
 
-        Keys are the names of the crossovers and the values are dicts
-        with the different value types that where tracked for each generation.
-        Normally the value types are 'mean', 'std', 'min', 'max'.
-        """
-        return self._crossover_log
+            # Create the crossovers Dataframe
+            self._crossovers = pd.DataFrame(cross_dict)
+
+        return self._crossovers
 
     @property
     def name(self) -> str:
@@ -146,35 +151,63 @@ class StageResults():
     @property
     def n_generations(self) -> int:
         """Number of generations that the stage performed."""
-        return self._fitness_log.select("gen")[-1]
+        # Get the results dict of the first fitness entry and return the
+        # last entry of the 'gen' key which is the index of the last generation
+        # that was performed.
+        return self.fitnesses["results"][0]["gen"][-1]
 
     @property
     def info_dict(self) -> dict[str, Any]:
-        """Information about the stage that was saved in the info.json file."""
+        """Information about the stage that was saved in the info.json file.
+
+        For all stages the keys are 'type', 'id', 'name' and 'description'.
+        The GAStage has additional keys 'break_condition'.
+        """
         return self._info_dict
 
-    # def __load_stage_info_from_file(
-    #     self, run_info_path: str
-    # ) -> dict[str, Any]:
-    #     with open(run_info_path, "r") as f:
-    #         run_info_dict = json.load(f)
-    #
-    #     stage_info_dict = run_info_dict["stage_info"][f"stage_{self.id}"]
-    #     return stage_info_dict
+    def __load_dict_from_file(
+        self, file_name: str
+    ) -> dict[str, list]:
+        """Load a dictionary from a json file with name :data:`file_name` from
+        the stage directory :attr:`StageResults.dir_path`
 
-    def __load_stage_dict_from_file(
-        self, stage_file_path: str
-    ) -> dict[str, dict[str, dict[str, list]]]:
-        with open(stage_file_path, "r") as f:
+        :param file_name: Name of the file that should be loaded.
+
+        :raises AssertionError: If the file does not exist in the stage 
+            directory.
+
+        :return: The loaded dictionary.
+        """
+        file_path = os.path.join(self.dir_path, file_name)
+        assert os.path.exists(file_path), \
+            f"File {file_name} does not exist in {self.dir_path}."
+
+        with open(file_path, "r") as f:
             stage_dict = json.load(f)
         return stage_dict
 
     def __get_crystal_data_from_db(
-        self, crystals_db_path: str, stage_id: int
+        self, crystals_db_path: str
     ) -> tuple[list[ase.Atoms], list[dict[str, Any]]]:
+        """Collects the crystals and key value pairs from the crystals database.
+
+        Th data is located at :data:`crystals_db_path` and must have the key 
+        'stage_id' with value :attr:`StageResults.id`.
+
+        :param crystals_db_path: Path to the crystals database. Normally it is
+            located in the run directory and is named 'crystals.db'.
+
+        :raises ValueError: If no crystals or key value pairs where found in the
+            database at the database key 'stage_id' with value 
+            :attr:`StageResults.id`.
+
+        :return: A tuple with the crystals and key value pairs dictionaries.
+        """
+        assert os.path.exists(crystals_db_path), \
+            f"File crystals.db does not exist in {self._run_dir}."
         crystals_db = db_tools.connect_to_existing_database(crystals_db_path)
         db_data = db_tools.get_data_with_specific_key_value_from_db(
-            crystals_db=crystals_db, key="stage_id", value=stage_id
+            crystals_db=crystals_db, key="stage_id", value=self.id
         )
         return db_data
 
@@ -333,4 +366,6 @@ if __name__ == "__main__":
         print("Path does not exist")
         sys.exit(1)
 
-    run = RunResults(run_dir)
+    run = StageResults(run_dir, 1)
+
+    print(run.mutations.loc[0, "results"])

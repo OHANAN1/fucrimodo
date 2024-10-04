@@ -184,7 +184,7 @@ class GAStage(Stage):
         with open(file_path, "w") as f:
             json.dump(mutation_dict, f)
 
-    def __save_fitness(self, save_dir: str):
+    def __save_fitnesses(self, save_dir: str):
         """Saves the fitness logbook and information to a json file.
 
         The json file will contain the following information:
@@ -204,7 +204,7 @@ class GAStage(Stage):
         :param save_dir: The directory to save the file to.
         """
         # Set up a dictionary to store fitness information and results
-        fitness_dict = {
+        fitnesses_dict = {
             "names": [func.__class__.__name__ for func in self.ga_runner.fitness_functions],
             "weights": list(self.ga_runner.fitness_weights),
             "reprs": [func.__repr__() for func in self.ga_runner.fitness_functions],
@@ -225,12 +225,12 @@ class GAStage(Stage):
             }
 
             # Append the results to the fitness dictionary
-            fitness_dict["results"].append(func_results)
+            fitnesses_dict["results"].append(func_results)
 
         # Save the fitness dictionary to a json file
-        file_path = os.path.join(save_dir, "fitness.json")
+        file_path = os.path.join(save_dir, "fitnesses.json")
         with open(file_path, "w") as f:
-            json.dump(fitness_dict, f)
+            json.dump(fitnesses_dict, f)
 
     @property
     def info_dict(self) -> dict:
@@ -263,7 +263,7 @@ class GAStage(Stage):
     def save_results(self, save_dir: str, crystals_db: Database):
         self.__save_mutations(save_dir)
         self.__save_crossovers(save_dir)
-        self.__save_fitness(save_dir)
+        self.__save_fitnesses(save_dir)
         self.__save_hall_of_fame(
             crystals_db, 
             self.hall_of_fame, 
