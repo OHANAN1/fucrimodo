@@ -38,7 +38,7 @@ def get_soap_similarity_fitness_list(
 
 def get_species_specific_soap_fitness_list(
     target_soap_features,
-    soap_species: list[str],
+    soap_species: Sequence[str | int],
     soap_object: CustomSOAP,
     rbf_gamma: int | float = 0.1,
     function_name: str = "species_specific_fit"

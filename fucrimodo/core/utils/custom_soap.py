@@ -19,10 +19,25 @@ class CustomSOAP():
         self.r_cut = r_cut
         self.n_max = n_max
         self.l_max = l_max
-        self.species = species
         self.sigma = sigma
         self.periodic = periodic
         self.average = average
+
+        # Only temporary solution to make species always a list of strings
+        # I need to figure out how to handle this better
+        if all(isinstance(s, int) for s in species):
+            from ase.data import chemical_symbols
+            str_species = [chemical_symbols[s] for s in species]
+            self._species = str_species
+        elif all(isinstance(s, str) for s in species):
+            str_species = []
+            for s in species:
+                if not isinstance(s, str):
+                    raise ValueError('Species must be a list of strings or integers')
+                str_species.append(s)
+            self._species = str_species
+        else:
+            raise ValueError('Species must be a list of strings or integers')
 
         self._dscribe_soap = SOAP( 
             r_cut = r_cut,
@@ -34,6 +49,11 @@ class CustomSOAP():
             average = average,
             sparse = False
         )
+
+    @property
+    def species(self) -> list[str]:
+        """List of chemical symbols used to calculate the SOAP descriptor."""
+        return self._species
 
     def get_init_params(self) -> dict:
         """
