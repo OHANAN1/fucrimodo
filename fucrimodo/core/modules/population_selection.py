@@ -17,13 +17,14 @@ class PopulationSelection(ABC):
         pass
 
     @abstractmethod
-    def select(self, individuals: list[Individual]) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Method that selects individuals from a given list of individuals.
 
         The selection strategy must be implemented in this method. 
 
         :param individuals: A list of individuals that are used for 
             the selection.
+        :param n: The number of individuals that should be selected.
 
         :return: A list of individuals that were selected based on the
             implemented selection strategy.

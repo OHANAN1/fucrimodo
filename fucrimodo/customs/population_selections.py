@@ -78,42 +78,31 @@ class TournamentSelection(PopulationSelection):
     """
     def __init__(
         self,
-        k: int | float,
         tournament_size: int,
     ):
-        self._k = k
         self._tournament_size = tournament_size
 
     def __repr__(self) -> str:
-        return f"TournamentSelection(" + \
-                f"k={self._k}, tournsize={self._tournament_size})"
+        return f"TournamentSelection(tournsize={self._tournament_size})"
 
-    def select(self, individuals: list[Individual]) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Selects a population using the tournament selection.
 
         :param individuals: A list of individuals to select from. The 
             individual must have the :class:`FitnessStorage` class at 
             :attr:`Individual.fitness` to be used in the tounament selection.
+        :param n: The number of individuals to select.
 
         :return: A list of individuals selected using the tounament selection.
         """
-        if type(self._k) == float:
-            # If k is given as a float, calculate the number of individuals
-            # to select as a percentage of the population.
-            k = int(len(individuals) * self._k)
-        else:
-            # If k is integer just use the integer value.
-            k = self._k
-        
         # Perform NSGA-II selection.
         individuals = tools.selTournament(
-            individuals, k=k, tournsize=self._tournament_size
+            individuals, k=n, tournsize=self._tournament_size
         )
 
-        # If the number of individuals selected is larger than k, only return
-        # the first k individuals. 
-        if len(individuals) > k:
-            individuals = individuals[:k]
+        # Ensure that the number of individuals selected is not bigger n.
+        if len(individuals) > n:
+            individuals = individuals[:n]
 
         return individuals
 
@@ -125,52 +114,38 @@ class NSGA2Selection(PopulationSelection):
     algorithm can be found in the DEAP documentation:
     `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selNSGA2`
 
-    :param k: The number of individuals to select. Either integer for total 
-        number or float for percentage of the population.
     :param nondominated_sorting: The method used for non-dominated sorting.
         Options are 'standard' and 'log'. See DEAP documentation for more
         information.
     """
     def __init__(
         self,
-        k: int | float,
         nondominated_sorting: str = "standard",
     ):
-        self._k = k
         self._nondominated_sorting = nondominated_sorting
 
     def __repr__(self) -> str:
-        return f"NSGA2Selection(k={self._k}, " + \
-                f"nondominated_sorting={self._nondominated_sorting})"
+        return f"NSGA2Selection(nondominated_sorting={self._nondominated_sorting})"
 
-    def select(self, individuals: list[Individual]) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Selects a population using the NSGA-II algorithm.
 
         :param individuals: A list of individuals to select from. The 
             individual must have the :class:`FitnessStorage` class at 
             :attr:`Individual.fitness` to be used in the NSGA-II algorithm.
+        :param n: The number of individuals to select.
 
         :return: A list of individuals selected using the NSGA-II algorithm.
             Sorted by the NSGA-II algorithm from best to worst.
         """
-        if type(self._k) == float:
-            # If k is given as a float, calculate the number of individuals
-            # to select as a percentage of the population.
-            k = int(len(individuals) * self._k)
-        else:
-            # If k is integer just use the integer value.
-            k = self._k
-        
         # Perform NSGA-II selection.
         individuals = tools.selNSGA2(
-            individuals, k=k, nd=self._nondominated_sorting
+            individuals, k=n, nd=self._nondominated_sorting
         )
 
-        # If the number of individuals selected is larger than k, only return
-        # the first k individuals. These are sorted by the NSGA-II algorithm
-        # therefore the first k individuals are the best.
-        if len(individuals) > k:
-            individuals = individuals[:k]
+        # Ensure that the number of individuals selected is not bigger n.
+        if len(individuals) > n:
+            individuals = individuals[:n]
 
         return individuals
 
@@ -429,11 +404,10 @@ class SelectAllPopulation(PopulationSelection):
 
     def select_start_pop(
         self,
-        individuals: list[Individual]
+        individuals: list[Individual],
+        n: int
     ) -> list[Individual]:
-        """
-        Returns all crystals.
-        """
+        """Returns all crystals. Parameter n is ignored."""
         return individuals
 
     def __repr__(self) -> str:
@@ -448,20 +422,26 @@ class SelectAllPopulation(PopulationSelection):
 class DopePopulationSelection(PopulationSelection):
 
     def __init__(
-        self, add_n: int, atom_types: list[str], cell_bounds: CustomCellBounds
+        self, atom_types: list[str], cell_bounds: CustomCellBounds
     ) -> None:
-        self.add_n = add_n
         self.atom_types = atom_types
         self.cell_bounds = cell_bounds
 
     def select(
-        self,
-        individuals: list[Individual]
+        self, individuals: list[Individual], n: int
     ) -> list[Individual]:
+        """Add randomly generated crystals to the population.
+
+        :param individuals: A list of individuals to add to.
+        :param n: The number of individuals to add to the population.
+
+        :return: A list of individuals with n new individuals added.
+            Therefore the length of the list is len(individuals) + n.
+        """
         new_crystal = crystal_creation.create_one_atomic_crystals(
             atom_types=self.atom_types,
             cell_bounds=self.cell_bounds,
-            total_number_of_atoms=self.add_n,
+            total_number_of_atoms=n
         )
 
         new_individuals = [
@@ -476,8 +456,8 @@ class DopePopulationSelection(PopulationSelection):
         return individuals + new_individuals
 
     def __repr__(self) -> str:
-        return "DopePopulationSelection(add_n={}, atom_types={}, cell_bounds={})".format(
-            self.add_n, self.atom_types, self.cell_bounds
+        return "DopePopulationSelection(atom_types={}, cell_bounds={})".format(
+            self.atom_types, self.cell_bounds
         )
 
 

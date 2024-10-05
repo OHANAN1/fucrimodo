@@ -24,6 +24,7 @@ class GeneticAlgorithm:
         crossover_probability: float,
         break_condition: BreakCondition,
         parent_selection: PopulationSelection,
+        parent_ratio: float,
         survivor_selection: PopulationSelection,
         save_n_best_crystals: int = 10,
     ):
@@ -39,6 +40,7 @@ class GeneticAlgorithm:
         self.parent_selection = parent_selection
         self.survivor_selection = survivor_selection
         self._hall_of_fame = tools.HallOfFame(save_n_best_crystals)
+        self.parent_ratio = parent_ratio
 
     @property
     def fitness_stats(self) -> tools.MultiStatistics:
@@ -473,7 +475,9 @@ class GeneticAlgorithm:
             print("Population size: ", population.size)
 
             # ── Select Parents ───────────────────────────────────────────────
-            parents = self.parent_selection.select(population.individuals)
+            parents = self.parent_selection.select(
+                population.individuals, int(population_size * self.parent_ratio)
+            )
             print("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
@@ -490,7 +494,9 @@ class GeneticAlgorithm:
             print("Created population pool")
 
             # Select survivors from the old population and offspring
-            new_population = self.survivor_selection.select(population_pool)
+            new_population = self.survivor_selection.select(
+                population_pool, population_size
+            )
             print("Selected {} survivors".format(len(new_population)))
 
             # Check which offsprings were also selected as survivors

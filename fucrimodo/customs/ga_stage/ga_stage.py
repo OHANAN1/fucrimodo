@@ -24,6 +24,7 @@ class GAStage(Stage):
         break_condition: BreakCondition,
         parent_selection: PopulationSelection,
         survivor_selection: PopulationSelection,
+        parent_ratio: float = 0.5,
         description: str = "",
         save_n_crystals: int = 10,
     ):
@@ -49,8 +50,9 @@ class GAStage(Stage):
             mutation_probability=mutation_probability,
             crossover_probability=crossover_probability,
             break_condition=break_condition,
-            parent_selection=parent_selection,
             survivor_selection=survivor_selection,
+            parent_selection=parent_selection,
+            parent_ratio=parent_ratio,
         )
 
     def __seperate_object_weight_tuples(
@@ -238,6 +240,7 @@ class GAStage(Stage):
         # run method.
         info_dict["n_generations"] = self.ga_runner.generation
         info_dict["parent_selection"] = self.ga_runner.parent_selection.__repr__()
+        info_dict["parent_ratio"] = self.ga_runner.parent_ratio
         info_dict["survivor_selection"] = self.ga_runner.survivor_selection.__repr__()
 
         return info_dict
