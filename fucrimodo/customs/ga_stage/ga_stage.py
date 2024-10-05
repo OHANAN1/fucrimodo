@@ -22,11 +22,9 @@ class GAStage(Stage):
         mutation_probability: float,
         crossover_probability: float,
         break_condition: BreakCondition,
+        parent_selection: PopulationSelection,
+        survivor_selection: PopulationSelection,
         description: str = "",
-        parent_selection: Callable = functools.partial(
-            tools.selTournament, tournsize=5
-        ),
-        survivor_selection: Callable = tools.selNSGA2,
         save_n_crystals: int = 10,
     ):
         super().__init__(name, description)
@@ -236,6 +234,12 @@ class GAStage(Stage):
     def info_dict(self) -> dict:
         info_dict = {}
         info_dict["break_condition"] = self.ga_runner.break_condition.__repr__()
+        # Get the current number of generations. Needs to be called after the 
+        # run method.
+        info_dict["n_generations"] = self.ga_runner.generation
+        info_dict["parent_selection"] = self.ga_runner.parent_selection.__repr__()
+        info_dict["survivor_selection"] = self.ga_runner.survivor_selection.__repr__()
+
         return info_dict
 
     def run(

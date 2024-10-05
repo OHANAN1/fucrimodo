@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from sklearn.metrics.pairwise import rbf_kernel
 import warnings
 from fucrimodo.core.modules import PopulationSelection
+from deap import tools
 
 # TODO: Needs work when changing PopulationGenerationClass
 import fucrimodo.customs.population_generator as crystal_creation
@@ -64,82 +65,114 @@ class RandomSelectionPopulation(PopulationSelection):
             return "RandomSelectionPopulation(n={})".format(self.n)
 
 
-class TournamentSelectionPopulation(PopulationSelection):
+class TournamentSelection(PopulationSelection):
+    """Selects a population using the tournament selection algorithm.
 
+    Wrapper around the DEAP tournament selection algorithm. More information
+    about the algorithm can be found in the DEAP documentation:
+    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selTournament`
+
+    :param k: The number of individuals to select. Either integer for total 
+        number or float for percentage of the population.
+    :param tournsize: The number of individuals participating in each tournament.
+    """
     def __init__(
         self,
-        n: int,
+        k: int | float,
         tournament_size: int,
-        evaluation_function: Callable[[Individual], float],
-        database_name: Optional[str] = None
     ):
-        self.n = n
-        self.tournament_size = tournament_size
-        self.evaluation_function = evaluation_function
-        self.database_name = database_name
-
-    def select_crystal(
-        self,
-        individuals: list[Individual],
-        fitness_list: list[float]
-    ) -> Individual:
-        """
-        Selects the best crystal from a tournament.
-        """
-        tournament_indicees = random.choices(
-            range(len(individuals)),
-            k=self.tournament_size
-        )
-        tournament = [
-            (individuals[i], fitness_list[i])
-            for i in tournament_indicees
-        ]
-        best_crystal, _ = max(
-            tournament,
-            key=lambda x: x[1]
-        )
-        return best_crystal
-
-    def select_start_pop(
-        self,
-        individuals: list[Individual],
-    ) -> list[Individual]:
-        """
-        Returns n crystals with the highest fitness.
-        """
-        if self.n > len(individuals):
-            n = len(individuals)
-            warnings.warn(
-                "TournamentSelectionPopulation: " +
-                "n is larger than the number of individuals. " +
-                "Returning {} instead of {} individuals.".format(
-                    n, self.n
-                )
-            )
-            return individuals
-
-        fitness_list = [
-            self.evaluation_function(individual)
-            for individual in individuals
-        ]
-        chosen_individuals = [
-            self.select_crystal(
-                individuals=individuals,
-                fitness_list=fitness_list
-            )
-            for _ in range(self.n)
-        ]
-
-        return chosen_individuals
+        self._k = k
+        self._tournament_size = tournament_size
 
     def __repr__(self) -> str:
-        if self.database_name is not None:
-            return "TournamentSelectionPopulation(n={}, database_name={})".format(  # noqa
-                self.n, self.database_name
-            )
-        else:
-            return "TournamentSelectionPopulation(n={})".format(self.n)
+        return f"TournamentSelection(" + \
+                f"k={self._k}, tournsize={self._tournament_size})"
 
+    def select(self, individuals: list[Individual]) -> list[Individual]:
+        """Selects a population using the tournament selection.
+
+        :param individuals: A list of individuals to select from. The 
+            individual must have the :class:`FitnessStorage` class at 
+            :attr:`Individual.fitness` to be used in the tounament selection.
+
+        :return: A list of individuals selected using the tounament selection.
+        """
+        if type(self._k) == float:
+            # If k is given as a float, calculate the number of individuals
+            # to select as a percentage of the population.
+            k = int(len(individuals) * self._k)
+        else:
+            # If k is integer just use the integer value.
+            k = self._k
+        
+        # Perform NSGA-II selection.
+        individuals = tools.selTournament(
+            individuals, k=k, tournsize=self._tournament_size
+        )
+
+        # If the number of individuals selected is larger than k, only return
+        # the first k individuals. 
+        if len(individuals) > k:
+            individuals = individuals[:k]
+
+        return individuals
+
+
+class NSGA2Selection(PopulationSelection):
+    """Selects a population using the NSGA-II algorithm.
+
+    Wrapper around the DEAP NSGA-II algorithm. More information about the
+    algorithm can be found in the DEAP documentation:
+    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selNSGA2`
+
+    :param k: The number of individuals to select. Either integer for total 
+        number or float for percentage of the population.
+    :param nondominated_sorting: The method used for non-dominated sorting.
+        Options are 'standard' and 'log'. See DEAP documentation for more
+        information.
+    """
+    def __init__(
+        self,
+        k: int | float,
+        nondominated_sorting: str = "standard",
+    ):
+        self._k = k
+        self._nondominated_sorting = nondominated_sorting
+
+    def __repr__(self) -> str:
+        return f"NSGA2Selection(k={self._k}, " + \
+                f"nondominated_sorting={self._nondominated_sorting})"
+
+    def select(self, individuals: list[Individual]) -> list[Individual]:
+        """Selects a population using the NSGA-II algorithm.
+
+        :param individuals: A list of individuals to select from. The 
+            individual must have the :class:`FitnessStorage` class at 
+            :attr:`Individual.fitness` to be used in the NSGA-II algorithm.
+
+        :return: A list of individuals selected using the NSGA-II algorithm.
+            Sorted by the NSGA-II algorithm from best to worst.
+        """
+        if type(self._k) == float:
+            # If k is given as a float, calculate the number of individuals
+            # to select as a percentage of the population.
+            k = int(len(individuals) * self._k)
+        else:
+            # If k is integer just use the integer value.
+            k = self._k
+        
+        # Perform NSGA-II selection.
+        individuals = tools.selNSGA2(
+            individuals, k=k, nd=self._nondominated_sorting
+        )
+
+        # If the number of individuals selected is larger than k, only return
+        # the first k individuals. These are sorted by the NSGA-II algorithm
+        # therefore the first k individuals are the best.
+        if len(individuals) > k:
+            individuals = individuals[:k]
+
+        return individuals
 
 # class DiversityPopulation(PopulationSelection):
 #     """

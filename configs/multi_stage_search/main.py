@@ -71,7 +71,7 @@ def main(
 
 
     cell_bounds = CustomCellBounds({
-        "a": [1, 4], "b": [1, 4], "c": [1, 4], 
+        "a": [1, 4], "b": [1, 4], "c": [1, 4],
         "alpha": [20, 160], "beta": [20, 160], "gamma": [20, 160]
     })
     
@@ -85,9 +85,7 @@ def main(
     for i in range(2):
         stage = stage_list[i]
 
-        individuals = dope_sel.select(
-            individuals=population.individuals,
-        )
+        individuals = dope_sel.select(individuals=population.individuals)
         population.individuals = individuals
 
         population = multi_stage_search.run(

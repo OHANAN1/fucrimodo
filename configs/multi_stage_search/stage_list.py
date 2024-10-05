@@ -2,6 +2,7 @@ from .crossover import get_exploration_crossovers
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from .mutations import get_optimize_mutations, get_all_muts
+from fucrimodo.customs import population_selections as pop_sel
 
 
 def get_stage_list(
@@ -49,7 +50,6 @@ def get_stage_list(
     soap_fitness_mid = soap_fitness_list[1]
     soap_fitness_weak = soap_fitness_list[2]
 
-    population_size = 50
 
 
     # ── Break conditions ────────────────────────────────────────────────────
@@ -77,17 +77,41 @@ def get_stage_list(
     soap_fitness_mid = soap_fitness_list[1]
     soap_fitness_strong = soap_fitness_list[2]
 
+    # ── Selection ───────────────────────────────────────────────────────────
+    default_selection = {
+        "survivor_selection": pop_sel.NSGA2Selection(k=1.0),
+        "parent_selection": pop_sel.TournamentSelection(
+            k=0.5, tournament_size=4
+        )
+    }
+
     # ╒══════════════════════════════════════════════════════════╕
     #                       Define Stages
     # ╘══════════════════════════════════════════════════════════╛
     from fucrimodo.customs.ga_stage import GAStage
+    start_population_size = 20
+    population_size = start_population_size
 
     stage_list = []
 
-    for i in range(len(species_specific_fitnesses)):
+    n_build_up = len(species_specific_fitnesses)
+    for i in range(n_build_up):
+        # Calculate the population size for the build up stages
+        # 12 individuals get added for each species specific fitness
+        population_size = start_population_size + ((i+1)*12)
+
+        # Adjust the selection defaults for the build up stages
+        selection_defaults = {
+            "survivor_selection": pop_sel.NSGA2Selection(k=population_size),
+            "parent_selection": pop_sel.TournamentSelection(
+                k=0.5, tournament_size=4
+            )
+        }
+
         stage_list.append(GAStage(
             name=f"Build up Exploration {i+1}",
             **exploration_defaults,
+            **selection_defaults,
             fitness_functions=species_specific_fitnesses[0:i+1],
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,
@@ -97,15 +121,25 @@ def get_stage_list(
         stage_list.append(GAStage(
             name=f"Build up Optimization {i+1}",
             **optimization_defaults,
+            **selection_defaults,
             fitness_functions=species_specific_fitnesses[0:i+1] + [soap_fitness_mid],
             crossover_list=explore_cross_1,
             mutation_list=all_muts_1,
             break_condition=optimization_break
         ))
 
+    # Adjust the selection defaults to the whole population
+    selection_defaults = {
+        "survivor_selection": pop_sel.NSGA2Selection(k=population_size),
+        "parent_selection": pop_sel.TournamentSelection(
+            k=0.5, tournament_size=4
+        )
+    }
+
     stage_list.append(GAStage(
         name="Exploration",
         **optimization_defaults,
+        **selection_defaults,
         fitness_functions=species_specific_fitnesses,
         crossover_list=explore_cross_1,
         mutation_list=all_opti_muts,
@@ -115,6 +149,7 @@ def get_stage_list(
     stage_list.append(GAStage(
         name="Exploration",
         **exploration_defaults,
+        **selection_defaults,
         fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
         crossover_list=explore_cross_2,
         mutation_list=all_muts_1,
@@ -124,6 +159,7 @@ def get_stage_list(
     stage_list.append(GAStage(
         name="Exploration",
         **optimization_defaults,
+        **selection_defaults,
         fitness_functions=[soap_fitness_weak, soap_fitness_mid, (soap_fitness_strong, 0.5)] + species_specific_fitnesses,
         crossover_list=explore_cross_2,
         mutation_list=all_opti_muts,

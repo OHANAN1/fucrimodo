@@ -147,6 +147,29 @@ class MultiStageSearch:
         date_string = now.strftime("%Y_%m_%d_H%H_%M_%S")
         return date_string
 
+    def __save_stage_info(self, stage: Stage, stage_dir: str):
+        """Method to save the info of a stage in a JSON file.
+
+        The info of the stage is saved in a JSON file in the stage directory.
+        The info is the :attr:`Stage.info_dict` of the stage with the added
+        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and 
+        :attr:`Stage.description`.
+
+        :param stage: Stage that should be saved.
+        :param stage_dir: Directory where the info of the stage should be saved.
+        """
+        stage_info_dict = stage.info_dict.copy()
+        stage_info_dict.update({
+            "id": stage.id,
+            "type": stage.type(),
+            "name": stage.name,
+            "description": stage.description,
+        })
+
+        file_path = os.path.join(stage_dir, "info.json")
+        with open(file_path, "w") as f:
+            json.dump(stage_info_dict, f, indent=4)
+
     def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
         """Method to set up the stage for a run.
 
@@ -168,18 +191,7 @@ class MultiStageSearch:
         stage_dir = os.path.join(self.run_dir, f"stage_{stage_id}")
         os.mkdir(stage_dir)
 
-        # Add info to the run directory of the stage in the stage directory
-        stage_info_dict = stage.info_dict.copy()
-        stage_info_dict.update({
-            "id": stage.id,
-            "type": stage.type(),
-            "name": stage.name,
-            "description": stage.description,
-        })
-
-        file_path = os.path.join(stage_dir, "info.json")
-        with open(file_path, "w") as f:
-            json.dump(stage_info_dict, f, indent=4)
+        self.__save_stage_info(stage, stage_dir)
 
         return stage_dir
 
@@ -219,5 +231,9 @@ class MultiStageSearch:
             save_dir = stage_dir,
             crystals_db = self.crystal_database
         )
+
+        # Save the stage_info_dict again, to update data. E.g. number of generations
+        self.__save_stage_info(stage, stage_dir)
+
         return population
 

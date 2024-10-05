@@ -2,6 +2,7 @@ from collections.abc import Callable
 import copy
 import functools
 from fucrimodo.core.modules import Population, FitnessFunction, Individual
+from fucrimodo.core.modules.population_selection import PopulationSelection
 from .mutations import Mutation
 from .crossovers import Crossover
 from .break_conditions import BreakCondition
@@ -22,8 +23,8 @@ class GeneticAlgorithm:
         mutation_probability: float,
         crossover_probability: float,
         break_condition: BreakCondition,
-        parent_selection: Callable,
-        survivor_selection: Callable,
+        parent_selection: PopulationSelection,
+        survivor_selection: PopulationSelection,
         save_n_best_crystals: int = 10,
     ):
         self.fitness_functions = fitness_functions
@@ -156,6 +157,14 @@ class GeneticAlgorithm:
     @property
     def hall_of_fame(self) -> tools.HallOfFame:
         return self._hall_of_fame
+
+    @property
+    def generation(self) -> int:
+        """The current generation of the genetic algorithm."""
+        # If not set, initialize the generation with 0
+        if not hasattr(self, "_generation"):
+            self._generation = 0
+        return self._generation
 
     def __perform_crossover(
         self, parent1: Individual, parent2: Individual
@@ -453,21 +462,18 @@ class GeneticAlgorithm:
         )
         print(global_log.stream)
 
-        generation = 0
+        self._generation = 0
         while not self.break_condition.check(
-            population.individuals, generation
+            population.individuals, self.generation
         ):
-            generation += 1
+            self._generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
-            print("Evolving Gen: ", generation)
+            print("Evolving Gen: ", self._generation)
             print("Population size: ", population.size)
 
             # ── Select Parents ───────────────────────────────────────────────
-            parents = self.parent_selection(
-                individuals = population.individuals, 
-                k = population.size
-            )
+            parents = self.parent_selection.select(population.individuals)
             print("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
@@ -483,15 +489,9 @@ class GeneticAlgorithm:
                     population_pool.append(ind)
             print("Created population pool")
 
-            new_population = self.survivor_selection(
-                individuals = population_pool, k = population.size
-            )
-            new_population = new_population[:population_size]
+            # Select survivors from the old population and offspring
+            new_population = self.survivor_selection.select(population_pool)
             print("Selected {} survivors".format(len(new_population)))
-            if len(new_population) != population_size:
-                raise ValueError(
-                    "The number of survivors does not match the population size."
-                )
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(
@@ -506,7 +506,7 @@ class GeneticAlgorithm:
                 population=population,
                 offspring=offspring,
                 nevals=nevals,
-                gen=generation,
+                gen=self._generation,
                 global_stats=global_stats,
                 global_log=global_log,
                 stage_id=stage_id,
