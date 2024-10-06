@@ -1,7 +1,6 @@
 from .abstract import Mutation
 from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-import ase
 from ase.ga import soft_mutation as ase_soft_mut
 from fucrimodo.core.utils.emt2 import EMT2 # Replace with ml model
 from ase.optimize import BFGS

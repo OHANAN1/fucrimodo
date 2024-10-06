@@ -3,7 +3,6 @@
 from fucrimodo.core.modules import Individual
 from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-import ase
 
 
 class GetConventionalCellMutation(Mutation):

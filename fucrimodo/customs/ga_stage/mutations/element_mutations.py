@@ -7,7 +7,8 @@ import ase
 import ase.data as ase_data
 import random
 import numpy as np
-from icecream import ic
+import logging
+logger = logging.getLogger('run_logger')
 
 
 class ReplaceAtomsMutation(Mutation):
@@ -102,9 +103,8 @@ class AddAtomsMutation(Mutation):
             distances = np.linalg.norm(positions - candidate, axis=1)
 
             if np.all(distances >= target_distance):
+                logger.debug("Could not find a distant point")
                 return candidate
-
-        ic("Could not find a distant point.")
 
         return None
 

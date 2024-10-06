@@ -4,36 +4,19 @@ from ase.cell import Cell
 import numpy as np
 from abc import ABC, abstractmethod
 import ase
-from ase.ga.utilities import closest_distances_generator
-import warnings
 from numpy.typing import NDArray
-
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-import ase.ga.element_crossovers as ase_elem_cross
-import ase.ga.cutandsplicepairing as ase_cut_and_splice
 from ase.build import stack, cut
-from ase.build import attach
-from ase.visualize import view
 import concurrent.futures
 from fucrimodo.core.modules import Individual
-
-from ase.geometry import wrap_positions
 from ase.geometry import get_distances
-from ase.build import make_supercell
-
-from icecream import ic
-
-import numpy as np
-from abc import ABC, abstractmethod
 import ase
-import warnings
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from typing import Callable
 import concurrent.futures
-from icecream import ic
 
-
+import logging
+logger = logging.getLogger('run_logger')
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Utility functions                     ║
@@ -139,7 +122,7 @@ def run_function_with_timeout(funktion: Callable, timeout: int = 60):
         try:
             return future.result(timeout=timeout)
         except concurrent.futures.TimeoutError:
-            print("Funktion hat zu lange gedauert und wurde abgebrochen")
+            logger.error("Funktion hat zu lange gedauert und wurde abgebrochen")
             return None
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -229,7 +212,7 @@ class Crossover(ABC):
         Returns the two offsprings and a boolean if the crossover was successful.
         True if successful, False if not.
         """
-        print("Performing {}.".format(self.__class__.__name__))
+        logger.info("Performing {}.".format(self.__class__.__name__))
 
         if not hasattr(self, "max_steps") or self.max_steps == 0:
             self.max_steps = 1
@@ -249,8 +232,8 @@ class Crossover(ABC):
                 )
 
             except Exception as e:
-                warnings.warn(
-                    "{}: Unknown Error. No mutation possible. {}".format(
+                logger.error(
+                    "{}: Unknown Error. No crossover possible. {}".format(
                         self.__class__.__name__, e)
                 )
                 keep_offspring = False
@@ -264,7 +247,7 @@ class Crossover(ABC):
                     offspring_1.wrap()
                     offspring_2.wrap()
                 except Exception as e:
-                    warnings.warn(
+                    logger.error(
                         "{}: Unknown Error in wrapping. {}".format(
                             self.__class__.__name__, e)
                     )
@@ -279,7 +262,7 @@ class Crossover(ABC):
                     offspring_2
                 )
             except Exception as e:
-                warnings.warn(
+                logger.error(
                     "{}: Unknown Error in crystal_is_valid_object. {}".format(
                         self.__class__.__name__, e)
                 )
@@ -290,7 +273,7 @@ class Crossover(ABC):
                 offspring_1_is_physical = self.crystal_is_physical(offspring_1)
                 offspring_2_is_physical = self.crystal_is_physical(offspring_2)
             except Exception as e:
-                warnings.warn(
+                logger.error(
                     "{}: Unknown Error in crystal_is_physical. {}".format(
                         self.__class__.__name__, e)
                 )
@@ -298,7 +281,7 @@ class Crossover(ABC):
                 continue
 
             if not offspring_1_is_valid or not offspring_2_is_valid:
-                warnings.warn(
+                logger.warning(
                     "{}: Offspring is not a valid object.".format(
                         self.__class__.__name__
                     ) + f"\nOffspring: {offspring_1} or {offspring_2}"
@@ -337,15 +320,15 @@ class Crossover(ABC):
                 parent2.set_cell(offspring_2_cell)
                 parent2.set_pbc([True, True, True])
 
-                print("Done! After {} steps.".format(step+1))
+                logger.info("Done! After {} steps.".format(step+1))
                 return (parent1, parent2, True)
 
             else:
-                print("Crossover failed.")
+                logger.info("Crossover failed.")
                 return (parent1, parent2, False)
 
         except Exception as e:
-            warnings.warn(
+            logger.error(
                 "{}: Unknown Error. Couldnt return offspring. {}".format(
                     self.__class__.__name__, e)
             )
@@ -722,8 +705,7 @@ class CutAndSpliceCrossover(Crossover):
             timeout=30
         )
         if result is None:
-            print("Crossover took too long. I dont know why tho")
-            print("Crossover took too long. I dont know why tho")
+            logger.error("Crossover took too long. I dont know why tho")
 
             return (None, None)
 

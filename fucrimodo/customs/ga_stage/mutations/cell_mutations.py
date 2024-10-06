@@ -2,12 +2,10 @@ from fucrimodo.core.modules.individual import Individual
 from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-import ase
 import numpy as np
 from ase.cell import Cell
 import ase.ga.standardmutations as ase_standard_mut
 from ase import build
-from ase.build import tools
 import random
 
 class ScaleUnitCellMutation(Mutation):

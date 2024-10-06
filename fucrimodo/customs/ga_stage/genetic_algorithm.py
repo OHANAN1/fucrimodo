@@ -1,4 +1,3 @@
-from collections.abc import Callable
 import copy
 import functools
 from fucrimodo.core.modules import Population, FitnessFunction, Individual
@@ -10,6 +9,9 @@ from typing import Sequence
 from deap import tools
 import numpy as np
 import random
+
+import logging
+logger = logging.getLogger('run_logger')
 
 class GeneticAlgorithm:
     def __init__(
@@ -220,7 +222,7 @@ class GeneticAlgorithm:
 
         :return: The number of individuals with invalid fitnesses.
         """
-        print("Updating fitnesses.")
+        ("Updating fitnesses.")
         invalid_ind = [ind for ind in individuals if not ind.fitness.valid]
         for ind in invalid_ind:
             ind.reset() # Ensures that all features are reset
@@ -329,7 +331,7 @@ class GeneticAlgorithm:
             if mut_info[1] == False or cross_info[1] == False:
                 modified_offspring.append(offspring[i])
 
-        print("Modified {} individuals".format(len(modified_offspring)))
+        logger.info("Modified {} individuals".format(len(modified_offspring)))
 
         return modified_offspring
 
@@ -471,14 +473,14 @@ class GeneticAlgorithm:
             self._generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
-            print("Evolving Gen: ", self._generation)
-            print("Population size: ", population.size)
+            logger.info(f"Evolving Gen: {self._generation}")
+            logger.info(f"Population size: {population.size}")
 
             # ── Select Parents ───────────────────────────────────────────────
             parents = self.parent_selection.select(
                 population.individuals, int(population_size * self.parent_ratio)
             )
-            print("Selected {} parents".format(len(parents)))
+            logger.info("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
             offspring = self.__create_offspring(parents)
@@ -491,13 +493,13 @@ class GeneticAlgorithm:
             for ind in offspring:
                 if ind not in population_pool:
                     population_pool.append(ind)
-            print("Created population pool")
+            logger.info("Created population pool")
 
             # Select survivors from the old population and offspring
             new_population = self.survivor_selection.select(
                 population_pool, population_size
             )
-            print("Selected {} survivors".format(len(new_population)))
+            logger.info("Selected {} survivors".format(len(new_population)))
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(

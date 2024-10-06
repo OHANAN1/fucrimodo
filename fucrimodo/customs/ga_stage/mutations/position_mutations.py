@@ -2,7 +2,6 @@ from .abstract import Mutation
 from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import ase.ga.standardmutations as ase_standard_mut
-import ase
 import numpy as np
 
 class RattleMutation(Mutation):

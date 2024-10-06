@@ -1,5 +1,3 @@
-from collections.abc import Callable
-import functools
 import json
 from fucrimodo.core.modules import Stage, Population, FitnessFunction, PopulationSelection, Individual
 from .mutations import Mutation
@@ -8,7 +6,6 @@ from .break_conditions import BreakCondition
 from ase.db.core import Database
 from typing import Any, Sequence
 from deap import tools
-import numpy as np
 import os
 from .genetic_algorithm import GeneticAlgorithm
 

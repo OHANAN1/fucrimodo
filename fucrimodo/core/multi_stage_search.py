@@ -3,7 +3,6 @@ from ase import db
 from ase.db.core import Database
 from deap import tools
 import numpy as np
-
 from fucrimodo.core.modules.individual import Individual
 from .modules import Stage, Population
 import os
@@ -27,12 +26,15 @@ class MultiStageSearch:
         iteration that modifies the population (e.g. in Genetic Algorithms they
         are calculated for each generation) of all stages of the optimization
         algorithm.
+    :param log_enable: Optional boolean to enable logging of the run.
+        Currently not implemented and will always log to a file.
     """
     def __init__(
         self,
         save_dir: str,
         descriptive_name: str|None = None,
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
+        log_enable: bool = False,
     ) -> None:
         # If no descriptive name is given, use the current time and date.
         # Define name attribute without setter, since it should never be changed
@@ -52,6 +54,9 @@ class MultiStageSearch:
 
         # Set the current stage id to 0
         self.current_stage_id = 0
+
+        from fucrimodo.core.utils.log import setup_run_logger
+        setup_run_logger(log_file_path=f"{self.run_dir}/run.log")
 
     @property
     def name(self) -> str:
