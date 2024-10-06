@@ -4,11 +4,14 @@ from ase.db.core import Database
 from deap import tools
 import numpy as np
 from fucrimodo.core.modules.individual import Individual
+from fucrimodo.core.utils.log import setup_run_logger
 from .modules import Stage, Population
 import os
 import pickle
 import datetime
 import json
+import logging
+logger = logging.getLogger('run_logger')
 
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.
@@ -34,7 +37,7 @@ class MultiStageSearch:
         save_dir: str,
         descriptive_name: str|None = None,
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
-        log_enable: bool = False,
+        log_level: int = logging.INFO,
     ) -> None:
         # If no descriptive name is given, use the current time and date.
         # Define name attribute without setter, since it should never be changed
@@ -55,8 +58,10 @@ class MultiStageSearch:
         # Set the current stage id to 0
         self.current_stage_id = 0
 
-        from fucrimodo.core.utils.log import setup_run_logger
-        setup_run_logger(log_file_path=f"{self.run_dir}/run.log")
+        setup_run_logger(
+            log_file_path=f"{self.run_dir}/run.log", 
+            log_level=log_level
+        )
 
     @property
     def name(self) -> str:
@@ -103,6 +108,29 @@ class MultiStageSearch:
 
         return self._global_log
 
+    @property
+    def stage_history(self) -> dict[str, list]:
+        """Dictionary to store the history of the stages.
+
+        The dictionary stores ordered lists of the stage IDs and
+        paths to the directories of the stages relative to the directory the 
+        run was saved in. Each index in the lists corresponds to one stage.
+
+        :returns: History dict of the stages. Keys are: "ID", "relative_save_path"
+        """
+        if not hasattr(self, "_stage_history"):
+            self._stage_history = {
+                "ID": [],
+                "relative_save_path": [],
+            }
+        return self._stage_history
+
+    def __update_stage_history(self, stage_id: int, relative_save_path: str):
+        """Adds new entry to the :attr:`stage_history`.
+        """
+        self.stage_history["ID"].append(stage_id)
+        self.stage_history["relative_save_path"].append(relative_save_path)
+
     def __create_global_statistics(
         self, 
         global_stats_dict: dict[str, Callable[[Individual], float]] | None
@@ -142,7 +170,7 @@ class MultiStageSearch:
 
         :param save_dir: Directory where the run directory should be created.
         """
-        run_dir = os.path.join(save_dir, self.name)
+        run_dir = os.path.join(os.getcwd(), save_dir, self.name)
         os.mkdir(run_dir)
 
         return run_dir
@@ -175,6 +203,8 @@ class MultiStageSearch:
         with open(file_path, "w") as f:
             json.dump(stage_info_dict, f, indent=4)
 
+        logger.info(f"Saved info.json of stage at {file_path}")
+
     def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
         """Method to set up the stage for a run.
 
@@ -189,21 +219,43 @@ class MultiStageSearch:
         :param stage: Stage that should be set up.
         :param stage_id: A unique ID that should be assigned to the stage.
         """
+        logger.info(f"Setting up stage with id {stage_id}")
+
         # Assign the stage ID to the stage
         stage.id = stage_id
 
         # Create a directory for the stage in the run directory
-        stage_dir = os.path.join(self.run_dir, f"stage_{stage_id}")
+        # stage should be saved in a directory relative to the run
+        relative_stage_dir = f"stage_{stage_id}"
+        stage_dir = os.path.join(self.run_dir, relative_stage_dir)
         os.mkdir(stage_dir)
 
         self.__save_stage_info(stage, stage_dir)
 
+        # Update the stage history with the currently run stage
+        self.__update_stage_history(
+            stage_id=self.current_stage_id,
+            relative_save_path=relative_stage_dir
+        )
+
         return stage_dir
 
     def save_results(self):
-        file_path = os.path.join(self.run_dir, "global_logbook.pickle")
+        file_path = os.path.join(self.run_dir, "global_statistics.pickle")
         with open(file_path, "wb") as f:
             pickle.dump(self.global_logbook, f)
+        logger.info(f"Saved run results at {file_path}")
+
+    def save_info(self):
+        file_path = os.path.join(self.run_dir, "info.json")
+        info_dict = {
+            "name": self.name,
+            "run_dir": self.run_dir,
+            "stage_history": self.stage_history
+        }
+        with open(file_path, "w") as f:
+            json.dump(info_dict, f, indent=4)
+        logger.info(f"Saved run info at {file_path}")
 
     def run(self, population: Population, stage: Stage) -> Population:
         """Method to run a stage of the optimization algorithm.
@@ -211,6 +263,8 @@ class MultiStageSearch:
         This method runs a stage of the optimization algorithm and makes the
         stage save the results of the optimization algorithm.
         Manages the stage ID and directory where the results are saved.
+        Also saves the info.json of the run and the global_statisitics.json.
+        If already present overwrites them.
 
         :param population: Population that should be optimized.
         :param stage: Stage that should be run.
@@ -239,6 +293,12 @@ class MultiStageSearch:
 
         # Save the stage_info_dict again, to update data. E.g. number of generations
         self.__save_stage_info(stage, stage_dir)
+
+        # Overwrite the info.json in the run directory
+        self.save_info()
+
+        # Overwrite the global_statistics.json in the run directory
+        self.save_results()
 
         return population
 

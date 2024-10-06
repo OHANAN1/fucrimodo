@@ -82,6 +82,9 @@ class StageResults():
             # Load the fitnesses dict from the fitnesses.json file
             fit_dict = self.__load_dict_from_file("fitnesses.json")
 
+            assert type(fit_dict["results"]) == list, \
+                "The results entry in the fitnesses.json file is not a list."
+
             # Load each of the results entries in a Dataframe
             for i in range(len(fit_dict["results"])):
                 fit_dict["results"][i] = pd.DataFrame(fit_dict["results"][i])
@@ -106,6 +109,9 @@ class StageResults():
             # Get the dict from the mutations.json file
             mut_dict = self.__load_dict_from_file("mutations.json")
 
+            assert type(mut_dict["results"]) == list, \
+                "The results entry in the mutations.json file is not a list."
+
             # Load each of the results entries in a Dataframe
             for i in range(len(mut_dict["results"])):
                 mut_dict["results"][i] = pd.DataFrame(mut_dict["results"][i])
@@ -129,6 +135,9 @@ class StageResults():
             # Load the crossovers dict from the crossovers.json file
             cross_dict = self.__load_dict_from_file("crossovers.json")
 
+            assert type(cross_dict["results"]) == list, \
+                "The results entry in the crossovers.json file is not a list."
+
             # Load each of the results entries in a Dataframe
             for i in range(len(cross_dict["results"])):
                 cross_dict["results"][i] = pd.DataFrame(cross_dict["results"][i])
@@ -151,10 +160,22 @@ class StageResults():
     @property
     def n_generations(self) -> int:
         """Number of generations that the stage performed."""
-        # Get the results dict of the first fitness entry and return the
-        # last entry of the 'gen' key which is the index of the last generation
-        # that was performed.
-        return self.fitnesses["results"][0]["gen"][-1]
+        # Try to get the number of generations from the info dict
+        try:
+            return int(
+                self._info_dict["n_generations"] # type: ignore
+            )
+
+        # If the key was not found or the value was not an integer
+        # get the number of generations from the fitnesses data
+        # While this should in theory always be the same, it is not guaranteed
+        except KeyError:
+            warnings.warn(
+                "The key 'n_generations' was not found in the info.json file"
+                    " or the value was not an integer."
+                    "Getting the number of generations from the fitnesses data."
+            )
+            return self.fitnesses["results"].iloc[0]["gen"].max()
 
     @property
     def info_dict(self) -> dict[str, Any]:
@@ -167,7 +188,7 @@ class StageResults():
 
     def __load_dict_from_file(
         self, file_name: str
-    ) -> dict[str, list]:
+    ) -> dict[str, list | str | int]:
         """Load a dictionary from a json file with name :data:`file_name` from
         the stage directory :attr:`StageResults.dir_path`
 
@@ -205,6 +226,7 @@ class StageResults():
         """
         assert os.path.exists(crystals_db_path), \
             f"File crystals.db does not exist in {self._run_dir}."
+
         crystals_db = db_tools.connect_to_existing_database(crystals_db_path)
         db_data = db_tools.get_data_with_specific_key_value_from_db(
             crystals_db=crystals_db, key="stage_id", value=self.id
@@ -251,7 +273,7 @@ class RunResults():
     @property
     def run_name(self) -> str:
         """
-        Name of the run. If set to None, will automatically use the base 
+        Name of the run. If set to None, will automatically use the base
         name of the run directory.
         """
         return self._run_name
@@ -369,3 +391,4 @@ if __name__ == "__main__":
     run = StageResults(run_dir, 1)
 
     print(run.mutations.loc[0, "results"])
+    print(run.n_generations)

@@ -14,13 +14,13 @@ import random
 from fucrimodo.core import multi_stage_search as multi_stage
 from fucrimodo.customs.ga_stage import break_conditions as break_cond
 import numpy as np
-from icecream import ic
 import warnings
+import logging
 
 def main(
     target_features: np.ndarray,
     soap_obj: CustomSOAP,
-    log_enable: bool = False,
+    log_level: int = logging.INFO,
     warnings_enable: bool = True,
     verbose: int = 3,
     random_seed: int = 42,
@@ -47,6 +47,7 @@ def main(
     multi_stage_search = multi_stage.MultiStageSearch(
         save_dir="data/processed/results/",
         global_statistics_dict=global_stats_dict,
+        log_level=log_level
     )
 
     cell_bounds = []
