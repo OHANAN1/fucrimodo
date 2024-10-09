@@ -455,67 +455,31 @@ class OnePointElementCrossover(Crossover):
         parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
+        # Get minimum length of both parents
         min_length = min(len(parent1), len(parent2))
 
-        par_1_atomic_numbers = parent1.get_atomic_numbers()
-        par_2_atomic_numbers = parent2.get_atomic_numbers()
-
-        all_atomic_numbers = np.unique(
-            np.concatenate([par_1_atomic_numbers, par_2_atomic_numbers])
-        )
-        if len(all_atomic_numbers) == 1:
+        # If one of the parents has only one element, crossover is not possible
+        if min_length < 2:
             return (None, None)
 
-        par_1_start_index = 0
-        if len(par_1_atomic_numbers) > min_length:
-            par_1_start_index = random.randint(0, len(par_1_atomic_numbers) - min_length)
+        # Get atomic numbers of both parents
+        par_1_atomic_numbers = parent1.get_atomic_numbers().tolist()
+        par_2_atomic_numbers = parent2.get_atomic_numbers().tolist()
 
-        selected_par_1_numbers = par_1_atomic_numbers[
-            par_1_start_index:par_1_start_index + min_length
-        ]
+        # Check if only one element is present in both parents
+        if len(set(par_1_atomic_numbers + par_2_atomic_numbers)) == 1:
+            return (None, None)
 
-        par_2_start_index = 0
-        if len(par_2_atomic_numbers) > min_length:
-            par_2_start_index = random.randint(0, len(par_2_atomic_numbers) - min_length)
 
-        selected_par_2_numbers = par_2_atomic_numbers[
-            par_2_start_index:par_2_start_index + min_length
-        ]
+        # Get random index where to split the atomic numbers
+        # Must be smaller then the minimum length to avoid to
+        # many atoms in the offspring
+        cut_index = random.randint(0, min_length - 1)
 
-        if min_length > 2:
-            cut_index = random.randint(1, min_length - 1)
-
-            new_par_1_numbers = np.concatenate(
-                [
-                    selected_par_1_numbers[:cut_index],
-                    selected_par_2_numbers[cut_index:]
-                ]
-            )
-
-            new_par_2_numbers = np.concatenate(
-                [
-                    selected_par_2_numbers[:cut_index],
-                    selected_par_1_numbers[cut_index:]
-                ]
-            )
-        else:
-            new_par_1_numbers = selected_par_2_numbers
-            new_par_2_numbers = selected_par_1_numbers
-
-        if par_1_start_index > 0:
-            new_par_1_numbers = np.concatenate(
-                [
-                    par_1_atomic_numbers[:par_1_start_index],
-                    new_par_1_numbers
-                ]
-            )
-        if par_2_start_index > 0:
-            new_par_2_numbers = np.concatenate(
-                [
-                    par_2_atomic_numbers[:par_2_start_index],
-                    new_par_2_numbers
-                ]
-            )
+        # Get the cut of atomic numbers of the opposite parents and
+        # concatenate them to get the new atomic numbers
+        new_par_1_numbers = par_2_atomic_numbers[:cut_index] + par_1_atomic_numbers[cut_index:]
+        new_par_2_numbers = par_1_atomic_numbers[:cut_index] + par_2_atomic_numbers[cut_index:]
 
         offspring1 = parent1.copy()
         offspring1.set_atomic_numbers(new_par_1_numbers)
@@ -544,74 +508,36 @@ class OnePointPositionCrossover(Crossover):
         parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
+        # Get minimum length of both parents
         min_length = min(len(parent1), len(parent2))
 
-        par_1_positions = parent1.get_positions()
-        par_2_positions = parent2.get_positions()
+        # If one of the parents has only one element, crossover is not possible
+        if min_length < 2:
+            return (None, None)
 
+        # Get atomic numbers of both parents
+        par_1_atomic_pos = parent1.get_positions().tolist()
+        par_2_atomic_pos = parent2.get_positions().tolist()
 
-        par_1_start_index = 0
-        if len(par_1_positions) > min_length:
-            par_1_start_index = random.randint(0, len(par_1_positions) - min_length)
+        # Get random index where to split the atomic numbers
+        # Must be smaller then the minimum length to avoid to
+        # many atoms in the offspring
+        cut_index = random.randint(0, min_length - 1)
 
-        selected_par_1_positions = par_1_positions[
-            par_1_start_index:par_1_start_index + min_length
-        ]
-
-        par_2_start_index = 0
-        if len(par_2_positions) > min_length:
-            par_2_start_index = random.randint(0, len(par_2_positions) - min_length)
-
-        selected_par_2_positions = par_2_positions[
-            par_2_start_index:par_2_start_index + min_length
-        ]
-
-        if min_length > 2:
-            cut_index = random.randint(1, min_length - 1)
-
-            new_par_1_positions = np.concatenate(
-                [
-                    selected_par_1_positions[:cut_index],
-                    selected_par_2_positions[cut_index:]
-                ]
-            )
-
-            new_par_2_positions = np.concatenate(
-                [
-                    selected_par_2_positions[:cut_index],
-                    selected_par_1_positions[cut_index:]
-                ]
-            )
-        else:
-            new_par_1_positions = selected_par_2_positions
-            new_par_2_positions = selected_par_1_positions
-
-        if par_1_start_index > 0:
-            new_par_1_positions = np.concatenate(
-                [
-                    par_1_positions[:par_1_start_index],
-                    new_par_1_positions
-                ]
-            )
-        if par_2_start_index > 0:
-            new_par_2_positions = np.concatenate(
-                [
-                    par_2_positions[:par_2_start_index],
-                    new_par_2_positions
-                ]
-            )
+        # Get the cut of atomic numbers of the opposite parents and
+        # concatenate them to get the new atomic numbers
+        new_par_1_pos = par_2_atomic_pos[:cut_index] + par_1_atomic_pos[cut_index:]
+        new_par_2_pos = par_1_atomic_pos[:cut_index] + par_2_atomic_pos[cut_index:]
 
         offspring1 = parent1.copy()
-        offspring1.set_positions(new_par_1_positions)
+        offspring1.set_positions(np.array(new_par_1_pos))
         offspring1.wrap()
 
         offspring2 = parent2.copy()
-        offspring2.set_positions(new_par_2_positions)
+        offspring2.set_positions(np.array(new_par_2_pos))
         offspring2.wrap()
 
         return (offspring1, offspring2)
-
-
 
 
 class CutAndSpliceCrossover(Crossover):
