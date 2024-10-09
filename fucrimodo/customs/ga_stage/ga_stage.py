@@ -4,7 +4,7 @@ from .mutations import Mutation
 from .crossovers import Crossover
 from .break_conditions import BreakCondition
 from ase.db.core import Database
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 from deap import tools
 import os
 from .genetic_algorithm import GeneticAlgorithm
@@ -78,6 +78,7 @@ class GAStage(Stage):
         database: Database,
         hall_of_fame: tools.HallOfFame,
         fitness_functions: Sequence[FitnessFunction],
+        global_stats_dict: dict[str, Callable] | None = None,
     ) -> None:
         """Saves the hall of fame to the database and adds the fitness to
         each individual.
@@ -85,9 +86,15 @@ class GAStage(Stage):
         for ind in hall_of_fame:
             key_value_pairs = {"stage_id": self.id}
 
+            # Add the fitness values to the key value pairs
             for i in range(len(fitness_functions)):
                 fitness_name = fitness_functions[i].db_title
                 key_value_pairs[fitness_name] = ind.fitness.values[i]
+
+            # Calculate global statistics for each individual if set
+            if global_stats_dict is not None:
+                for key, func in global_stats_dict.items():
+                    key_value_pairs[key] = func(ind)
 
             database.write(ind, key_value_pairs)
 
@@ -105,6 +112,7 @@ class GAStage(Stage):
             - 'gen': The generation number
             - 'called': The number of times the crossover was called
             - 'failed': The number of times the crossover failed
+            - 'survivor': The number of times the offspring was selected as a survivor
 
         :param save_dir: The directory to save the file to.
         """
@@ -125,6 +133,7 @@ class GAStage(Stage):
                 "gen": self.crossover_logbook.select("gen"),
                 "called": cross_log.select("called"),
                 "failed": cross_log.select("failed"),
+                "survivor": cross_log.select("survivor"),
             }
 
             # Append the results to the crossover dictionary
@@ -133,7 +142,7 @@ class GAStage(Stage):
         # Save the crossover dictionary to a json file
         file_path = os.path.join(save_dir, "crossovers.json")
         with open(file_path, "w") as f:
-            json.dump(crossover_dict, f)
+            json.dump(crossover_dict, f, indent=4)
 
     def __save_mutations(self, save_dir: str):
         """Saves the mutation logbook and information to a json file.
@@ -179,7 +188,7 @@ class GAStage(Stage):
         # Save the mutation dictionary to a json file
         file_path = os.path.join(save_dir, "mutations.json")
         with open(file_path, "w") as f:
-            json.dump(mutation_dict, f)
+            json.dump(mutation_dict, f, indent=4)
 
     def __save_fitnesses(self, save_dir: str):
         """Saves the fitness logbook and information to a json file.
@@ -227,7 +236,7 @@ class GAStage(Stage):
         # Save the fitness dictionary to a json file
         file_path = os.path.join(save_dir, "fitnesses.json")
         with open(file_path, "w") as f:
-            json.dump(fitnesses_dict, f)
+            json.dump(fitnesses_dict, f, indent=4)
 
     @property
     def info_dict(self) -> dict:
@@ -264,12 +273,18 @@ class GAStage(Stage):
 
         return population
 
-    def save_results(self, save_dir: str, crystals_db: Database):
+    def save_results(
+        self, 
+        save_dir: str, 
+        crystals_db: Database, 
+        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None
+    ):
         self.__save_mutations(save_dir)
         self.__save_crossovers(save_dir)
         self.__save_fitnesses(save_dir)
         self.__save_hall_of_fame(
-            crystals_db, 
-            self.hall_of_fame, 
-            self.ga_runner.fitness_functions
+            crystals_db,
+            self.hall_of_fame,
+            self.ga_runner.fitness_functions,
+            global_statistics_dict
         )

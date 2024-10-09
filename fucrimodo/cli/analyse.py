@@ -1,7 +1,7 @@
 import os
 import sys
-from fucrimodo.analysis.analysis_classes import AnalyseRun, AnalyseStage
-from fucrimodo.analysis.results_classes import StageResults
+# from fucrimodo.analysis.analysis_classes import AnalyseRun, AnalyseStage
+# from fucrimodo.analysis.results_classes import StageResults
 import pandas as pd
 
 class CLICommand:
@@ -97,7 +97,6 @@ class Runner:
                 )
         self.target_crystal_path = args.target_crystal_path
 
-
     def __let_user_select_key(
         self, 
         selector: list[str] | pd.DataFrame | str,
@@ -185,7 +184,7 @@ class Runner:
         import matplotlib.pyplot as plt
         analyse_run = AnalyseRun(self.run_dir)
 
-        global_log = analyse_run.run_results.global_statistics_log
+        global_log = analyse_run.run_results.global_log
 
         if self.statistics_key is None:
             print()
@@ -262,14 +261,14 @@ class Runner:
             )
 
         fig, ax = plt.subplots()
-        analyse_stage.plot_results(
+        analyse_stage.perform_analysis(
             analysis_type=self.analysis_type, 
             row=self.index,
             ax=ax
         )
         plt.legend()
         plt.show()
-            
+
     def run(self):
         print(f"Running Analyse script with arguments: ")
         print(f"\tanalysis_object: \t{self.analysis_type}")

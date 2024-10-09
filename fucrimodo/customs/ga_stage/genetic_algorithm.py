@@ -251,7 +251,12 @@ class GeneticAlgorithm:
 
         if global_stats is not None and global_log is not None:
             global_record = global_stats.compile(population.individuals)
-            global_log.record(gen=gen, stage_id=stage_id, **global_record)
+            # Record the global statistics. Use the stage_id to identify the stage
+            # and the generation of the population to track the total generation
+            # and not only the generation of the stage.
+            global_log.record(
+                gen=population.generation, stage_id=stage_id, **global_record
+            )
         else:
             global_record = None
 
@@ -370,8 +375,8 @@ class GeneticAlgorithm:
         # Use the hashes of all possible modifications as keys
         mod_data = { 
             str(modification.__hash__()): {
-                "called": 0, 
-                "failed": 0, 
+                "called": 0,
+                "failed": 0,
                 "survivor": 0
             } for modification in modification_list
         }
@@ -379,11 +384,14 @@ class GeneticAlgorithm:
 
             # Load the data from the info attr of the individual
             hash = str(ind.info[info_key][0])
+
+            # Skip if the hash is None or "None". Happens if no mutation or
+            # crossover was to modify the individual due to the probability.
             if hash is None or hash == "None":
                 continue
 
             mod_data[hash]["called"] += 1
-            mod_data[hash]["failed"] += int(ind.info[info_key][1]) 
+            mod_data[hash]["failed"] += int(ind.info[info_key][1])
             mod_data[hash]["survivor"] += int(ind.info[info_key][2])
 
         modification_logbook.record(gen=gen, **mod_data)

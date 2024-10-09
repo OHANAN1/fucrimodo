@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
+
+from fucrimodo.core.modules.individual import Individual
 from .population import Population
 from ase.db.core import Database
 from deap import tools
+from typing import Callable
 
 class Stage(ABC):
     """Abstract base class for stages in the optimization algorithm.
@@ -29,7 +32,12 @@ class Stage(ABC):
         pass
 
     @abstractmethod
-    def save_results(self, save_dir: str, crystals_db: Database):
+    def save_results(
+        self, 
+        save_dir: str, 
+        crystals_db: Database, 
+        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None
+    ) -> None:
         """Method to save the results of the stage to a given directory and
         ASE database.
 

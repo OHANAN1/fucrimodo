@@ -36,6 +36,7 @@ class MultiStageSearch:
         self,
         save_dir: str,
         descriptive_name: str|None = None,
+        description: str = "",
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
         log_level: int = logging.INFO,
     ) -> None:
@@ -46,12 +47,17 @@ class MultiStageSearch:
         else:
             self._name = descriptive_name
 
+        self._description = description
+
         # Create the dictionary to store the data of the run
         self._run_dir = self.__create_run_dir(save_dir)
 
+        # Save the global statistics dictionary to access it during saving
+        self._global_statistics_dict = global_statistics_dict
+
         # Create the global statistics and the logbook
         self._global_statistics = self.__create_global_statistics(
-            global_statistics_dict
+            self._global_statistics_dict
         )
         self._global_log = self.global_logbook
 
@@ -66,6 +72,10 @@ class MultiStageSearch:
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def description(self) -> str:
+        return self._description
 
     @property
     def run_dir(self) -> str:
@@ -230,6 +240,7 @@ class MultiStageSearch:
         stage_dir = os.path.join(self.run_dir, relative_stage_dir)
         os.mkdir(stage_dir)
 
+        # Save the info of the stage in a JSON file in the stage directory
         self.__save_stage_info(stage, stage_dir)
 
         # Update the stage history with the currently run stage
@@ -241,16 +252,51 @@ class MultiStageSearch:
         return stage_dir
 
     def save_results(self):
-        file_path = os.path.join(self.run_dir, "global_statistics.pickle")
-        with open(file_path, "wb") as f:
-            pickle.dump(self.global_logbook, f)
+        """Method to save the results of the run in a JSON file.
+
+        The results of the run are saved in a JSON file in the run directory.
+        The results are the global statistics of the run if they are set.
+        The keys of the dictionary are "names", "functions" and "results".
+        The values are lists where each index corresponds to one statistic.
+        The results are stored in a dictionary with the keys "stage_id", "gen",
+        "min", "max", "avg" and "std" for each statistic.
+        """
+        # Create a dictionary to store the global statistics if they are set
+        global_stats_dict = {}
+        if self._global_statistics_dict is not None:
+            global_stats_dict["names"] = [
+                name for name in self._global_statistics_dict.keys()
+            ]
+            global_stats_dict["functions"] = [
+                func.__name__ 
+                for func in self._global_statistics_dict.values()
+            ]
+
+            # Loop over the chapters of the logbook and save the statistics
+            global_stats_dict["results"] = []
+            for name in self.global_logbook.chapters.keys():
+                stat_log = self.global_logbook.chapters[name]
+                stat_result = {
+                    "gen": stat_log.select("gen"),
+                    "min": stat_log.select("min"),
+                    "max": stat_log.select("max"),
+                    "avg": stat_log.select("avg"),
+                    "std": stat_log.select("std"),
+                    "stage_id": stat_log.select("stage_id"),
+                }
+                global_stats_dict["results"].append(stat_result)
+
+        # Save the global statistics in a JSON file
+        file_path = os.path.join(self.run_dir, "global_statistics.json")
+        with open(file_path, "w") as f:
+            json.dump(global_stats_dict, f, indent=4)
         logger.info(f"Saved run results at {file_path}")
 
     def save_info(self):
         file_path = os.path.join(self.run_dir, "info.json")
         info_dict = {
             "name": self.name,
-            "run_dir": self.run_dir,
+            "description": self.description,
             "stage_history": self.stage_history
         }
         with open(file_path, "w") as f:
@@ -288,7 +334,8 @@ class MultiStageSearch:
         print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
         stage.save_results(
             save_dir = stage_dir,
-            crystals_db = self.crystal_database
+            crystals_db = self.crystal_database,
+            global_statistics_dict = self._global_statistics_dict
         )
 
         # Save the stage_info_dict again, to update data. E.g. number of generations
