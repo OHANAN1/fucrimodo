@@ -95,14 +95,10 @@ class TournamentSelection(PopulationSelection):
 
         :return: A list of individuals selected using the tounament selection.
         """
-        # Perform NSGA-II selection.
+        # Perform tournament selection.
         individuals = tools.selTournament(
             individuals, k=n, tournsize=self._tournament_size
         )
-
-        # Ensure that the number of individuals selected is not bigger n.
-        if len(individuals) > n:
-            individuals = individuals[:n]
 
         return individuals
 
@@ -142,10 +138,6 @@ class NSGA2Selection(PopulationSelection):
         individuals = tools.selNSGA2(
             individuals, k=n, nd=self._nondominated_sorting
         )
-
-        # Ensure that the number of individuals selected is not bigger n.
-        if len(individuals) > n:
-            individuals = individuals[:n]
 
         return individuals
 

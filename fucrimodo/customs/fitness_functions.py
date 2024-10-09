@@ -1,5 +1,6 @@
 import numpy as np
 import ase
+from fucrimodo.core.modules.individual import Individual
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from numpy.typing import NDArray
 from ase.geometry import get_distances
@@ -78,7 +79,6 @@ class PhysicalityFitness(FitnessFunction):
         r_str = "PhysicalityFitness()"
         return r_str
 
-
 class SimilarityToTargetSOAPFitness(FitnessFunction):
     def __init__(
         self,
@@ -96,7 +96,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
 
     def __get_similarity_to_target_soap(
         self,
-        soap_feature_vector: NDArray[np.float64]
+        soap_feature_vector: np.ndarray
     ) -> float:
         similarity = self.soap_similarity.get_similarity_of_feature_vector(
             soap_feature_vector
@@ -105,22 +105,22 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
 
     def __get_difference_to_target_fitness(
         self,
-        soap_feature_vector: NDArray[np.float64],
+        soap_feature_vector: np.ndarray
     ) -> float:
         similarities_to_target_soap = self.__get_similarity_to_target_soap(
             soap_feature_vector
         )
         return similarities_to_target_soap
 
-    def evaluate_individual(self, individual: ase.Atoms) -> float:
+    def evaluate_individual(self, individual: Individual) -> float:
 
         try:
-            if hasattr(individual, "soap_feature_vector"):
-                soap_feature_vector = individual.soap_feature_vector # type: ignore
+            if individual.features is not None:
+                soap_feature_vector = individual.features
 
             else:
                 soap_feature_vector = self.soap_obj.create(individual)
-                individual.soap_feature_vector = soap_feature_vector # type: ignore
+                individual.features = soap_feature_vector
 
 
         except Exception as e:
