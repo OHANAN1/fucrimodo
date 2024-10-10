@@ -198,6 +198,7 @@ def get_global_statistics_overview(run_data: RunData) -> pd.DataFrame:
 
     return info_df
 
+
 def plot_global_statistics(
     run_data: RunData,
     row: int,
@@ -235,10 +236,31 @@ def plot_global_statistics(
     ax.set_xlabel("Generation")
     ax.set_ylabel(y_label)
 
+    # Plot vertical lines at the stage boundaries
+    # Get the initial stage id
+    current_stage_id = results_df["stage_id"].iloc[0]
+    for i in range(len(results_df["stage_id"])):
+        stage_id = results_df["stage_id"].iloc[i]
+        # Check if the selected stage id is different from the current one
+        if stage_id != current_stage_id:
+            # Plot a vertical line at the current generation
+            ax.axvline(
+                x=results_df["gen"].iloc[i],
+                color="black",
+                linestyle="--",
+                label=f"Stage {current_stage_id}"
+            )
+
+            # Update the current stage id
+            current_stage_id = stage_id
+
+    # Add the legend
+    ax.legend()
+
 
 def get_best_crystal_tuple(
     run_data: RunData,
-    global_statistics_index: int,
+    global_statistics_row: int,
     invert: bool = False
 ) -> tuple[ase.Atoms, float, dict[str, Any]]:
     """Returns the crystal with the highest value for a specific global
@@ -259,7 +281,7 @@ def get_best_crystal_tuple(
     """
     stat_values = []
     selected_key = list(run_data.global_statistics["names"])[
-        global_statistics_index
+        global_statistics_row
     ]
     assert selected_key in run_data.key_value_pairs[0].keys(), (
         f"Key {selected_key} not in key value pairs of crystal db."
@@ -278,6 +300,7 @@ def get_best_crystal_tuple(
             stat_values[best_index],
             run_data.key_value_pairs[best_index])
 
+
 def get_best_crystal_overview(
     run_data: RunData,
     global_stats_row: int
@@ -293,9 +316,6 @@ def get_best_crystal_overview(
     """
     best_crystal = get_best_crystal_tuple(run_data, 0)
     crystal, best_value, key_val_pair = best_crystal
-
-    # get associated global statistics name
-    global_stat_name = run_data.global_statistics.at[global_stats_row, "names"]
 
     overview = pd.DataFrame({
         "formula": [crystal.get_chemical_formula()],
@@ -315,7 +335,7 @@ def get_best_crystal_overview(
 
 def visualize_best_crystal(
     run_data: RunData,
-    statistics_index: int,
+    global_statistics_row: int,
     ax: Axes | None = None,
     notebook_mode: bool = False
 ) -> None:
@@ -323,19 +343,10 @@ def visualize_best_crystal(
 
     # Get the best crystal tuple
     best_crystal_tuple = get_best_crystal_tuple(
-        run_data,
-        global_statistics_index=statistics_index
+        run_data=run_data,
+        global_statistics_row=global_statistics_row
     )
     crystal, best_value, key_val_pair = best_crystal_tuple
-
-    print(f"Best crystal value: {best_value}")
-    print(f"Key value pairs: ")
-    from tabulate import tabulate
-    table = tabulate(
-        key_val_pair.items(),
-        headers=["Key", "Value"],
-    )
-    print(table)
 
     # If ax is provided plot the crystal, else view it
     if ax is not None:
@@ -344,6 +355,7 @@ def visualize_best_crystal(
     else:
         # Embed the crystal in notebook or in a new window
         if notebook_mode:
+            print("Plotting in notebook mode.")
             view(crystal, viewer="x3d")
         else:
             view(crystal)
@@ -367,20 +379,9 @@ def get_run_overview(run_data: RunData) -> pd.DataFrame:
     return overview
 
 
-if __name__ == "__main__":
-
-    import sys
-
-    try:
-        run_dir = sys.argv[1]
-    except IndexError:
-        print("Please use as: python path/to/script.py path/to/run_dir")
-        sys.exit(1)
-
-    if not os.path.exists(run_dir):
-        print("Path does not exist")
-        sys.exit(1)
-
+def cli_runner(
+    run_dir: str, show_plots: bool = True
+) -> None:
     run_data = RunData(run_dir)
 
     print("________________________________________________________")
@@ -399,5 +400,23 @@ if __name__ == "__main__":
     plot_global_statistics(run_data, 1)
 
     visualize_best_crystal(run_data, 0)
-    plt.show()
 
+    if show_plots:
+        plt.show()
+
+
+if __name__ == "__main__":
+
+    import sys
+
+    try:
+        run_dir = sys.argv[1]
+    except IndexError:
+        print("Please use as: python path/to/script.py path/to/run_dir")
+        sys.exit(1)
+
+    if not os.path.exists(run_dir):
+        print("Path does not exist")
+        sys.exit(1)
+
+    cli_runner(run_dir)

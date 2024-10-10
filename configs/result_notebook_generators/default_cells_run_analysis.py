@@ -1,83 +1,129 @@
 from nbformat.v4 import new_notebook, new_code_cell, new_markdown_cell
 from nbformat import NotebookNode, validate
 import os
+from fucrimodo.analysis import run_analysis as ra
+from fucrimodo.analysis import stage_analysis as sa
 
-def get_run_info_string(run_info: dict) -> str:
-    run_info_str = "## Run Info\n"
-    for key, value in run_info.items():
-        if key != "stage_info":
-            run_info_str += f"- *{key}*: {value}\n \n"
-    return run_info_str
-
-
-def get_setup_cells(run_name: str) -> list[NotebookNode]:
-    return [
-        new_markdown_cell(f"# Run: {run_name}"),
+def get_setup_cells(run_data: ra.RunData) -> list[NotebookNode]:
+   return [
+        new_markdown_cell(f"# Run: {run_data.name}"),
         new_code_cell(
             "# Uncomment the following line to use interactive plots\n"
-                "# %matplotlib widget \n \n"
+                "# %matplotlib widget\n\n" 
                 "from IPython.display import Markdown\n"
-                "from fucrimodo.analysis.analyse_run import AnalyseRun\n\n"
-                "run_analysis = AnalyseRun('.')\n"
+                "from fucrimodo.analysis import run_analysis as ra\n"
+                "from fucrimodo.analysis import stage_analysis as sa\n\n"
+                "run_data = ra.RunData('.')\n"
         ),
-        new_code_cell(
-            "# Please select the statistic key that you want to analyze.\n"
-                "print('Possible keys: ', run_analysis.get_shared_statistic_keys())"
-        ),
-        new_code_cell(
-            "statistic_key = # <- Write desired key here"
-        ),
-]
-
-
-def get_run_info_cells() -> list[NotebookNode]:
-    return [
-        new_markdown_cell("## Run Info"),
-        new_code_cell("Markdown('Missing')")
     ]
 
-
-def get_visualization_cells(target_crystal_path: str | None = None) -> list[NotebookNode]:
-    visualization_cells = [
-            new_markdown_cell("## Visualization"),
-            new_markdown_cell("### Best Found Crystal"),
-            new_code_cell(
-                "from ase.visualize import view\n\n"
-                "best_crystal_tuple = run_analysis.get_best_crystal_tuple(statistic_key)\n"
-                "best_crystal = best_crystal_tuple[0]\n"
-                "print(best_crystal)"
-            ),
-            new_code_cell(
-                "view(best_crystal)"
-            )
-        ]
-    if type(target_crystal_path) == str:
-        file_name_tar = os.path.basename(target_crystal_path)
-        visualization_cells += [
-            new_markdown_cell("### Target"),
-            new_code_cell(
-                "from ase.io import read\n"
-                    "import os\n"
-                    f"target_crystal_path = os.path.join(run_analysis.run_results.run_dir, '{file_name_tar}')\n"
-                    "target_crystal = read(target_crystal_path)\n"
-            ),
-            new_code_cell(
-                "view(target_crystal)"
-            )
-        ]
-    return visualization_cells
-
-
-def get_run_statistics_cells() -> list[NotebookNode]:
-    return [
-        new_markdown_cell("## Run statistics"),
-        new_code_cell(
-            "# Look at doc string or documentation for customization.\n"
-            "from fucrimodo.analysis.analyse_run import create_combined_statistics_development_plot\n"
-            "create_combined_statistics_development_plot(\n"
-            "    run_analysis,\n"
-            "    statistics_key=statistic_key,\n"
-            ")"
+def get_run_info_cells(run_data: ra.RunData) -> list[NotebookNode]:
+    # Add general run info to the notebook
+    run_info_cells = [
+        new_markdown_cell("## Run Info"),
+        new_markdown_cell(
+            ra.get_run_overview(run_data).T.to_html(header=False)
         )
     ]
+
+    # Add information about global statistics to the notebook
+    global_stats_overview = ra.get_global_statistics_overview(run_data)
+    run_info_cells += [
+        new_markdown_cell("### Global Statistics"),
+        new_markdown_cell("#### Overview"),
+        new_markdown_cell(global_stats_overview.to_html(notebook=False)),
+    ]
+
+
+    # Create a plot for each of the global statistics
+    for i in range(len(global_stats_overview.index)):
+        run_info_cells += [
+            new_markdown_cell(f"#### {global_stats_overview.at[i, "names"]}"),
+            new_code_cell(f"ra.plot_global_statistics(run_data, row = {i})")
+        ]
+
+    # Show the best found crystal
+    run_info_cells += [
+        new_markdown_cell("### Best Found Crystal"),
+        new_markdown_cell(
+            "Change the global_stats_row parameter to specify which attribute "
+                "of the crystal determines if it is the best. "
+                "Look at the Global Statistics Overview table to see "
+                "the different options. (Row number is on the left)"
+        ),
+        new_code_cell("global_stats_row = 0"),
+        new_code_cell(
+            "ra.get_best_crystal_overview(run_data, global_stats_row)"
+        ),
+        new_code_cell(
+            "from ase.visualize import view\n\n"
+                "best_crystal, _, _ = ra.get_best_crystal_tuple(\n"
+                "\trun_data=run_data,\n"
+                "\tglobal_statistics_row=global_stats_row\n"
+                ")\n\n"
+                "view(best_crystal, viewer='x3d')"
+        ),
+    ]
+
+    return run_info_cells
+
+
+def get_stage_info_cells(run_data: ra.RunData) -> list[NotebookNode]:
+    stage_info_cells = [new_markdown_cell("## Stages")]
+
+    # Get the stages data from the run data
+    stages_dict = run_data.stages
+
+    # Add information about each stage to the notebook
+    stage_id = 1
+    while True:
+        # If the stage is not in the stages dictionary, all stages have been 
+        # processed
+        if stage_id not in stages_dict:
+            break
+
+        stage_data = stages_dict[stage_id]
+
+        # Add general stage overview to the notebook
+        stage_info_cells += [
+            new_markdown_cell(f"### Stage {stage_id}: {stage_data.name}"),
+            new_code_cell(f"stage_{stage_id} = run_data.stages[{stage_id}]"),
+            new_markdown_cell("#### Overview"),
+            new_markdown_cell(
+                sa.get_stage_overview(stage_data).T.to_html(header=False)
+            ),
+        ]
+
+        # Add information about the fitness functions used in the stage
+        stage_info_cells += [
+            new_markdown_cell("#### Fitness Functions"),
+            new_markdown_cell(
+                sa.get_fitness_overview(stage_data).to_html()
+            ),
+            new_code_cell(
+                "# Adjust row to the fitness function you want to plot\n"
+                "sa.plot_fitness_statistics(stage_1, row=0)"
+            )
+        ]
+
+        # Add information about the mutation and crossover used in the stage
+        for modification_type in ["Mutation", "Crossover"]:
+            stage_info_cells += [
+                new_markdown_cell(f"#### {modification_type}s"),
+                new_markdown_cell(
+                    sa.get_modification_overview(stage_data, modification_type).to_html()
+                ),
+                new_code_cell(
+                    "# Adjust row to the operator you want to plot\n"
+                    f"sa.plot_modification_statistics(stage_1, '{modification_type}', row=0)"
+                )
+            ]
+
+        stage_id += 1
+
+    return stage_info_cells
+
+
+
+
 

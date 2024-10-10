@@ -383,21 +383,9 @@ def get_stage_overview(stage_data: StageData) -> pd.DataFrame:
 
     return stage_overview
 
-if __name__ == "__main__":
 
-    import sys
-
-    try:
-        run_dir = sys.argv[1]
-    except IndexError:
-        print("Please use as: python path/to/script.py path/to/run_dir")
-        sys.exit(1)
-
-    if not os.path.exists(run_dir):
-        print("Path does not exist")
-        sys.exit(1)
-
-    stage_data = StageData(run_dir)
+def cli_runner(stage_dir: str):
+    stage_data = StageData(stage_dir)
 
     print("________________________________________________________")
     print("Stage Overview:")
@@ -421,3 +409,21 @@ if __name__ == "__main__":
     
 
     plt.show()
+
+
+if __name__ == "__main__":
+
+    import sys
+
+    try:
+        stage_dir = sys.argv[1]
+    except IndexError:
+        print("Please use as: python path/to/script.py path/to/stage_dir")
+        sys.exit(1)
+
+    if not os.path.exists(stage_dir):
+        print("Path does not exist")
+        sys.exit(1)
+
+    cli_runner(stage_dir)
+
