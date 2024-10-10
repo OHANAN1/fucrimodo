@@ -5,6 +5,7 @@ from functools import partial
 from operator import mul, truediv
 from collections.abc import Sequence
 import sys
+import numpy as np
 
 
 class FitnessStorage(object):
@@ -212,13 +213,15 @@ class Individual(ase.Atoms):
         self._info = value
 
     @property
-    def features(self) -> dict | None:
+    def features(self) -> np.ndarray | None:
+        if not hasattr(self, "_features"):
+            return None
         return self._features
 
     @features.setter
-    def features(self, value: dict | None):
+    def features(self, value: np.ndarray | None):
         self._features = value
 
     def reset(self):
-        self.features = None
+        self._features = None
         del self.fitness.values
