@@ -28,29 +28,47 @@ def create_results_notebook(
 
 def cli_runner(
     run_dir: str,
-    notebook_name: str = "results_notebook.ipynb"
+    notebook_name: str = "results_notebook.ipynb",
+    fold_chapters: bool = True,
+    run_notebook: bool = True
 ):
     notebook = create_results_notebook(run_dir)
 
-    try:
-        validate(notebook)
-        print("The generated notebook is valid.")
-    except nbformat.validator.NotebookValidationError as e:
-        print(f"The notebook is invalid: {e}")
-
+    # Add Metadata to the notebook to make the headings collapsible
+    # To enable folding run: jupyter nbextension enable collapsible_headings/main
+    # If necessary install required extensions
+    if fold_chapters:
+        for cell in notebook['cells']:
+            # Only look for Heading cells above level 1
+            if cell['cell_type'] == 'markdown':
+                if cell['source'].startswith('##'):
+                    # Add metadata to the cell
+                    cell.metadata.heading_collapsed = True
 
     # Execute the notebook
-    # Change the current working directory to the run directory to make sure
-    # the notebook can access the data
-    current_dir = os.getcwd()
-    os.chdir(run_dir)
-    client = NotebookClient(notebook)
-    client.execute()
+    if run_notebook:
+        # Save the current working directory to change back to it later
+        current_dir = os.getcwd()
 
-    # Zurück zum ursprünglichen Arbeitsverzeichnis
-    os.chdir(current_dir)
+        # Change the current working directory to the run directory to make sure
+        # the notebook can access the necessary data and run the code
+        os.chdir(run_dir)
+        client = NotebookClient(notebook)
+        client.execute()
 
-    # Speichern des Notebooks
+        # Go back to the original working directory
+        os.chdir(current_dir)
+
+    else:
+        # If the notebook is not executed, check if it is valid instead
+        try:
+            validate(notebook)
+            print("The generated notebook is valid.")
+
+        except nbformat.validator.NotebookValidationError as e:
+            print(f"The notebook is invalid: {e}")
+
+    # Save the notebook
     notebook_path = os.path.join(run_dir, notebook_name)
     with open(notebook_path, "w", encoding="utf-8") as f:
         nbformat.write(notebook, f)
@@ -65,8 +83,6 @@ def cli_runner(
     #
     # # Fold all chapters
     # # Füge collapsible Metadaten zu allen Markdown-Überschriften hinzu
-    # for cell in notebook['cells']:
-    #     cell.metadata.heading_collapsed = True
     #
     # with open(notebook_path, 'w') as f:
     #     nbformat.write(notebook, f)

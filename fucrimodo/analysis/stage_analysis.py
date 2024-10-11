@@ -52,6 +52,18 @@ class StageData():
         return self._info_dict["id"]
 
     @property
+    def parent_selection(self) -> str:
+        return str(self._info_dict["parent_selection"])
+
+    @property
+    def survivor_selection(self) -> str:
+        return str(self._info_dict["survivor_selection"])
+
+    @property
+    def break_condition(self) -> str:
+        return str(self._info_dict["break_condition"])
+
+    @property
     def type(self) -> str:
         return str(self._info_dict["type"])
 
@@ -370,13 +382,17 @@ def get_stage_overview(stage_data: StageData) -> pd.DataFrame:
     """
     stage_overview = pd.DataFrame(
         {
-            "name": stage_data.name,
-            "description": stage_data.description,
-            "type": stage_data.type,
-            "n_generations": stage_data.n_generations,
-            "n_fitnesses": len(stage_data.fitnesses),
-            "n_mutations": len(stage_data.mutations),
-            "n_crossovers": len(stage_data.crossovers),
+            "Name": stage_data.name,
+            "Description": stage_data.description,
+            "Type": stage_data.type,
+            "N_generations": stage_data.n_generations,
+            "Parent Selection": stage_data.parent_selection,
+            "Survivor Selection": stage_data.survivor_selection,
+            "Break Condition": stage_data.break_condition,
+            "Parent Ratio": stage_data._info_dict["parent_ratio"],
+            "N_fit": len(stage_data.fitnesses),
+            "N_mut": len(stage_data.mutations),
+            "N_cross": len(stage_data.crossovers),
         },
         index=[0] # type: ignore
     )
