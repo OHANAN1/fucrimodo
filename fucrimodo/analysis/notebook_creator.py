@@ -30,7 +30,8 @@ def cli_runner(
     run_dir: str,
     notebook_name: str = "results_notebook.ipynb",
     fold_chapters: bool = True,
-    run_notebook: bool = True
+    run_notebook: bool = True,
+    verbose: bool = False,
 ):
     notebook = create_results_notebook(run_dir)
 
@@ -76,14 +77,3 @@ def cli_runner(
     print(f"Notebook saved at: {notebook_path}")
     print("Done")
     print()
-
-    # Check how I can collaps cells:
-    # with open(notebook_path, 'r') as f:
-    #     notebook = nbformat.read(f, as_version=4)
-    #
-    # # Fold all chapters
-    # # Füge collapsible Metadaten zu allen Markdown-Überschriften hinzu
-    #
-    # with open(notebook_path, 'w') as f:
-    #     nbformat.write(notebook, f)
-

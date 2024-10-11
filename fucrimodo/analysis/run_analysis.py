@@ -248,7 +248,6 @@ def plot_global_statistics(
                 x=results_df["gen"].iloc[i],
                 color="black",
                 linestyle="--",
-                label=f"Stage {current_stage_id}"
             )
 
             # Update the current stage id
@@ -380,29 +379,43 @@ def get_run_overview(run_data: RunData) -> pd.DataFrame:
 
 
 def cli_runner(
-    run_dir: str, show_plots: bool = True
+    run_dir: str,
+    show: bool = True,
+    verbose: bool = False,
+    row: int | None = None,
 ) -> None:
     run_data = RunData(run_dir)
 
     print("________________________________________________________")
     print("Run Overview:")
-    print(get_run_overview(run_data))
+    print(get_run_overview(run_data).T)
     print()
     print("________________________________________________________")
     print("Global Statistics Overview:")
-    print(get_global_statistics_overview(run_data))
+    global_stats_overview = get_global_statistics_overview(run_data)
+    print(global_stats_overview.T)
     print()
-    print("________________________________________________________")
-    print("Best Crystal Overview:")
-    print(get_best_crystal_overview(run_data, 0))
+    print()
+    print("Note: To analyse crystals open ase db cli.")
 
-    plot_global_statistics(run_data, 0)
-    plot_global_statistics(run_data, 1)
+    # If a row is provided, only plot the selected global statistic
+    if row is not None:
+        plot_global_statistics(run_data, row)
+        if show:
+            plt.show()
+        else:
+            plt.savefig(f"global_statistic_{row}.png")
+            plt.close()
 
-    visualize_best_crystal(run_data, 0)
-
-    if show_plots:
-        plt.show()
+    # If no row is provided, plot all global statistics
+    else:
+        for i in range(len(global_stats_overview)):
+            plot_global_statistics(run_data, i)
+            if show:
+                plt.show()
+            else:
+                plt.savefig(f"global_statistic_{i}.png")
+                plt.close()
 
 
 if __name__ == "__main__":

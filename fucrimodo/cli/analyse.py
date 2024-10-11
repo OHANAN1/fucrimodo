@@ -3,56 +3,57 @@ import sys
 # from fucrimodo.analysis.analysis_classes import AnalyseRun, AnalyseStage
 # from fucrimodo.analysis.results_classes import StageResults
 import pandas as pd
+import argparse
 
 
 class CLICommand:
     """Analyse the data that was collected during a run."""
-
     @staticmethod
-    def add_arguments(parser):
+    def add_arguments(parser: argparse.ArgumentParser):
         add = parser.add_argument
-        add('analysis_object', help='Possible values: notebook, run, stage')
         add(
-            'run_dir',
-            help=\
-            "Directory where the results of the run where saved. " \
-            "Should contain the files: crystals.db, run_info.json and" \
-            "stage_NUM.json for each stage performed."
-        )
-
-        add('-v', '--verbose', action='store_true', help='More output.')
-        add(
-            '-c', '--target_crystal_path', 
-            help = \
-            'Path to the file where the target crystal is located. ' \
-            'If given, the scripts will consider the target crystal in ' \
-            'its analysis.' \
-            '(file-type: all types accepted by ase.io.read. e.g. xyz, xsf).'
+            'analysis_object', 
+            help='Possible values: notebook, run, stage'
         )
         add(
-            '-s', '--stage_id', type=str,
-            help=\
-            'ID of the stage that should be analyzed. ' \
-            'If not provided, the user will be prompted to select a stage.' \
-            'Only relevant if analysis_object is "stage".'
+            'dir_path',
+            help= \
+            "Directory where the results of the run or stage where saved. "
+            "If the analysis object is 'notebook', provide the directory "
+            "where the results of the run are saved. The notebook will be "
+            "saved in the same directory."
         )
         add(
-            '-t', '--analysis_type', type=str,
-            help=\
-            'Type of analysis that should be performed. ' \
-            'Depending on the analysis object, different types of analysis ' \
-            'can be performed. ' \
-            'For the analysis object "stage", the following types are possible: ' \
-            'mutation, crossover, fitness'
+            '-v', '--verbose', 
+            action='store_true', 
+            help='More output.'
         )
         add(
-            '-i', '--index', type=int,
+            '-s', '--show',
+            action='store_true',
+            help= \
+            'Show the results. If not given, the results will be saved to '
+            'a file in the provided directory.'
+        )
+        add(
+            '-t', '--analysis_type', 
             help=\
-            'Index of the item that should be analyzed. ' \
-            'Depending on the analysis object and type, different items can be ' \
-            'analyzed. ' \
-            'E.g. for the analysis object "stage" and type "mutation", the index ' \
-            'refers to the mutation operator that should be analyzed.'
+            'Type of analysis that should be performed. '
+            'Depending on the analysis object, different types of analysis '
+            'can be performed. '
+            'For the analysis object "stage", the following types are possible: '
+            'Mutation, Crossover, Fitness (Upper case is required). '
+            'If no type is provided, a general overview of the stage will be '
+            'displayed.'
+        )
+        add(
+            '-r',
+            '--row',
+            help=\
+            'For the different analysis types, different rows can be analyzed. '
+            'If no row is provided, all rows will be analyzed.'
+            'The row number is the index of the row in the table that will be '
+            'displayed when the analysis is run.'
         )
 
     @staticmethod
@@ -69,87 +70,64 @@ class Runner:
 
     def parse(self, args):
         self.args = args
-        self.analysis_object = args.analysis_object
-        self.analysis_type = args.analysis_type
-        self.verbose = args.verbose
-        self.stage_id = args.stage_id
-        self.index = args.index
+        self.analysis_object: str = args.analysis_object
+        self.analysis_type: str = args.analysis_type
 
-        if not os.path.exists(args.run_dir):
-            print("Path does not exist")
-            sys.exit(1)
-        if args.run_dir[-1] == "/":
-            run_dir = args.run_dir[:-1]
-        else:
-            run_dir = args.run_dir
-        if os.path.exists(run_dir) and type(run_dir) == str:
-            self.run_dir: str = run_dir
-        else:
-            raise ValueError("The provided run_dir is not a valid path.")
+        assert type(args.verbose) == bool, "The flag --verbose must be a boolean"
+        self.verbose: bool = args.verbose
 
-        if args.target_crystal_path is not None:
-            from ase.io import read
+        assert type(args.show) == bool, "The flag --show must be a boolean"
+        self.show: bool = args.show
+
+        # Check if the provided row can be converted to an integer
+        if args.row is not None:
             try:
-                read(args.target_crystal_path)
-            except Exception as e:
-                raise ValueError(
-                    "Could not load target crystal from provided path."
-                    f"Error: {e}"
-                )
-        self.target_crystal_path = args.target_crystal_path
+                args.row = int(args.row)
+            except ValueError:
+                print("The flag --row must be an integer or None")
+                sys.exit(1)
 
-    def __let_user_select_key(
-        self, 
-        selector: list[str] | pd.DataFrame | str,
-        header: str = "Please select one of the following keys:",
-    ) -> int:
-        """Prompts the user to select one of the items in the selection.
+        assert type(args.row) == int or args.row is None, "The flag --row must be an integer or None"
+        self.row: int = args.row
 
-        :param header: The header that should be displayed. Something like
-        :param selector: The object that contains the possible selections.
-            If it is a list, the items will be displayed with an index next
-            to them. If it is a pandas DataFrame, the string representation
-            of the DataFrame will be displayed.
-            If it is a string, the string will be displayed.
-
-        :returns: The user selected index.
-
-        :raise AssertionError: If user input is not an integer.
-        """
-
-        # Display the header
-        print("_____________________________________________________")
-        print(header)
-        print()
-
-        if type(selector) == list:
-            for i, key in enumerate(selector):
-                print(f"\t{i}: {key}")
-        elif type(selector) == pd.DataFrame or type(selector) == str:
-            print(selector)
+        if args.dir_path is not None:
+            if not os.path.exists(args.dir_path):
+                print("Path does not exist")
+                sys.exit(1)
+            self.dir_path = args.dir_path
         else:
-            raise ValueError("Selector type not recognized.")
-
-        print()
-        selected_index = input("Selected Index (number on left): ")
-        assert type(selected_index) != int, "Please write an integer number"
-
-        return int(selected_index)
+            print("No path provided")
+            sys.exit(1)
 
     def run(self):
         print(f"Running Analyse script with arguments: ")
         print(f"\tanalysis_object: \t{self.analysis_type}")
-        print(f"\trun_dir: \t{self.run_dir}")
+        print(f"\tdir_path: \t{self.dir_path}")
         print(f"\tverbose: \t{self.verbose}")
+        print()
 
         if self.analysis_object == "notebook":
             from fucrimodo.analysis import notebook_creator as nc
-            nc.cli_runner(self.run_dir)
+            nc.cli_runner(self.dir_path, verbose=self.verbose)
         elif self.analysis_object == "run":
             from fucrimodo.analysis import run_analysis as ra
-            ra.cli_runner(self.run_dir)
+            ra.cli_runner(
+                self.dir_path,
+                verbose=self.verbose,
+                row=self.row,
+                show=self.show,
+            )
         elif self.analysis_object == "stage":
             from fucrimodo.analysis import stage_analysis as sa
-            sa.cli_runner(self.run_dir)
+            sa.cli_runner(
+                stage_dir = self.dir_path,
+                verbose = self.verbose, 
+                row = self.row,
+                show = self.show,
+                analysis_type = self.analysis_type,
+            )
         else:
-            raise ValueError("Provided analysis type not found")
+            raise ValueError(
+                "Provided analysis type not found, " 
+                    "only 'notebook', 'run', 'stage' are allowed."
+            )
