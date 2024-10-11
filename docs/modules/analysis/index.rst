@@ -22,7 +22,6 @@ Detailed information about these classes can be found here:
    :maxdepth: 1
 
    analyse_run
-   results_class
 
 Create Results Notebooks
 ========================
