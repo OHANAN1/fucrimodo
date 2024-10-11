@@ -1,18 +1,12 @@
 import numpy as np
 import ase
+from fucrimodo.core.modules.individual import Individual
 from fucrimodo.core.utils.custom_soap import CustomSOAP
-from ase.ga.utilities import closest_distances_generator
 from numpy.typing import NDArray
-from sklearn.metrics.pairwise import rbf_kernel
-from abc import ABC, abstractmethod
-from typing import Sequence
 from ase.geometry import get_distances
-from ase.ga.utilities import atoms_too_close
 import warnings
 from fucrimodo.core.modules import FitnessFunction
 from fucrimodo.utils.soap_similarity import SOAPSimilarity
-
-from icecream import ic
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -28,10 +22,10 @@ class PhysicalityFitness(FitnessFunction):
     def __init__(
         self,
         closest_distances: dict[tuple[int, int], float],
-        db_title: str = "PhysicalityFitness"
+        db_title: str | None = "PhysicalityFitness"
     ):
+        super().__init__(db_title=db_title)
         self.closest_distances = closest_distances
-        self.set_db_title(db_title)
 
     def __calculate_normalized_atom_distance_fitness(
         self,
@@ -81,22 +75,9 @@ class PhysicalityFitness(FitnessFunction):
             crystal=individual,
         )
 
-    def adjust_to_population(
-        self,
-        population: list[ase.Atoms]
-    ) -> None:
-        pass
-
-    def set_db_title(self, title: str) -> None:
-        super().set_db_title(title)
-
-    def get_db_title(self) -> str:
-        return self.db_title
-
     def __repr__(self) -> str:
         r_str = "PhysicalityFitness()"
         return r_str
-
 
 class SimilarityToTargetSOAPFitness(FitnessFunction):
     def __init__(
@@ -105,17 +86,17 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         soap_object: CustomSOAP,
         soap_similarity: SOAPSimilarity,
         adjust: bool = False,
-        db_title: str = "SimilarityToTargetSOAPFitness"
+        db_title: str | None = None
     ):
+        super().__init__(db_title=db_title)
         self.target_soap_features = target_soap_features
         self.soap_similarity = soap_similarity
         self.soap_obj = soap_object
         self.adjust = adjust
-        self.set_db_title(db_title+"_"+soap_similarity.get_db_title())
 
     def __get_similarity_to_target_soap(
         self,
-        soap_feature_vector: NDArray[np.float64]
+        soap_feature_vector: np.ndarray
     ) -> float:
         similarity = self.soap_similarity.get_similarity_of_feature_vector(
             soap_feature_vector
@@ -124,40 +105,27 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
 
     def __get_difference_to_target_fitness(
         self,
-        soap_feature_vector: NDArray[np.float64],
+        soap_feature_vector: np.ndarray
     ) -> float:
         similarities_to_target_soap = self.__get_similarity_to_target_soap(
             soap_feature_vector
         )
         return similarities_to_target_soap
 
-    def adjust_to_population(
-        self,
-        population: list[ase.Atoms]
-    ) -> None:
-        if self.adjust:
-            soap_feature_vectors = self.soap_obj.create(system=population)
-            self.soap_similarity.adjust_to_population(
-                population=soap_feature_vectors  # type: ignore
-            )
-
-        else:
-            pass
-
-    def evaluate_individual(self, individual: ase.Atoms) -> float:
+    def evaluate_individual(self, individual: Individual) -> float:
 
         try:
-            if hasattr(individual, "soap_feature_vector"):
-                soap_feature_vector = individual.soap_feature_vector # type: ignore
+            if individual.features is not None:
+                soap_feature_vector = individual.features
 
             else:
                 soap_feature_vector = self.soap_obj.create(individual)
-                individual.soap_feature_vector = soap_feature_vector # type: ignore
+                individual.features = soap_feature_vector
 
 
         except Exception as e:
             warnings.warn(
-                f"{self.get_db_title()}: "
+                f"{self.db_title}:"
                 f"Could not use soap_create for ind: {individual}"
                 f"Error: {e}"
             )
@@ -171,18 +139,12 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
 
         except Exception as e:
             warnings.warn(
-                f"{self.get_db_title()}: "
+                f"{self.db_title}:"
                 f"Could not calculate fitness for ind: {individual}\n"
                 f"Error: {e} \n"
                 f"Shape of feature vector: {soap_feature_vector.shape}"
             )
             return 0
-
-    def set_db_title(self, title: str) -> None:
-        super().set_db_title(title)
-
-    def get_db_title(self) -> str:
-        return self.db_title
 
     def __repr__(self) -> str:
         r_str = "SimilarityToTargetSOAPFitness("
@@ -203,9 +165,9 @@ class NumberOfAtomsFitness(FitnessFunction):
     def __init__(
         self,
         n_max: int = 10,
-        db_title: str = "NumberOfAtomsFitness"
+        db_title: str | None = None
     ):
-        self.set_db_title(db_title)
+        super().__init__(db_title=db_title)
         self.n_max = n_max
 
     def evaluate_individual(self, individual: ase.Atoms) -> float:
@@ -215,23 +177,11 @@ class NumberOfAtomsFitness(FitnessFunction):
             return fitness
         except Exception as e:
             warnings.warn(
-                f"{self.get_db_title()}: "
+                f"{self.db_title}: "
                 f"Could not calculate fitness for ind: {individual}\n"
                 f"Error: {e}"
             )
             return 0
-
-    def adjust_to_population(
-        self,
-        population: list[ase.Atoms]
-    ) -> None:
-        pass
-
-    def set_db_title(self, title: str) -> None:
-        super().set_db_title(title)
-
-    def get_db_title(self) -> str:
-        return self.db_title
 
     def __repr__(self) -> str:
         r_str = "NumberOfAtomsFitness()"

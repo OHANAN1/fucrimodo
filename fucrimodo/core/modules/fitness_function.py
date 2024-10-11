@@ -1,52 +1,50 @@
-import ase
 from abc import ABC, abstractmethod
+from .individual import Individual
+from .population import Population
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║        Abstract Base Class for Fitness Functions         ║
 # ╚══════════════════════════════════════════════════════════╝
 
-
 class FitnessFunction(ABC):
+    """Class that defines the abstract base class for fitness functions.
+
+    Fitness functions are used for example in the genetic algorithm to
+    assign a fitness value to an individual.
+    Individuals can then be compared based on their fitness value.
+
+    :param db_title: Descriptive title that can be used to refer to the
+        fitness function in an ASE database. See :attr:'db_title' for more
+        information.
+
+    :raises ValueError: If the :data:'db_title' contains any spaces, numbers
+        or special characters other than '_'.
     """
-    Abstract class for fitness functions.
-    The fitness function should take a array of crystal structures
-    as ases.Atoms objects and return a list of floats.
-    The return is a list of fitness values for each crystal structure.
+    def __init__(self, db_title: str | None = None):
+        if db_title is not None:
+            self.db_title = db_title
 
-    The class is callable and can be used like this:
-
-    fitness_function = FitnessFunction(...)
-    fitness = fitness_function(list[Individual])
-    """
-
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def evaluate_individual(self, individual: ase.Atoms) -> float:
+    @property
+    def db_title(self) -> str:
+        """Descriptive title that can be used to refer to the
+        fitness function in an ASE database.
+        This title must not contain any spaces, numbers or special
+        characters. '_' is allowed.
+        
+        If the title is not set, the class name of the fitness function
+        is used to generate a title.
         """
-        This function takes a single individual and returns a fitness value.
-        """
-        pass
+        if not hasattr(self, "_db_title"):
+            return self.__class__.__name__
 
-    @abstractmethod
-    def adjust_to_population(
-        self,
-        population: list[ase.Atoms]
-    ) -> None:
-        """
-        Optional function that can be used to adjust for example the
-        rbf gamma value to the given population.
-        If not needed it can be left empty.
-        """
-        pass
+        return self._db_title
 
-    @abstractmethod
-    def set_db_title(self, title: str) -> None:
-        """
-        Optional function that can be used to set the title of the
-        ase database. Therefore no space, no numbers and no special
-        characters are allowed. '_' is allowed.
+    @db_title.setter
+    def db_title(self, title: str):
+        """Sets the title of the fitness. 
+
+        :raises ValueError: If the title contains any spaces, numbers
+            or special characters other than '_'.
         """
         forbidden_chars = [
             " ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
@@ -57,18 +55,24 @@ class FitnessFunction(ABC):
                 "numbers or special characters."
                 f"Given title: {title}"
             )
-
-        self.db_title = title
+        self._db_title = title
 
     @abstractmethod
-    def get_db_title(self) -> str:
-        """
-        Optional function that can be used to get the title of the
-        ase database.
+    def evaluate_individual(self, individual: Individual) -> float:
+        """Method to calculate the fitness value of an individual.
+
+        :param individual: Individual
         """
         pass
 
-    @abstractmethod
+    def adjust_to_population(self, population: Population) -> None:
+        """
+        Optional function that can be used to adjust for example the
+        rbf gamma value to the given population.
+        If not needed it can be left empty.
+        """
+        pass
+
     def __repr__(self):
         class_name = self.__class__.__name__
         variables = vars(self)

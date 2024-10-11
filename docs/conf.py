@@ -16,7 +16,8 @@ author = 'Louis Boehm, Martin Kuban'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',  # Optional, für automatisch generierte Zusammenfassungen
-    'nbsphinx', # Um Jupyter Notebooks zu rendern
+    'nbsphinx', # For Jupyter Notebooks
+    'sphinxcontrib.tikz' # To render tikz code
 ]
 
 templates_path = ['_templates']
@@ -26,6 +27,9 @@ autosummary_generate = True  # Erzeugt automatisch Zusammenfassungen
 
 # Führe Notebooks immer aus wenn sie gerendert werden
 nbsphinx_execute = 'always'
+
+# Configuriere Latex
+tikz_tikzlibraries = "arrows, shapes.geometric, positioning, shapes.multipart, arrows.meta, fit"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

@@ -22,7 +22,6 @@ Detailed information about these classes can be found here:
    :maxdepth: 1
 
    analyse_run
-   results_class
 
 Create Results Notebooks
 ========================
@@ -31,10 +30,10 @@ To ease the analysis and present the results, jupyter notebooks can be created
 as described in the :ref:`cli-analysis`. 
 An Example for such a results notebook can be found here:
 
-.. toctree::
-   :maxdepth: 1
-
-   ../../example_results/example_run_results/results_notebook.ipynb
+.. .. toctree::
+..    :maxdepth: 1
+..
+..    ../../example_results/example_run_results/results_notebook.ipynb
 
 How these are created is completely adjustable.
 [MISSING: information about how thez can be customized.]

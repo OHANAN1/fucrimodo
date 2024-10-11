@@ -1,37 +1,59 @@
 import os
 import sys
-from fucrimodo.analysis.analyse_run import AnalyseRun
+# from fucrimodo.analysis.analysis_classes import AnalyseRun, AnalyseStage
+# from fucrimodo.analysis.results_classes import StageResults
+import pandas as pd
+import argparse
+
 
 class CLICommand:
     """Analyse the data that was collected during a run."""
-
     @staticmethod
-    def add_arguments(parser):
+    def add_arguments(parser: argparse.ArgumentParser):
         add = parser.add_argument
-        add('analysis_type', help='Possible values: notebook, run')
         add(
-            'run_dir',
-            help=\
-            "Directory where the results of the run where saved. " \
-            "Should contain the files: crystals.db, run_info.json and" \
-            "stage_NUM.json for each stage performed."
-        )
-
-        add('-v', '--verbose', action='store_true', help='More output.')
-        add(
-            '-c', '--target_crystal_path', 
-            help = \
-            'Path to the file where the target crystal is located. ' \
-            'If given, the scripts will consider the target crystal in ' \
-            'its analysis.' \
-            '(file-type: all types accepted by ase.io.read. e.g. xyz, xsf).'
+            'analysis_object', 
+            help='Possible values: notebook, run, stage'
         )
         add(
-            '-s', '--statistics_key', type=str,
+            'dir_path',
+            help= \
+            "Directory where the results of the run or stage where saved. "
+            "If the analysis object is 'notebook', provide the directory "
+            "where the results of the run are saved. The notebook will be "
+            "saved in the same directory."
+        )
+        add(
+            '-v', '--verbose', 
+            action='store_true', 
+            help='More output.'
+        )
+        add(
+            '-s', '--show',
+            action='store_true',
+            help= \
+            'Show the results. If not given, the results will be saved to '
+            'a file in the provided directory.'
+        )
+        add(
+            '-t', '--analysis_type', 
             help=\
-            'Key of the statistic that should be analyzed. ' \
-            'If not provided, but necessary, the script will display all ' \
-            'possible keys and will prompt the user select one.'
+            'Type of analysis that should be performed. '
+            'Depending on the analysis object, different types of analysis '
+            'can be performed. '
+            'For the analysis object "stage", the following types are possible: '
+            'Mutation, Crossover, Fitness (Upper case is required). '
+            'If no type is provided, a general overview of the stage will be '
+            'displayed.'
+        )
+        add(
+            '-r',
+            '--row',
+            help=\
+            'For the different analysis types, different rows can be analyzed. '
+            'If no row is provided, all rows will be analyzed.'
+            'The row number is the index of the row in the table that will be '
+            'displayed when the analysis is run.'
         )
 
     @staticmethod
@@ -48,158 +70,64 @@ class Runner:
 
     def parse(self, args):
         self.args = args
-        self.analysis_type = args.analysis_type
-        self.verbose = args.verbose
-        self.statistics_key = args.statistics_key
+        self.analysis_object: str = args.analysis_object
+        self.analysis_type: str = args.analysis_type
 
-        if not os.path.exists(args.run_dir):
-            print("Path does not exist")
-            sys.exit(1)
-        if args.run_dir[-1] == "/":
-            self.run_dir = args.run_dir[:-1]
-        else:
-            self.run_dir = args.run_dir
+        assert type(args.verbose) == bool, "The flag --verbose must be a boolean"
+        self.verbose: bool = args.verbose
 
-        if args.target_crystal_path is not None:
-            from ase.io import read
+        assert type(args.show) == bool, "The flag --show must be a boolean"
+        self.show: bool = args.show
+
+        # Check if the provided row can be converted to an integer
+        if args.row is not None:
             try:
-                read(args.target_crystal_path)
-            except Exception as e:
-                raise ValueError(
-                    "Could not load target crystal from provided path."
-                    f"Error: {e}"
-                )
-        self.target_crystal_path = args.target_crystal_path
+                args.row = int(args.row)
+            except ValueError:
+                print("The flag --row must be an integer or None")
+                sys.exit(1)
+
+        assert type(args.row) == int or args.row is None, "The flag --row must be an integer or None"
+        self.row: int = args.row
+
+        if args.dir_path is not None:
+            if not os.path.exists(args.dir_path):
+                print("Path does not exist")
+                sys.exit(1)
+            self.dir_path = args.dir_path
+        else:
+            print("No path provided")
+            sys.exit(1)
 
     def run(self):
         print(f"Running Analyse script with arguments: ")
-        print(f"\tanalysis_type: \t{self.analysis_type}")
-        print(f"\trun_dir: \t{self.run_dir}")
+        print(f"\tanalysis_object: \t{self.analysis_type}")
+        print(f"\tdir_path: \t{self.dir_path}")
         print(f"\tverbose: \t{self.verbose}")
+        print()
 
-        if self.analysis_type == "notebook":
-            self.__notebook_gen()
-        elif self.analysis_type == "run":
-            self.__analyse_run()
+        if self.analysis_object == "notebook":
+            from fucrimodo.analysis import notebook_creator as nc
+            nc.cli_runner(self.dir_path, verbose=self.verbose)
+        elif self.analysis_object == "run":
+            from fucrimodo.analysis import run_analysis as ra
+            ra.cli_runner(
+                self.dir_path,
+                verbose=self.verbose,
+                row=self.row,
+                show=self.show,
+            )
+        elif self.analysis_object == "stage":
+            from fucrimodo.analysis import stage_analysis as sa
+            sa.cli_runner(
+                stage_dir = self.dir_path,
+                verbose = self.verbose, 
+                row = self.row,
+                show = self.show,
+                analysis_type = self.analysis_type,
+            )
         else:
-            raise ValueError("Provided analysis type not found")
-
-    def __let_user_select_statistics_key(
-        self, possible_stat_keys: list[str]
-    ) -> str:
-        """Prompts the user to select one of the possible keys
-
-        :param possible_stat_keys: list of statistic keys that can be used to analyse the run(s).
-
-        :returns: The selected statistics key.
-
-        :raise AssertionError: If user input is not an integer 
-            or if integer is to big.
-        """
-
-        print("_____________________________________________________")
-        print("Please choose the statistics key you want to analyse.")
-        print()
-        for i, stat_key in enumerate(possible_stat_keys):
-            print(f"\t{i}: {stat_key}")
-
-        print()
-        selected_index = input("Type one of the corresponding numbers on the left: ")
-        assert type(selected_index) != int, "Please write an integer number"
-        assert int(selected_index)+1 <= len(possible_stat_keys), "The number you selected is to big."
-
-        statistics_key = possible_stat_keys[int(selected_index)]
-        print(f" -> Selected Key: {statistics_key}")
-        return statistics_key
-
-    def __notebook_gen(self):
-        """Methode to generate the results notebook."""
-        import nbformat
-        from nbformat.v4 import new_notebook
-        from nbformat import validate
-        from configs.result_notebook_generators.default_cells_run_analysis \
-            import get_setup_cells, get_run_info_cells, get_run_statistics_cells, get_visualization_cells
-
-        run_dir = os.path.basename(self.run_dir)
-        print("Creating notebook for run dir:", run_dir)
-
-        analyse_run = AnalyseRun(self.run_dir)
-
-        nb = new_notebook()
-        nb.cells.extend(get_setup_cells(run_name=analyse_run.run_results.run_name))
-        nb.cells.extend(get_visualization_cells(self.target_crystal_path))
-        nb.cells.extend(get_run_info_cells())
-        nb.cells.extend(get_run_statistics_cells())
-
-        if self.target_crystal_path is not None:
-            import shutil
-            shutil.copyfile(
-                self.target_crystal_path,
-                os.path.join(
-                    self.run_dir,
-                    os.path.basename(self.target_crystal_path)
-                )
+            raise ValueError(
+                "Provided analysis type not found, " 
+                    "only 'notebook', 'run', 'stage' are allowed."
             )
-
-        try:
-            validate(nb)
-            print("The generated notebook is valid.")
-        except nbformat.validator.NotebookValidationError as e:
-            print(f"The notebook is invalid: {e}")
-
-        # Speichern des Notebooks
-        notebook_name = "results_notebook.ipynb"
-        notebook_path = os.path.join(self.run_dir, notebook_name)
-        with open(notebook_path, "w", encoding="utf-8") as f:
-            nbformat.write(nb, f)
-
-        print(f"Notebook saved at: {notebook_path}")
-        print("Done")
-        print()
-
-    def __analyse_run(self):
-        import matplotlib.pyplot as plt
-        analyse_run = AnalyseRun(self.run_dir)
-
-        if self.statistics_key is None:
-            print()
-            self.statistics_key = self.__let_user_select_statistics_key(
-                possible_stat_keys=analyse_run.get_global_statistics_keys()
-            )
-            print()
-
-        analysis_dir=os.path.join(self.run_dir, "analysis_results")
-        if not os.path.isdir(analysis_dir):
-            os.mkdir(analysis_dir)
-
-        from fucrimodo.analysis.analyse_run import create_combined_statistics_development_plot
-        create_combined_statistics_development_plot(
-            analyse_run,
-            statistics_key=self.statistics_key,
-            display_stage_id=True,
-            stage_id_x_offset=0.85,
-            stage_id_y_pos=1.15,
-            statistics_name="Ref. Similarity",
-            statistics_symbol="S$_\\text{r}$",
-            save_fig=False,
-            y_lim=(-0.1, 1.1),
-            legend_params=dict(
-                bbox_to_anchor=(0.4, 1.03), loc="lower center", fontsize=25
-            )
-        )
-        plt.show()
-
-        # Get the analysis results dict
-        if self.target_crystal_path is not None:
-            from ase.io import read
-            import ase
-            target_crystal = read(self.target_crystal_path)
-            assert type(target_crystal) == ase.Atoms, "Provided crystal is not ase.Atoms object."
-        else:
-            target_crystal = None
-
-        analysis_results_dict = analyse_run.get_analysis_results_dict(
-            statistics_key=self.statistics_key, target_crystal=target_crystal
-        )
-        import pprint
-        pprint.pprint(analysis_results_dict)

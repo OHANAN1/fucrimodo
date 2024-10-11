@@ -88,6 +88,7 @@ def create_random_atoms_object_2(
         )
         return None
 
+
 def create_random_atoms_object(
     atom_types: list[str],
     cell_bounds: CustomCellBounds,
@@ -154,6 +155,7 @@ def create_one_atomic_crystals(
     print("Created {} atomic crystals".format(len(atoms_list)))
     print()
     return atoms_list
+
 
 def create_two_atomic_crystals(
     atom_types: list[str],

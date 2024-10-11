@@ -30,15 +30,27 @@ is one of the following: 'mean', 'std', 'min', 'max'.
 It depends on what statistic was tracked, but normally these are the available
 value types.
 
-.. currentmodule:: fucrimodo.analysis.analyse_run
+.. currentmodule:: fucrimodo.analysis.run_analysis
 
 .. autosummary::
    :recursive:
 
-   AnalyseRun
-   AnalyseStage
+   RunData
 
-.. automodule:: fucrimodo.analysis.analyse_run
+.. automodule:: fucrimodo.analysis.run_analysis
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+.. currentmodule:: fucrimodo.analysis.stage_analysis
+
+.. autosummary::
+   :recursive:
+
+   StageData
+
+.. automodule:: fucrimodo.analysis.stage_analysis
    :members:
    :undoc-members:
    :show-inheritance:

@@ -41,69 +41,8 @@ class Runner:
         )
 
     def run(self):
-        import random
-        from fucrimodo.core import multi_ga_search as multi_ga
-        from fucrimodo.core.utils import data_handeling
-
-        import numpy as np
-        from icecream import ic
-        import warnings
-
-        # ╔══════════════════════════════════════════════════════════╗
-        # ║                      Debug Settings                      ║
-        # ╚══════════════════════════════════════════════════════════╝
-
-        log_enable = True
-        warnings.filterwarnings("ignore")
-        ic.disable()
-
-        random.seed(42)
-        np.random.seed(42)
-
-        verbose = 3
-        soap_species: list["str"] = self.soap_obj.species
-
-        # ── Stages ──────────────────────────────────────────────────────────────
-        from configs.stage_list import get_stage_list
-        stage_list = get_stage_list(
-            soap_object=self.soap_obj,
-            target_soap_features=self.target_features,
-            soap_species=soap_species,
+        from configs.multi_stage_search.main import main
+        main(
+            target_features=self.target_features,
+            soap_obj=self.soap_obj,
         )
-
-        # ── Global Statistics ───────────────────────────────────────────────────
-        from configs.global_statistics import get_global_statistics_dict
-        global_stats_dict = get_global_statistics_dict(
-            soap_object=self.soap_obj,
-            target_soap_features=self.target_features,
-        )
-
-        # ── Start Population Candidates ─────────────────────────────────────────
-        from configs.population_generator import get_start_pop_candidates
-        start_pop_candidates = get_start_pop_candidates(
-            soap_species=soap_species,
-            population_size=20
-        )
-
-        run_data = data_handeling.RunData(
-            save_dir="data/processed/results/",
-            soap_object=self.soap_obj,
-            log_enable=log_enable,
-            save_n_best_crystals=10,
-            global_statistics_dict=global_stats_dict,
-        )
-
-        # ── Perform Run ─────────────────────────────────────────────────────────
-        run_data.add_run_settings(
-            stage_data_list=stage_list,
-            verbose=verbose
-        )
-
-        ga_search = multi_ga.MultiGenAlgSearch(
-            run_data=run_data,
-        )
-        ga_search.run(
-            start_pop_candidates=start_pop_candidates,
-        )
-
-        # save_current_script(run_data)

@@ -1,15 +1,15 @@
-from .mutation import Mutation
-from .crossover import Crossover
-from .break_condition import BreakCondition
 from .fitness_function import FitnessFunction
 from .population_generator import PopulationGenerator
 from .population_selection import PopulationSelection
+from .stage import Stage
+from .individual import Individual
+from .population import Population
 
 __all__ = [
-    "Mutation",
-    "Crossover",
-    "BreakCondition",
     "FitnessFunction",
     "PopulationGenerator",
-    "PopulationSelection"
+    "PopulationSelection",
+    "Stage",
+    "Individual",
+    "Population"
 ]
