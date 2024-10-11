@@ -60,9 +60,9 @@ def get_enlarge_free_mutations(
     perm_mut = mut.elem_mut.PermutationMutation(
         closest_distances=closest_distances,
     )
-    rattle_mut_default = mut.pos_mut.RattleMutation(
-        closest_distances=closest_distances,
-    )
+    # rattle_mut_default = mut.pos_mut.RattleMutation(
+    #     closest_distances=closest_distances,
+    # )
     rattle_mut_weak = mut.pos_mut.RattleMutation(
         closest_distances=closest_distances, n_top=1, rattle_strength=0.1
     )
@@ -77,9 +77,9 @@ def get_enlarge_free_mutations(
         possible_elements=soap_species,
         closest_distances=closest_distances
     )
-    # soft_mut = mut.energy_mut.SoftMutation(
-    #     closest_distances=closest_distances
-    # )
+    soft_mut = mut.energy_mut.SoftMutation(
+        closest_distances=closest_distances
+    )
     min_tilt_mut = mut.cell_mut.MinimizeTiltMutation(
         closest_distances=closest_distances
     )
@@ -92,12 +92,12 @@ def get_enlarge_free_mutations(
     )
     enlarge_free_muts = [  # noqa
         perm_mut,
-        rattle_mut_default,
+        # rattle_mut_default,
         rattle_mut_weak,
         add_mut,
         del_mut,
         replace_mut,
-        # soft_mut,
+        soft_mut,
         min_tilt_mut,
         conv_cell_mut,
         rot_mut,
@@ -289,9 +289,6 @@ def main(
         mut.pos_mut.RattleMutation(
             closest_distances=closest_distances, n_top=1, rattle_strength=0.5
         ),
-        mut.pos_mut.RattleMutation(
-            closest_distances=closest_distances, n_top=1, rattle_strength=0.01
-        ),
         mut.sym_mut.GetConventionalCellMutation(
             closest_distances=closest_distances,
             symmetry_tol=0.3
@@ -303,7 +300,7 @@ def main(
         random_order=True,
         closest_distances=closest_distances
     )
-    all_opti_muts = optimize_mutations + [multi_opti_mut]
+    all_opti_muts = optimize_mutations # + [multi_opti_mut]
 
     soap_fitness_weak = soap_fitness_list[0]
     soap_fitness_mid = soap_fitness_list[1]
@@ -320,10 +317,10 @@ def main(
         "mutation_probability": 0.8,
         "break_condition": break_cond.MultipleOrBreak([
             break_cond.GenerationBreak(200), 
-            break_cond.MaxFitnessBreak(0, 0.80),
+            break_cond.MaxFitnessBreak(0, 0.85),
             break_cond.MultipleAndBreak([
                 break_cond.GenerationBreak(100),
-                break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.70))
+                break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80))
             ])
         ]),
         "crossover_list": [
@@ -360,13 +357,13 @@ def main(
 
     ref_fitness = deepcopy(soap_fitness_mid)
     global_stats_dict = {
-        "reference_similarity": ref_fitness.evaluate_individual,
-        "volume": lambda x: x.get_volume(),
+        "Reference_Similarity": ref_fitness.evaluate_individual,
+        "Volume": lambda x: x.get_volume(),
     }
 
     multi_stage_search = multi_stage.MultiStageSearch(
         save_dir="data/processed/results/",
-        description="Like before, but without Soft mutation, with default rattle in enlarge free Mutations and weaker rattle in optimize mutations.",
+        description="Like before, but no multi mutation in optimization.",
         global_statistics_dict=global_stats_dict,
         log_level=log_level
     )
