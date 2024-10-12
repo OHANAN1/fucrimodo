@@ -35,7 +35,7 @@ dependencies = [
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
-docs = ['sphinx', 'sphinx_rtd_theme']
+docs = ['sphinx', 'sphinx_rtd_theme', 'nbsphinx', 'sphinxcontrib-tikz']
 
 [project.urls]
 Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
