@@ -71,8 +71,8 @@ class MultipleAndBreak(BreakCondition):
 
     def check(self, population: list, generation_index: int) -> bool:
         return all(
-            break_condition.check(population, generation_index)
-            for break_condition in self.break_conditions
+            [break_condition.check(population, generation_index)
+            for break_condition in self.break_conditions]
         )
 
     def __repr__(self):
@@ -88,8 +88,8 @@ class MultipleOrBreak(BreakCondition):
 
     def check(self, population: list, generation_index: int) -> bool:
         return any(
-            break_condition.check(population, generation_index)
-            for break_condition in self.break_conditions
+            [break_condition.check(population, generation_index)
+            for break_condition in self.break_conditions]
         )
 
     def __repr__(self):
