@@ -3,6 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+=========
 FUCrIMODo
 =========
 
@@ -19,6 +20,22 @@ Information about GAs can be found at various sources.
 The DEAP library for example provides a very good
 `documentation <https://deap.readthedocs.io/en/master/>`_ explaining 
 concepts but also technical details of such algorithms.
+
+Installation
+============
+The installation of FUCrIMODo is done via conda or pip.
+Since conda is the recommended way to install the dependencies,
+we will use it in the following example. Enter the directory of fucrimodo,
+where the `environment.yml` file is located and run the following commands:
+
+.. code-block:: bash
+
+    conda env create -f environment.yml
+    conda activate fucrimodo-env
+
+In this conda environment, `fucrimodo` is installed and added to the path as
+a command line client. You can now run the program by typing `fucrimodo` in
+the terminal to see the help message.
 
 .. toctree::
    :maxdepth: 1

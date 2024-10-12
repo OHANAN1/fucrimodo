@@ -8,7 +8,6 @@ from dscribe.kernels import AverageKernel
 import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tqdm import tqdm
 import warnings
 
 
@@ -98,7 +97,7 @@ def find_best_gamma_for_target_comparison(
     highest_variance = -np.inf  # Verwenden von -np.inf für den Anfangswert
     variances = []
 
-    for gamma in tqdm(gamma_values, desc="Calculating variances"):
+    for gamma in gamma_values:
         variance = calculate_variance_for_gamma(
             soap_feature_vectors,
             target_soap_feature_vector,

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = "fucrimodo"
+version = "0.1.0"
+description = "Find Unknown Crystals by Inversion of ML Optimized Descriptors"
+authors = [
+  {name = "Louis Böhm", email =  "louis.boehm@gmx.de"},
+  {name = "Martin Kuban", email = "missing@hu-berlin.de"},
+]
+maintainers = [
+  {name = "Louis Böhm", email = "louis.boehm@gmx.de"}
+]
+readme = "README.md"
+keywords = ["tools", "fucrimodo", "Material Science"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: Unix based",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics"
+]
+dependencies = [
+    "ase>=3.23.0",
+    "matid>=2.1.2",
+    "numpy>=1.26.4",
+    "matplotlib>=3.9.1",
+    "nbformat>=5.10.1",
+    "pandas>=2.2.3",
+    "deap>=1.4.1",
+    "spglib==1.15.0"
+]
+# also add "dscribe>=2.1.1", this currently clashed with matid and needs to be installed with conda instead, see environment.yml
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+docs = ['sphinx', 'sphinx_rtd_theme', 'nbsphinx', 'sphinxcontrib-tikz']
+
+[project.urls]
+Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
+
+# Adds fucrimodo.__main__() in the executables path
+[project.scripts]
+fucrimodo = "fucrimodo.__main__:main"
+
+[tool.setuptools.package-dir]
+"" = "."
+
+[tool.setuptools.packages.find]
+where = ["."]

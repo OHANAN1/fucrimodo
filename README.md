@@ -20,7 +20,21 @@ This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
 
 ## Usage
 
-INCOMPLETE
+### Install
+
+The easiest way to install this program is through `conda`.
+Enter the fucrimodo directory, where the `dependencies.yml` and the 
+`pyproject.toml` is located and run:
+```bash
+conda env create -f ./environment.yml
+```
+This will install all dependencies and adds `fucrimodo` as a command line 
+interface to the path in the conda env `fucrimodo-env`.
+To now use the program run:
+```bash
+conda activate fucrimodo-env
+```
+In this environment fucrimodo can now be used as described below.
 
 ### Quick start
 

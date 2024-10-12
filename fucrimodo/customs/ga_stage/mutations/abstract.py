@@ -1,8 +1,6 @@
-import warnings
 from abc import ABC, abstractmethod
 import numpy as np
 import ase
-from icecream import ic
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.modules import Individual
 import logging
