@@ -7,11 +7,12 @@ from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from ase.geometry import cell
 import warnings
-from icecream import ic
 from ase.ga.startgenerator import StartGenerator
 from ase.ga.utilities import closest_distances_generator
 from ase.data import atomic_numbers
-from tqdm import tqdm
+
+import logging
+logger = logging.getLogger('run_logger')
 
 
 def crystal_is_valid(
@@ -19,35 +20,35 @@ def crystal_is_valid(
     cell_bounds: CustomCellBounds,
 ):
     if atoms is None:
-        ic("Atoms object is None")
+        logger.warning("Atoms object is None")
         return False
 
     if not isinstance(atoms, ase.Atoms):
-        ic("Atoms object is not an ase.Atoms object")
+        logger.warning("Atoms object is not an ase.Atoms object")
         return False
 
     if len(atoms) == 0:
-        ic("Atoms object has no atoms")
+        logger.warning("Atoms object has no atoms")
         return False
 
     if not cell_bounds.is_within_bounds(atoms.cell):
-        ic("Cell is not within bounds")
+        logger.warning("Cell is not within bounds")
         return False
 
     if not atoms.pbc.all():
-        ic("Atoms object has no periodic boundary conditions")
+        logger.warning("Atoms object has no periodic boundary conditions")
         return False
 
     if np.isnan(atoms.get_positions()).any():
-        ic("Atoms object has NaN positions")
+        logger.warning("Atoms object has NaN positions")
         return False
 
     if np.isnan(atoms.get_cell()).any():
-        ic("Atoms object has NaN cell")
+        logger.warning("Atoms object has NaN cell")
         return False
 
     if np.isnan(atoms.get_atomic_numbers()).any():
-        ic("Atoms object has NaN atomic numbers")
+        logger.warning("Atoms object has NaN atomic numbers")
         return False
 
     return True
@@ -256,7 +257,7 @@ def create_slab_population(
     print()
     print("Creating slab population...")
     crystals = []
-    for i in tqdm(range(population_size)):
+    for i in range(population_size):
         crystal = sg.get_new_candidate()
         crystals.append(crystal)
 
