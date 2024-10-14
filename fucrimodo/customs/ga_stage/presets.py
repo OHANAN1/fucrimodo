@@ -1,25 +1,17 @@
-from typing import Any
 import numpy as np
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.customs import population_selections as pop_sel
-import random
-from fucrimodo.core import multi_stage_search as multi_stage
 from fucrimodo.customs.ga_stage import break_conditions as break_cond
 import numpy as np
-import warnings
-import logging
-from copy import deepcopy
 from fucrimodo.customs.ga_stage import mutations as mut
 from fucrimodo.customs.ga_stage import crossovers as cross
 from fucrimodo.core.modules import FitnessFunction
+from fucrimodo.customs.ga_stage.ga_stage import GAStage
 from fucrimodo.utils import soap_similarity as soap_sim
 from collections.abc import Sequence
 from fucrimodo.customs import fitness_functions as ff
-from fucrimodo.core.modules import Individual
-from fucrimodo.core.modules import Population
-from fucrimodo.customs import population_generator as crystal_creation
 from abc import ABC, abstractmethod
 from fucrimodo.customs.ga_stage.mutations import Mutation
 from fucrimodo.customs.ga_stage.crossovers import Crossover
@@ -35,7 +27,7 @@ from fucrimodo.customs.fitness_functions import FitnessFunction
 # ga_preset=GAPreset 
 # GAStage(**ga_preset)
 
-class GAPreset(ABC, dict):
+class GAPreset(ABC):
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -48,8 +40,128 @@ class GAPreset(ABC, dict):
         self._soap_object = soap_object
         self._soap_features = soap_features
 
-        # Create the dict that is used for the initialization of the GAStage
-        self._dict = dict(
+    @property
+    def name(self) -> str:
+        if not hasattr(self, "_name"):
+            self._name = "No name set, please set name attribute."
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    @abstractmethod
+    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+        pass
+
+    @fitness_functions.setter
+    def fitness_functions(self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]):
+        self._fitness_functions = value
+
+    @property
+    @abstractmethod
+    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
+        pass
+
+    @crossover_list.setter
+    def crossover_list(self, value: Sequence[Crossover | tuple[Crossover, float]]):
+        self._crossover_list = value
+
+    @property
+    @abstractmethod
+    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
+        pass
+
+    @mutation_list.setter
+    def mutation_list(self, value: Sequence[Mutation | tuple[Mutation, float]]):
+        self._mutation_list = value
+
+    @property
+    @abstractmethod
+    def mutation_probability(self) -> float:
+        if not hasattr(self, "_mutation_probability"):
+            self._mutation_probability = 0.8
+        return self._mutation_probability
+
+    @mutation_probability.setter
+    def mutation_probability(self, value: float):
+        self._mutation_probability = value
+
+    @property
+    def crossover_probability(self) -> float:
+        if not hasattr(self, "_crossover_probability"):
+            self._crossover_probability = 0.8
+        return self._crossover_probability
+
+    @crossover_probability.setter
+    def crossover_probability(self, value: float):
+        self._crossover_probability = value
+
+    @property
+    @abstractmethod
+    def break_condition(self) -> BreakCondition:
+        pass
+
+    @break_condition.setter
+    def break_condition(self, value: BreakCondition):
+        self._break_condition = value
+
+    @property
+    def parent_selection(self) -> PopulationSelection:
+        if not hasattr(self, "_parent_selection"):
+            self._parent_selection = pop_sel.TournamentSelection(
+                tournament_size=4
+            )
+        return self._parent_selection
+
+    @parent_selection.setter
+    def parent_selection(self, value: PopulationSelection):
+        self._parent_selection = value
+
+    @property
+    def survivor_selection(self) -> PopulationSelection:
+        if not hasattr(self, "_survivor_selection"):
+            self._survivor_selection = pop_sel.NSGA2Selection()
+        return self._survivor_selection
+
+    @survivor_selection.setter
+    def survivor_selection(self, value: PopulationSelection):
+        self._survivor_selection = value
+
+    @property
+    def parent_ratio(self) -> float:
+        if not hasattr(self, "_parent_ratio"):
+            self._parent_ratio = 0.5
+        return self._parent_ratio
+
+    @parent_ratio.setter
+    def parent_ratio(self, value: float):
+        self._parent_ratio = value
+
+    @property
+    def description(self) -> str:
+        if not hasattr(self, "_description"):
+            self._description = ""
+        return self._description
+
+    @description.setter
+    def description(self, value: str):
+        self._description = value
+
+    @property
+    def save_n_crystals(self) -> int:
+        if not hasattr(self, "_save_n_crystals"):
+            self._save_n_crystals = 10
+        return self._save_n_crystals
+
+    @save_n_crystals.setter
+    def save_n_crystals(self, value: int):
+        self._save_n_crystals = value
+
+    def create(self) -> GAStage:
+        """Create the GAStage object with the preset properties."""
+        return GAStage(
             name=self.name,
             fitness_functions=self.fitness_functions,
             crossover_list=self.crossover_list,
@@ -64,88 +176,6 @@ class GAPreset(ABC, dict):
             save_n_crystals=self.save_n_crystals
         )
 
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
-        pass
-
-    @property
-    @abstractmethod
-    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
-        pass
-
-    @property
-    @abstractmethod
-    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
-        pass
-
-    @property
-    @abstractmethod
-    def mutation_probability(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def crossover_probability(self) -> float:
-        pass
-
-    @property
-    @abstractmethod
-    def break_condition(self) -> BreakCondition:
-        pass
-
-    @property
-    @abstractmethod
-    def parent_selection(self) -> PopulationSelection:
-        pass
-
-    @property
-    @abstractmethod
-    def survivor_selection(self) -> PopulationSelection:
-        pass
-
-    @property
-    def parent_ratio(self) -> float:
-        return 0.5
-
-    @property
-    def description(self) -> str:
-        return ""
-
-    @property
-    def save_n_crystals(self) -> int:
-        return 10
-
-    # Add methods that are required for the dict class to work
-    def __call__(self) -> dict[str, Any]:
-        return self._dict
-
-    def __getitem__(self, key):
-        return self._dict[key]
-
-    def keys(self):
-        return self._dict.keys()
-
-    def items(self):
-        return self._dict.items()
-
-    def values(self):
-        return self._dict.values()
-
-    def __iter__(self):
-        return iter(self._dict)
-
-    def __len__(self):
-        return len(self._dict)
-
-    def __repr__(self):
-        return f"{self.name} preset"
-    
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                     Utility methods                      ║
@@ -235,11 +265,15 @@ class ExlorationGAPreset(GAPreset):
         del self._parent_selection
         del self._survivor_selection
 
-    @property
+    @GAPreset.name.getter
     def name(self) -> str:
-        return "Exploration"
+        return "Exploration GA"
 
-    @property
+    @GAPreset.description.getter
+    def description(self) -> str:
+        return "Apply strong modifications to the population to explore the search space. (Preset: Exploration)"
+
+    @GAPreset.fitness_functions.getter
     def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         if not hasattr(self, "_fitness_functions"):
             soap_fitness_list = get_soap_similarity_fitness_list(
@@ -256,16 +290,17 @@ class ExlorationGAPreset(GAPreset):
 
         return self._fitness_functions
 
-    @property
+    @GAPreset.crossover_list.getter
     def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
         if not hasattr(self, "_crossover_list"):
             self._crossover_list =[
                 cross.OnePointElementCrossover(self._closest_distances),
+                cross.OnePointPositionCrossover(self._closest_distances),
                 cross.UnitCellCrossover(self._closest_distances),
             ]
         return self._crossover_list
     
-    @property
+    @GAPreset.mutation_list.getter
     def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
             all_muts = [
@@ -323,19 +358,7 @@ class ExlorationGAPreset(GAPreset):
             self._mutation_list = all_muts + [multi_mut]
         return self._mutation_list
 
-    @property
-    def mutation_probability(self) -> float:
-        if not hasattr(self, "_mutation_probability"):
-            self._mutation_probability = 0.8
-        return self._mutation_probability
-
-    @property
-    def crossover_probability(self) -> float:
-        if not hasattr(self, "_crossover_probability"):
-            self._crossover_probability = 0.8
-        return self._crossover_probability
-
-    @property
+    @GAPreset.break_condition.getter
     def break_condition(self) -> BreakCondition:
         if not hasattr(self, "_break_condition"):
             self._break_condition = break_cond.MultipleOrBreak([
@@ -348,22 +371,106 @@ class ExlorationGAPreset(GAPreset):
             ])
         return self._break_condition
 
-    @property
-    def parent_selection(self) -> PopulationSelection:
-        if not hasattr(self, "_parent_selection"):
-            self._parent_selection = pop_sel.TournamentSelection(tournament_size=4)
-        return self._parent_selection
 
-    @property
-    def survivor_selection(self) -> PopulationSelection:
-        if not hasattr(self, "_survivor_selection"):
-            self._survivor_selection = pop_sel.NSGA2Selection()
-        return self._survivor_selection
+class OptimizationGAPreset(GAPreset):
+    def change_cell_bounds(self, cell_bounds: CustomCellBounds):
+        """Set new cell bounds.
 
-    @property
+        This resets all properties in the class so they are recalculated with 
+        the new cell bounds when called.
+        """
+        self._cell_bounds = cell_bounds
+        self.reset()
+
+    def reset(self):
+        """Reset the public properties in the class."""
+        del self._fitness_functions
+        del self._crossover_list
+        del self._mutation_list
+        del self._break_condition
+        del self._parent_selection
+        del self._survivor_selection
+
+    @GAPreset.name.getter
+    def name(self) -> str:
+        return "Optimization GA"
+
+    @GAPreset.fitness_functions.getter
+    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+        if not hasattr(self, "_fitness_functions"):
+             self._fitness_functions = get_soap_similarity_fitness_list(
+                target_soap_features=self._soap_features,
+                soap_object=self._soap_object
+            )
+        return self._fitness_functions
+
+    @GAPreset.crossover_list.getter
+    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
+        if not hasattr(self, "_crossover_list"):
+            self._crossover_list =[
+                cross.OnePointElementCrossover(self._closest_distances),
+                cross.OnePointPositionCrossover(self._closest_distances),
+            ]
+        return self._crossover_list
+    
+    @GAPreset.mutation_list.getter
+    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
+        if not hasattr(self, "_mutation_list"):
+            all_muts = [
+                mut.elem_mut.PermutationMutation(
+                    closest_distances=self._closest_distances,
+                ),
+                mut.pos_mut.RattleMutation(
+                    closest_distances=self._closest_distances, 
+                    n_top=1, 
+                    rattle_strength=0.1
+                ),
+                mut.pos_mut.RattleMutation(
+                    closest_distances=self._closest_distances, 
+                    n_top=1, 
+                    rattle_strength=0.5
+                ),
+                mut.pos_mut.RattleMutation(
+                    closest_distances=self._closest_distances, 
+                    n_top=1,
+                    rattle_strength=0.01
+                ),
+                mut.energy_mut.SoftMutation(
+                    closest_distances=self._closest_distances
+                ),
+                mut.cell_mut.MinimizeTiltMutation(
+                    closest_distances=self._closest_distances
+                ),
+                mut.sym_mut.GetConventionalCellMutation(
+                    closest_distances=self._closest_distances,
+                    symmetry_tol=0.3
+                ),
+                mut.cell_mut.RotationMutation(
+                    closest_distances=self._closest_distances
+                ),
+            ]
+            multi_mut = mut.multi_mut.MultipleMutations(
+                mutations=all_muts,
+                number_of_mutations=2,
+                random_order=True,
+                closest_distances=self._closest_distances
+            )
+            self._mutation_list = all_muts + [multi_mut]
+        return self._mutation_list
+
+    @GAPreset.break_condition.getter
+    def break_condition(self) -> BreakCondition:
+        if not hasattr(self, "_break_condition"):
+            self._break_condition = break_cond.MultipleOrBreak([
+                break_cond.GenerationBreak(5),
+                break_cond.MaxFitnessBreak(0, 0.99),
+                break_cond.MultipleAndBreak([
+                    break_cond.GenerationBreak(100),
+                    break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80))
+                ])
+            ])
+        return self._break_condition
+
+    @GAPreset.description.getter
     def description(self) -> str:
-        return "Apply strong modifications to the population to explore the search space. (Preset: Exploration)"
-
-    @property
-    def save_n_crystals(self) -> int:
-        return 10
+        return "Apply weak modifications to the population that do not create entirely new individuals but slightly modify the ones existing. (Preset: Optimization)"
