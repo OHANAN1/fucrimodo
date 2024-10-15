@@ -1,6 +1,7 @@
 import argparse
 import textwrap
 from importlib import import_module
+from fucrimodo import __version__
 
 class CLIError(Exception):
     """Error for CLI commands.
@@ -11,7 +12,8 @@ class CLIError(Exception):
 
 commands = [
     ('run', 'fucrimodo.cli.run'),
-    ('analyse', 'fucrimodo.cli.analyse')
+    ('analyse', 'fucrimodo.cli.analyse'),
+    ('utils', 'fucrimodo.cli.utils'),
 ]
 
 
@@ -19,8 +21,10 @@ def main(
     prog='fucrimodo', 
     description='Fucrimodo command line tool.', 
     commands=commands,
-    args=None
+    args=None,
+    version=__version__
 ):
+
     parser = argparse.ArgumentParser(
         prog=prog,description=description,
     )
@@ -29,6 +33,7 @@ def main(
         dest='command'
     )
     parser.add_argument('-T', '--traceback', action='store_true')
+    parser.add_argument('-V', '--version', action='version', version=f'%(prog)s-{version}')
     subparser = subparsers.add_parser(
         'help',
         description='Help',
