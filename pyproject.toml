@@ -1,10 +1,10 @@
 [build-system]
 requires = ["setuptools", "wheel"]
-build-backend = 'setuptools.build_meta'
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "fucrimodo"
-version = "0.1.0"
+version = "0.1.1"
 description = "Find Unknown Crystals by Inversion of ML Optimized Descriptors"
 authors = [
   {name = "Louis Böhm", email =  "louis.boehm@gmx.de"},
@@ -43,9 +43,6 @@ Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
 # Adds fucrimodo.__main__() in the executables path
 [project.scripts]
 fucrimodo = "fucrimodo.__main__:main"
-
-[tool.setuptools.package-dir]
-"" = "."
 
 [tool.setuptools.packages.find]
 where = ["."]
