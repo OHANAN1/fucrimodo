@@ -47,7 +47,30 @@ class Runner:
 
     def run(self):
         """Copy the fucrimodo_lab template to the desired location."""
+        # User needs to confirm that the lab should be created at the given 
+        # location.
+        confirmation = input(f"Create fucrimodo lab in {self.save_dir})[y/n]: ")
+        if confirmation.lower() != 'y':
+            print("Aborted.")
+            sys.exit(0)
+
+        fucrimodo_lab_dir = os.path.join(self.save_dir, 'fucrimodo_lab')
+        # Check if the directory already exists.
+        if os.path.exists(fucrimodo_lab_dir):
+            print(f"The directory {fucrimodo_lab_dir} already exists.")
+            sys.exit(1)
+
+        # Get the location of the lab template.
         import importlib.resources as pkg_resources
+        lab_template = str(pkg_resources.files('fucrimodo').joinpath('lab_template'))
 
+        # Copy the lab template to the desired location.
+        import shutil
+        shutil.copytree(lab_template, fucrimodo_lab_dir)
 
+        # Print a message to the user.
+        print(f"Lab created in {fucrimodo_lab_dir}.")
+        print("You can configure the lab by editing the config files in the lab.")
+        print("For more information, see the documentation.")
+        print("Brew the potion that reverts the descriptor to its atomic form!")
 

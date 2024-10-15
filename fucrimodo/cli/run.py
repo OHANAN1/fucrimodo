@@ -8,7 +8,7 @@ class CLICommand:
     def add_arguments(parser):
         add = parser.add_argument
         add(
-            'input_file', 
+            'input_file',
             help='Give the path to the file with the features that should ' \
                 'be inverted and the parameters that define the descriptor. ' \
                 '(file-type: json).'
@@ -84,9 +84,9 @@ class Runner:
 
             self.run_config = run_config
         else:
-            # Import the default config
+            # Import the default run config from the lab_template
             from importlib import import_module
-            self.run_config = import_module("configs.multi_stage_search.main")
+            self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
 
     def run(self):
         """Run the inversion."""
@@ -98,7 +98,5 @@ class Runner:
             descriptor_object=self.soap_obj,
             descriptive_name=self.name,
         )
-        print("Newest version")
-        # TODO: THIS IS ODD< SOMEHOW I CAN STILL USE THE PROGRAM WITHOUT THE CONFIGS DIR
 
         self.run_config.main(multi_stage_search)

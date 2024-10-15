@@ -13,7 +13,8 @@ class CLIError(Exception):
 commands = [
     ('run', 'fucrimodo.cli.run'),
     ('analyse', 'fucrimodo.cli.analyse'),
-    ('utils', 'fucrimodo.cli.utils'),
+    ('init', 'fucrimodo.cli.init'),
+    # ('utils', 'fucrimodo.cli.utils'),
 ]
 
 
