@@ -1,20 +1,18 @@
 import numpy as np
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.customs import population_selections as pop_sel
 from fucrimodo.customs.ga_stage import break_conditions as break_cond
 import numpy as np
+from fucrimodo.customs import fitness_functions as ff
+from abc import ABC
+from collections.abc import Sequence
 from fucrimodo.customs.ga_stage import mutations as mut
 from fucrimodo.customs.ga_stage import crossovers as cross
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.core.modules import FitnessFunction
 from fucrimodo.customs.ga_stage.ga_stage import GAStage
 from fucrimodo.utils import soap_similarity as soap_sim
-from collections.abc import Sequence
-from fucrimodo.customs import fitness_functions as ff
-from abc import ABC, abstractmethod
-from fucrimodo.customs.ga_stage.mutations import Mutation
-from fucrimodo.customs.ga_stage.crossovers import Crossover
 from fucrimodo.customs.ga_stage.break_conditions import BreakCondition
 from fucrimodo.customs.population_selections import PopulationSelection
 from fucrimodo.customs.fitness_functions import FitnessFunction
@@ -28,6 +26,13 @@ from fucrimodo.customs.fitness_functions import FitnessFunction
 # GAStage(**ga_preset)
 
 class GAPreset(ABC):
+    """Abstract base class for GAStage
+    This class is used to create presets for the GAStage class.
+    The properties of the class are used to set the properties of the GAStage
+    object.
+    The properties are set when the GAStage object is created.
+    Use `del` to reset the properties of the class to its default values.
+    """
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -48,37 +53,48 @@ class GAPreset(ABC):
 
     @name.setter
     def name(self, value: str):
-        self._name = value
+        self._name = str(value)
 
     @property
-    @abstractmethod
     def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
-        pass
+        # Prompt the user to implement the property
+        # Normally this would be done with an abstract property,
+        # but this is not possible with the setter
+        raise NotImplementedError(
+            "Please implement the fitness_functions property."
+        )
 
     @fitness_functions.setter
     def fitness_functions(self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]):
         self._fitness_functions = value
 
     @property
-    @abstractmethod
-    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
-        pass
+    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
+        # Prompt the user to implement the property
+        # Normally this would be done with an abstract property, 
+        # but this is not possible with the setter
+        raise NotImplementedError(
+            "Please implement the crossover_list property."
+        )
 
     @crossover_list.setter
-    def crossover_list(self, value: Sequence[Crossover | tuple[Crossover, float]]):
+    def crossover_list(self, value: Sequence[cross.Crossover | tuple[cross.Crossover, float]]):
         self._crossover_list = value
 
     @property
-    @abstractmethod
-    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
-        pass
+    def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
+        # Prompt the user to implement the property
+        # Normally this would be done with an abstract property,
+        # but this is not possible with the setter
+        raise NotImplementedError(
+            "Please implement the mutation_list property."
+        )
 
     @mutation_list.setter
-    def mutation_list(self, value: Sequence[Mutation | tuple[Mutation, float]]):
+    def mutation_list(self, value: Sequence[mut.Mutation | tuple[mut.Mutation, float]]):
         self._mutation_list = value
 
     @property
-    @abstractmethod
     def mutation_probability(self) -> float:
         if not hasattr(self, "_mutation_probability"):
             self._mutation_probability = 0.8
@@ -99,9 +115,10 @@ class GAPreset(ABC):
         self._crossover_probability = value
 
     @property
-    @abstractmethod
     def break_condition(self) -> BreakCondition:
-        pass
+        if not hasattr(self, "_break_condition"):
+            self._break_condition = break_cond.NeverBreak()
+        return self._break_condition
 
     @break_condition.setter
     def break_condition(self, value: BreakCondition):
@@ -176,6 +193,31 @@ class GAPreset(ABC):
             save_n_crystals=self.save_n_crystals
         )
 
+    def change_cell_bounds(self, cell_bounds: CustomCellBounds):
+        """Set new cell bounds.
+
+        This resets the mutations and the crossovers so they are recalculated
+        with the new cell bounds when called.
+        """
+        self._cell_bounds = cell_bounds
+        del self._mutation_list
+        del self._crossover_list
+
+    def reset(self):
+        """Reset the properties in the class that are used to init the GAStage.
+        Appart from the name and description.
+
+        The properties are recalculated and set when called.
+        Usefull, when the cell bounds or the closest distances are changed, 
+        so the properties are recalculated with the new values.
+        """
+        del self._fitness_functions
+        del self._crossover_list
+        del self._mutation_list
+        del self._break_condition
+        del self._parent_selection
+        del self._survivor_selection
+
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                     Utility methods                      ║
@@ -247,27 +289,13 @@ def get_species_specific_soap_fitness_list(
 # ╚══════════════════════════════════════════════════════════╝
 
 class ExlorationGAPreset(GAPreset):
-    def change_cell_bounds(self, cell_bounds: CustomCellBounds):
-        """Set new cell bounds.
-
-        This resets all properties in the class so they are recalculated with 
-        the new cell bounds when called.
-        """
-        self._cell_bounds = cell_bounds
-        self.reset()
-
-    def reset(self):
-        """Reset the public properties in the class."""
-        del self._fitness_functions
-        del self._crossover_list
-        del self._mutation_list
-        del self._break_condition
-        del self._parent_selection
-        del self._survivor_selection
-
+    # Only adjust the getters, so the properties of the GAPreset are not 
+    # overwritten completely.
     @GAPreset.name.getter
     def name(self) -> str:
-        return "Exploration GA"
+        if not hasattr(self, "_name"):
+            self._name = "Exploration GA"
+        return self._name
 
     @GAPreset.description.getter
     def description(self) -> str:
@@ -291,7 +319,7 @@ class ExlorationGAPreset(GAPreset):
         return self._fitness_functions
 
     @GAPreset.crossover_list.getter
-    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
+    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
         if not hasattr(self, "_crossover_list"):
             self._crossover_list =[
                 cross.OnePointElementCrossover(self._closest_distances),
@@ -301,7 +329,7 @@ class ExlorationGAPreset(GAPreset):
         return self._crossover_list
     
     @GAPreset.mutation_list.getter
-    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
+    def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
             all_muts = [
                 mut.elem_mut.PermutationMutation(
@@ -362,7 +390,7 @@ class ExlorationGAPreset(GAPreset):
     def break_condition(self) -> BreakCondition:
         if not hasattr(self, "_break_condition"):
             self._break_condition = break_cond.MultipleOrBreak([
-                break_cond.GenerationBreak(5),
+                break_cond.GenerationBreak(200),
                 break_cond.MaxFitnessBreak(0, 0.85),
                 break_cond.MultipleAndBreak([
                     break_cond.GenerationBreak(100),
@@ -373,27 +401,21 @@ class ExlorationGAPreset(GAPreset):
 
 
 class OptimizationGAPreset(GAPreset):
-    def change_cell_bounds(self, cell_bounds: CustomCellBounds):
-        """Set new cell bounds.
-
-        This resets all properties in the class so they are recalculated with 
-        the new cell bounds when called.
-        """
-        self._cell_bounds = cell_bounds
-        self.reset()
-
-    def reset(self):
-        """Reset the public properties in the class."""
-        del self._fitness_functions
-        del self._crossover_list
-        del self._mutation_list
-        del self._break_condition
-        del self._parent_selection
-        del self._survivor_selection
-
+    # Only adjust the getters, so the properties of the GAPreset are not 
+    # overwritten completely.
     @GAPreset.name.getter
     def name(self) -> str:
-        return "Optimization GA"
+        if not hasattr(self, "_name"):
+            self._name = "Optimization GA"
+        return self._name
+
+    @GAPreset.description.getter
+    def description(self) -> str:
+        return (
+            "Apply weak modifications to the population that do not create "
+                "entirely new individuals but slightly modify the ones "
+                "existing. (Preset: Optimization)"
+        )
 
     @GAPreset.fitness_functions.getter
     def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
@@ -405,7 +427,7 @@ class OptimizationGAPreset(GAPreset):
         return self._fitness_functions
 
     @GAPreset.crossover_list.getter
-    def crossover_list(self) -> Sequence[Crossover | tuple[Crossover, float]]:
+    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
         if not hasattr(self, "_crossover_list"):
             self._crossover_list =[
                 cross.OnePointElementCrossover(self._closest_distances),
@@ -414,7 +436,7 @@ class OptimizationGAPreset(GAPreset):
         return self._crossover_list
     
     @GAPreset.mutation_list.getter
-    def mutation_list(self) -> Sequence[Mutation | tuple[Mutation, float]]:
+    def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
             all_muts = [
                 mut.elem_mut.PermutationMutation(
@@ -471,6 +493,3 @@ class OptimizationGAPreset(GAPreset):
             ])
         return self._break_condition
 
-    @GAPreset.description.getter
-    def description(self) -> str:
-        return "Apply weak modifications to the population that do not create entirely new individuals but slightly modify the ones existing. (Preset: Optimization)"

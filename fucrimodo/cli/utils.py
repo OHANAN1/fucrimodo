@@ -8,32 +8,16 @@ class CLICommand:
     def add_arguments(parser):
         add = parser.add_argument
         add(
-            'input_file', 
-            help='Give the path to the file with the features that should ' \
-                'be inverted and the parameters that define the descriptor. ' \
-                '(file-type: json).'
+            'utility_name', 
+            help='Give the name of the utility that should be run.'
+                'Options are: "init_lab"\n'
+                'init_lab: Initialize a new fucrimodo lab.'
         )
         add('-v', '--verbose', action='store_true', help='More output.')
         add(
-            '-c', '--config', 
-            help=('Path to the config file. Must be a python file that '
-                'contains a method "main" that takes the following arguments: '
-                'main(fucrimodo.core.multi_stage_search.MultiStageSearch). '
-                'If not provided, the default config will be used.')
-        )
-        add(
             '-s', '--save_dir',
-            help=('Directory where the dir should be created in which the '
-                'results of the inversion will be saved. '
-                'If not provided, the results will be saved in a dir created'
-                'in the current working directory. ')
-        )
-        add(
-            '-n', '--name',
-            help=('Name of the run. This will be used as the name of the '
-                'directory in which the results will be saved. '
-                'If not provided, the name will be set to the current time '
-                'and date.')
+            help=('Directory where the lab should be created'
+                'If not provided, it is set to the current working directory.')
         )
 
 
@@ -84,7 +68,6 @@ class Runner:
 
             self.run_config = run_config
         else:
-            # Import the default config
             from importlib import import_module
             self.run_config = import_module("configs.multi_stage_search.main")
 
@@ -98,7 +81,5 @@ class Runner:
             descriptor_object=self.soap_obj,
             descriptive_name=self.name,
         )
-        print("Newest version")
-        # TODO: THIS IS ODD< SOMEHOW I CAN STILL USE THE PROGRAM WITHOUT THE CONFIGS DIR
 
         self.run_config.main(multi_stage_search)

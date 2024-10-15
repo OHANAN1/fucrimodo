@@ -13,7 +13,7 @@ from fucrimodo.core.modules import Individual
 from fucrimodo.core.modules import Population
 from fucrimodo.customs import population_generator as crystal_creation
 from fucrimodo.customs.ga_stage.presets import ExlorationGAPreset, OptimizationGAPreset
-from fucrimodo.customs.ga_stage import GAStage
+from fucrimodo.customs.ga_stage import GAStage, break_conditions
 
 def get_start_pop_candidates(
         soap_species: list[str],
@@ -46,19 +46,16 @@ def get_start_pop_candidates(
 
     return population
 
-def main(
-    target_features: np.ndarray,
-    soap_obj: CustomSOAP,
-    log_level: int = logging.INFO,
-    verbose: int = 3,
-    random_seed: int = 42,
-    ):
+def main(multi_stage_search: multi_stage.MultiStageSearch):
+
+    multi_stage_search.description = "Just for testing, has very short stages."
+
     # ── Set random seed ─────────────────────────────────────────────────────
-    random.seed(random_seed)
-    np.random.seed(random_seed)
+    random.seed(42)
+    np.random.seed(42)
 
     # ── Global Setup ───────────────────────────────────────────────────
-    soap_species = soap_obj.species
+    soap_species = multi_stage_search.descriptor_object.species
 
     closest_distances = CustomClosestDistances(
         species=soap_species,
@@ -78,21 +75,44 @@ def main(
 
     # ── Setup Global Statistics ─────────────────────────────────────────────
     reference_similarity = ff.SimilarityToTargetSOAPFitness(
-        target_soap_features=target_features,
-        soap_object=soap_obj,
+        target_soap_features=multi_stage_search.target_features,
+        soap_object=multi_stage_search.descriptor_object,
         soap_similarity=soap_sim.RBFSimilarity(
-            target_feature_vector=target_features,
+            target_feature_vector=multi_stage_search.target_features,
             rbf_gamma=0.1,
             adjust_gamma=False,
         ),
         db_title="Reference"
     )
 
-    global_stats_dict = {
+    multi_stage_search.global_statistics_dict = {
         "Reference_Similarity": reference_similarity.evaluate_individual,
         "Volume": lambda x: x.get_volume(),
     }
 
+    # ╔══════════════════════════════════════════════════════════╗
+    # ║                      Load Presets                        ║
+    # ╚══════════════════════════════════════════════════════════╝
+
+    explore_ga = ExlorationGAPreset(
+        closest_distances=closest_distances,
+        cell_bounds=cell_bounds[0],
+        soap_object=multi_stage_search.descriptor_object,
+        soap_features=multi_stage_search.target_features,
+    )
+    explore_ga.break_condition = break_conditions.GenerationBreak(5)
+
+    optimize_ga = OptimizationGAPreset(
+        closest_distances=closest_distances,
+        cell_bounds=cell_bounds[0],
+        soap_object=multi_stage_search.descriptor_object,
+        soap_features=multi_stage_search.target_features,
+    )
+    optimize_ga.break_condition = break_conditions.GenerationBreak(5)
+
+    # ╔══════════════════════════════════════════════════════════╗
+    # ║                        Run Stages                        ║
+    # ╚══════════════════════════════════════════════════════════╝
 
     # ── Start Population Candidates ─────────────────────────────────────────
     population = get_start_pop_candidates(
@@ -100,57 +120,27 @@ def main(
         population_size=100
     )
 
-    # ╔══════════════════════════════════════════════════════════╗
-    # ║                      Load Defaults                       ║
-    # ╚══════════════════════════════════════════════════════════╝
-
-    explore_ga = ExlorationGAPreset(
-        closest_distances=closest_distances,
-        cell_bounds=cell_bounds[0],
-        soap_object=soap_obj,
-        soap_features=target_features,
-    )
-
-    optimize_ga = OptimizationGAPreset(
-        closest_distances=closest_distances,
-        cell_bounds=cell_bounds[0],
-        soap_object=soap_obj,
-        soap_features=target_features,
-    )
-
-    # ╔══════════════════════════════════════════════════════════╗
-    # ║                        Run Stages                        ║
-    # ╚══════════════════════════════════════════════════════════╝
-
-    # Setup multi-stage search object
-    multi_stage_search = multi_stage.MultiStageSearch(
-        save_dir="data/processed/results/",
-        description="Like before, but no multi mutation in optimization.",
-        global_statistics_dict=global_stats_dict,
-        log_level=log_level
-    )
-
     # Stage 1
-    population = multi_stage_search.run(
+    multi_stage_search.run(
         population=population,
         stage = explore_ga.create()
     )
 
     # Stage 2
-    population = multi_stage_search.run(
+    multi_stage_search.run(
         population=population,
         stage = optimize_ga.create()
     )
 
     # Stage 3
-    optimize_ga.name = "Optimization 2"
     explore_ga.change_cell_bounds(cell_bounds[1])
-    population = multi_stage_search.run(
+    multi_stage_search.run(
         population=population,
         stage = explore_ga.create()
     )
 
     # Stage 4
+    optimize_ga.name = "Optimization 2"
     optimize_ga.crossover_probability = 0.9
     population = multi_stage_search.run(
         population=population,

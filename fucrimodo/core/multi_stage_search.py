@@ -21,6 +21,10 @@ class MultiStageSearch:
 
     :param save_dir: Directory where a dictionary should be created to store
         the data of the run.
+    :param target_features: Array with the target features that the 
+        optimization algorithm should invert.
+    :param descriptor_object: Object of the descriptor that is used to
+        calculate the features of the individuals.
     :param descriptive_name: Optional name of the run. If no name is given,
         the current time and date is used. Saved to :attr:`name`.
     :param global_statistics_dict: Optional dictionary, where the keys are the
@@ -35,6 +39,8 @@ class MultiStageSearch:
     def __init__(
         self,
         save_dir: str,
+        target_features: np.ndarray,
+        descriptor_object,
         descriptive_name: str|None = None,
         description: str = "",
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
@@ -49,17 +55,17 @@ class MultiStageSearch:
 
         self._description = description
 
+        # Set the target features of the optimization algorithm
+        self._target_features = target_features
+
+        # Set the descriptor object that is used to calculate the features
+        self._descriptor_object = descriptor_object
+
         # Create the dictionary to store the data of the run
         self._run_dir = self.__create_run_dir(save_dir)
 
         # Save the global statistics dictionary to access it during saving
-        self._global_statistics_dict = global_statistics_dict
-
-        # Create the global statistics and the logbook
-        self._global_statistics = self.__create_global_statistics(
-            self._global_statistics_dict
-        )
-        self._global_log = self.global_logbook
+        self.global_statistics_dict = global_statistics_dict
 
         # Set the current stage id to 0
         self.current_stage_id = 0
@@ -76,6 +82,41 @@ class MultiStageSearch:
     @property
     def description(self) -> str:
         return self._description
+
+    @description.setter
+    def description(self, value: str):
+        self._description = value
+
+    @property
+    def global_statistics_dict(self) -> dict[str, Callable[[Individual], float]] | None:
+        return self._global_statistics_dict
+
+    @global_statistics_dict.setter
+    def global_statistics_dict(self, value: dict[str, Callable[[Individual], float]] | None):
+        """Setter for the global statistics dictionary.
+
+        The setter also creates the global statistics and the logbook for the
+        new statistics.
+        """
+        self._global_statistics_dict = value
+        # Create the global statistics and the logbook for the new statistics
+        if value is None:
+            self._global_statistics = None
+        else:
+            self._global_statistics = self.__create_global_statistics(
+                self._global_statistics_dict
+            )
+            self._global_log = self.global_logbook
+
+    @property
+    def target_features(self) -> np.ndarray:
+        if not hasattr(self, "_target_features"):
+            raise AttributeError("Target features have not been set.")
+        return self._target_features
+
+    @property
+    def descriptor_object(self):
+        return self._descriptor_object
 
     @property
     def run_dir(self) -> str:
@@ -322,9 +363,10 @@ class MultiStageSearch:
         stage_dir = self.__set_up_stage(stage, self.current_stage_id)
 
         # Run the stage and save the results
-        print(f"Running stage {self.current_stage_id}:")
-        print(f"Stage ID: {stage.id}")
-        print(f"Poulation size: {population.size}")
+        print(f"Running stage:")
+        print(f"Name: {stage.name}")
+        print(f"ID: {stage.id}")
+        print(f"Population size: {population.size}")
         population = stage.run(
             population=population,
             global_log=self.global_logbook,
