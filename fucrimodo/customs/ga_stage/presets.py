@@ -304,9 +304,18 @@ class ExlorationGAPreset(GAPreset):
     @GAPreset.fitness_functions.getter
     def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         if not hasattr(self, "_fitness_functions"):
+            # Order the fitness functions in a way that the reference similarity
+            # (gamma = 0.1) is the first fitness function.
+            # The break conditions react to the first fitness function.
             soap_fitness_list = get_soap_similarity_fitness_list(
                 target_soap_features=self._soap_features,
-                soap_object=self._soap_object
+                soap_object=self._soap_object,
+                rbf_gammas=[0.1, 1.0, 0.01],
+                function_titles=[
+                    "soap_similarity_mid",
+                    "soap_similarity_strong",
+                    "soap_similarity_weak"
+                ]
             )
             species_specific_fitnesses = get_species_specific_soap_fitness_list(
                 target_soap_features=self._soap_features,
@@ -420,9 +429,18 @@ class OptimizationGAPreset(GAPreset):
     @GAPreset.fitness_functions.getter
     def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         if not hasattr(self, "_fitness_functions"):
-             self._fitness_functions = get_soap_similarity_fitness_list(
+            # Order the fitness functions in a way that the reference similarity
+            # (gamma = 0.1) is the first fitness function.
+            # The break conditions react to the first fitness function.
+            self._fitness_functions = get_soap_similarity_fitness_list(
                 target_soap_features=self._soap_features,
-                soap_object=self._soap_object
+                soap_object=self._soap_object,
+                rbf_gammas=[0.1, 1.0, 0.01],
+                function_titles=[
+                    "soap_similarity_mid",
+                    "soap_similarity_strong",
+                    "soap_similarity_weak"
+                ]
             )
         return self._fitness_functions
 
