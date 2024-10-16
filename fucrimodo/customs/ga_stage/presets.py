@@ -484,7 +484,7 @@ class OptimizationGAPreset(GAPreset):
     def break_condition(self) -> BreakCondition:
         if not hasattr(self, "_break_condition"):
             self._break_condition = break_cond.MultipleOrBreak([
-                break_cond.GenerationBreak(5),
+                break_cond.GenerationBreak(200),
                 break_cond.MaxFitnessBreak(0, 0.99),
                 break_cond.MultipleAndBreak([
                     break_cond.GenerationBreak(100),
