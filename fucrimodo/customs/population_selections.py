@@ -303,6 +303,27 @@ class SelectAllPopulation(PopulationSelection):
             return "SelectAllPopulation()"
 
 
+class TournamentDCDSelection(PopulationSelection):
+    def select(
+        self, individuals: list[Individual], n: int
+    ) -> list[Individual]:
+        # Assign crowding distance to each individual, as expected by the
+        # selTournamentDCD function
+        tools.emo.assignCrowdingDist(individuals)
+
+        # Select individuals using the selTournamentDCD function
+        selected_individuals = tools.selTournamentDCD(individuals, n)
+
+        # Reset the crowding distance of the selected individuals
+        for individual in selected_individuals:
+            if hasattr(individual, "crowding_dist"):
+                del individual.crowding_dist
+
+        return selected_individuals
+
+    def __repr__(self) -> str:
+        return "TournamentDCDSelection()"
+
 class DopePopulationSelection(PopulationSelection):
     def __init__(
         self,
