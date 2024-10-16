@@ -104,12 +104,18 @@ def main(multi_stage_search: multi_stage.MultiStageSearch):
 
     # ── Stage 1 ─────────────────────────────────────────────────────────────
     # Run the exploration GA with the initial population
-    multi_stage_search.run(population=population, stage=explore_ga.create())
+    population = multi_stage_search.run(
+        population=population,
+        stage=explore_ga.create()
+    )
 
 
     # ── Stage 2 ─────────────────────────────────────────────────────────────
     # Run the optimization GA with the population from the exploration
-    multi_stage_search.run(population=population, stage=optimize_ga.create())
+    population = multi_stage_search.run(
+        population=population,
+        stage=optimize_ga.create()
+    )
 
 
     # ── Stage 3 ─────────────────────────────────────────────────────────────
@@ -120,7 +126,10 @@ def main(multi_stage_search: multi_stage.MultiStageSearch):
     explore_ga.change_cell_bounds(cell_bounds[1])
 
     # Run the extended exploration
-    multi_stage_search.run(population=population, stage=explore_ga.create())
+    population = multi_stage_search.run(
+        population=population,
+        stage=explore_ga.create()
+    )
 
 
     # ── Stage 4 ─────────────────────────────────────────────────────────────
@@ -136,4 +145,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch):
     optimize_ga.break_condition = break_conditions.GenerationBreak(500)
 
     # Run the final optimization
-    multi_stage_search.run(population=population, stage=optimize_ga.create())
+    population = multi_stage_search.run(
+        population=population,
+        stage=optimize_ga.create()
+    )
