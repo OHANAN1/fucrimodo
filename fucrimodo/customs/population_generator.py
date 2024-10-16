@@ -1,264 +1,89 @@
 import random
 import ase
-from ase.ga.utilities import CellBounds
-import numpy as np
-from fucrimodo.core.modules import PopulationGenerator
+from fucrimodo.core.modules import PopulationGenerator, Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from ase.geometry import cell
-import warnings
 from ase.ga.startgenerator import StartGenerator
-from ase.ga.utilities import closest_distances_generator
-from ase.data import atomic_numbers
+import warnings
+import ase
 
 import logging
 logger = logging.getLogger('run_logger')
 
 
-def crystal_is_valid(
-    atoms: ase.Atoms | None,
-    cell_bounds: CustomCellBounds,
-):
-    if atoms is None:
-        logger.warning("Atoms object is None")
-        return False
-
-    if not isinstance(atoms, ase.Atoms):
-        logger.warning("Atoms object is not an ase.Atoms object")
-        return False
-
-    if len(atoms) == 0:
-        logger.warning("Atoms object has no atoms")
-        return False
-
-    if not cell_bounds.is_within_bounds(atoms.cell):
-        logger.warning("Cell is not within bounds")
-        return False
-
-    if not atoms.pbc.all():
-        logger.warning("Atoms object has no periodic boundary conditions")
-        return False
-
-    if np.isnan(atoms.get_positions()).any():
-        logger.warning("Atoms object has NaN positions")
-        return False
-
-    if np.isnan(atoms.get_cell()).any():
-        logger.warning("Atoms object has NaN cell")
-        return False
-
-    if np.isnan(atoms.get_atomic_numbers()).any():
-        logger.warning("Atoms object has NaN atomic numbers")
-        return False
-
-    return True
-
-
-def create_random_atoms_object_2(
-    atom_types: list[str],
-    cell_bounds: CustomCellBounds,
-) -> ase.Atoms | None:
-
-    bounds = cell_bounds.bounds
-
-    cell_pars = []
-    for param in ["a", "b", "c"]:
-        param_bounds = bounds[param]
-        param = np.random.uniform(param_bounds[0], param_bounds[1])
-        cell_pars.append(param)
-
-    new_cell = cell.Cell(np.array([[cell_pars[0], 0, 0],
-                                   [0, cell_pars[1], 0],
-                                   [0, 0, cell_pars[2]]]))
-    try:
-
-        atom_typ = [random.choice(atom_types), random.choice(atom_types)]
-        scaled_position = [np.random.rand(3), np.random.rand(3)]
-
-        atoms = ase.Atoms(
-            atom_typ,
-            scaled_positions=scaled_position,
-            cell=new_cell,
-            pbc=True
-        )
-
-        return atoms
-    except Exception as e:
-        warnings.warn(
-            "Error creating random atoms object: {}".format(e), UserWarning
-        )
-        return None
-
-
-def create_random_atoms_object(
-    atom_types: list[str],
-    cell_bounds: CustomCellBounds,
-) -> ase.Atoms | None:
-
-    bounds = cell_bounds.bounds
-
-    cell_pars = []
-    for param in ["a", "b", "c"]:
-        param_bounds = bounds[param]
-        param = np.random.uniform(param_bounds[0], param_bounds[1])
-        cell_pars.append(param)
-
-    new_cell = cell.Cell(np.array([[cell_pars[0], 0, 0],
-                                   [0, cell_pars[1], 0],
-                                   [0, 0, cell_pars[2]]]))
-    try:
-
-        atom_typ = random.choice(atom_types)
-        scaled_position = np.random.rand(3)
-
-        atoms = ase.Atoms(
-            atom_typ,
-            scaled_positions=[scaled_position],
-            cell=new_cell,
-            pbc=True
-        )
-
-        return atoms
-    except Exception as e:
-        warnings.warn(
-            "Error creating random atoms object: {}".format(e), UserWarning
-        )
-        return None
-
-
-def create_one_atomic_crystals(
-    atom_types: list[str],
-    cell_bounds: CustomCellBounds,
-    total_number_of_atoms: int,
-):
-    print("Creating one atomic crystals...")
-    atoms_list = []
-    max_steps = 2*total_number_of_atoms
-    step = 0
-    while len(atoms_list) < total_number_of_atoms:
-        print(
-            "Adding atoms object {}/{}".format(
-                len(atoms_list), total_number_of_atoms), end="\r"
-        )
-        atoms_object = create_random_atoms_object(
-            atom_types, cell_bounds
-        )
-
-        if step > max_steps:
-            break
-
-        if crystal_is_valid(atoms_object, cell_bounds):
-            atoms_list.append(atoms_object)
-            step += 1
-        else:
-            step += 1
-
-    print("Created {} atomic crystals".format(len(atoms_list)))
-    print()
-    return atoms_list
-
-
-def create_two_atomic_crystals(
-    atom_types: list[str],
-    cell_bounds: CustomCellBounds,
-    total_number_of_atoms: int,
-):
-    print("Creating one atomic crystals...")
-    atoms_list = []
-    max_steps = 2*total_number_of_atoms
-    step = 0
-    while len(atoms_list) < total_number_of_atoms:
-        print(
-            "Adding atoms object {}/{}".format(
-                len(atoms_list), total_number_of_atoms), end="\r"
-        )
-        atoms_object = create_random_atoms_object_2(
-            atom_types, cell_bounds
-        )
-
-        if step > max_steps:
-            break
-
-        if crystal_is_valid(atoms_object, cell_bounds):
-            atoms_list.append(atoms_object)
-            step += 1
-        else:
-            step += 1
-
-    print("Created {} atomic crystals".format(len(atoms_list)))
-    print()
-    return atoms_list
-
-
-if __name__ == "__main__":
-    from ase.visualize import view
-
-    atom_types = ["H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne"]
-    cell_bounds = CustomCellBounds(
-        bounds={
-            "a": [1, 10],
-            "b": [1, 10],
-            "c": [1, 10],
-        }
-    )
-    print("Bounds: ", cell_bounds.bounds)
-    total_number_of_atoms = 10
-
-    atoms_list = create_one_atomic_crystals(
-        atom_types, cell_bounds, total_number_of_atoms
+def convert_ase_atoms_to_individual(atoms: ase.Atoms) -> Individual:
+    return Individual(
+        positions=atoms.get_positions(),
+        cell=atoms.get_cell(),
+        pbc=atoms.pbc,
+        symbols=atoms.get_chemical_symbols(),
     )
 
-    for atoms in atoms_list:
-        print(atoms)
-        print(atoms.cell)
-        print(atoms.get_positions())
-        print(atoms.get_atomic_numbers())
-        print()
+class OneAtomicCrystalGenerator(PopulationGenerator):
+    """Class to generate a population of one atomic crystals.
 
-    view(atoms_list)
+    :param atom_types: A list of atom types that are used to generate the
+    :param cell_bounds: The bounds of the cell parameters which the
+        generated crystals should not exceed or be below of.
+    :param closest_distances: The closest distances that define the
+        minimum allowed distance between atoms.
+    :param volume: The volume of the generated crystals.
+    """
 
+    def __init__(
+        self,
+        atom_types: list[str],
+        cell_bounds: CustomCellBounds,
+        closest_distances: CustomClosestDistances,
+        volume: float,
+    ):
+        self.atom_types = atom_types
+        self.cell_bounds = cell_bounds
+        self.closest_distances = closest_distances
+        self.volume = volume
 
-def create_slab_population(
-    atom_types: list[str] | list[int],
-    cell_bounds: CustomCellBounds,
-    population_size: int,
-    closest_distances: CustomClosestDistances,
-    number_of_atoms: int,
-    volume: float = 9000.0,
-    number_of_variable_cell_vectors: int = 0,
-    splits: dict[tuple[int], int] = {(2,): 1, (1,): 1},
-    slab: ase.Atoms | None = ase.Atoms('', pbc=True),
-) -> list[ase.Atoms]:
-    splits = {(2,): 1, (1,): 1}
+    def generate_individuals(self, n: int) -> list[Individual]:
+        # Create a generator for each atom type
+        # This is just how the ase.ga.startgenerator.StartGenerator works
+        # block defines the number of atoms of each type, here 1
+        generators = [StartGenerator(
+            slab=ase.Atoms('', pbc=True),
+            blocks=[(atom_type, 1)],
+            blmin=self.closest_distances._ase_closest_distances,
+            number_of_variable_cell_vectors=3,
+            cellbounds=self.cell_bounds._ase_cellbounds,
+            box_volume=self.volume,
+            splits={(2,): 1, (1,): 1},
+            test_dist_to_slab=False,
+            test_too_far=False,
+        ) for atom_type in self.atom_types]
 
-    if slab is None:
-        slab = ase.Atoms('', pbc=True)
+        max_steps = 2 * n
+        # Generate individuals
+        step = 0
+        individuals = []
+        while len(individuals) < n:
+            # Get a random generator for a specific atom type
+            gen_index = random.randint(0, len(generators) - 1)
 
-    if isinstance(atom_types[0], str):
-        atom_types = [atomic_numbers[atom] for atom in atom_types]
-        print("Atom types: ", atom_types)
+            # Get a new candidate from the generator
+            crystal = generators[gen_index].get_new_candidate(maxiter=1000)
 
-    n_atom_types = len(atom_types)
-    n_atoms = number_of_atoms // n_atom_types
-    block = []
-    for i in range(n_atom_types):
-        block.append((atom_types[i], n_atoms))
+            # The generator returns None, if the crystal could not be created
+            # in the internal max number of steps
+            if crystal is not None:
 
-    sg = StartGenerator(
-        slab=slab,
-        blocks=block,
-        blmin=closest_distances._ase_closest_distances,
-        box_volume=volume,
-        number_of_variable_cell_vectors=number_of_variable_cell_vectors,
-        cellbounds=cell_bounds._ase_cellbounds,
-        splits=splits,
-    )
+                # Convert the ase.Atoms object to an Individual object
+                individuals.append(
+                    convert_ase_atoms_to_individual(crystal)
+                )
 
-    print()
-    print("Creating slab population...")
-    crystals = []
-    for i in range(population_size):
-        crystal = sg.get_new_candidate()
-        crystals.append(crystal)
+            # Increase step and check if max steps is reached
+            step += 1
+            if step > max_steps:
+                warnings.warn(
+                    "Could not generate {} individuals".format(n), UserWarning
+                )
+                break
 
-    return crystals
+        return individuals
