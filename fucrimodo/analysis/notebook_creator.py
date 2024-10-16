@@ -1,13 +1,12 @@
 import nbformat
 from nbformat.v4 import new_notebook
 from nbformat import validate
-from configs.result_notebook_generators.default_cells_run_analysis \
+from fucrimodo.lab_template.configs.analysis.notebook_generator.default_cells_run_analysis \
     import get_setup_cells, get_run_info_cells, get_stage_info_cells
-        
 import os
 from .run_analysis import RunData
-
 from nbclient.client import NotebookClient
+
 
 def create_results_notebook(
     run_dir
