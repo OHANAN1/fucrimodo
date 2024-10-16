@@ -200,8 +200,13 @@ class GAPreset(ABC):
         with the new cell bounds when called.
         """
         self._cell_bounds = cell_bounds
-        del self._mutation_list
-        del self._crossover_list
+
+        # Reset the mutations and crossovers if they are already set as
+        # private properties so they are recalculated with the new cell bounds.
+        if hasattr(self, "_mutation_list"):
+            del self._mutation_list
+        if hasattr(self, "_crossover_list"):
+            del self._crossover_list
 
     def reset(self):
         """Reset the properties in the class that are used to init the GAStage.
@@ -211,12 +216,23 @@ class GAPreset(ABC):
         Usefull, when the cell bounds or the closest distances are changed, 
         so the properties are recalculated with the new values.
         """
-        del self._fitness_functions
-        del self._crossover_list
-        del self._mutation_list
-        del self._break_condition
-        del self._parent_selection
-        del self._survivor_selection
+        if hasattr(self, "_fitness_functions"):
+            del self._fitness_functions
+
+        if hasattr(self, "_mutation_list"):
+            del self._mutation_list
+
+        if hasattr(self, "_crossover_list"):
+            del self._crossover_list
+
+        if hasattr(self, "_break_condition"):
+            del self._break_condition
+            
+        if hasattr(self, "_parent_selection"):
+            del self._parent_selection
+
+        if hasattr(self, "_survivor_selection"):
+            del self._survivor_selection
 
 
 # ╔══════════════════════════════════════════════════════════╗
