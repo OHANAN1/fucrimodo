@@ -200,7 +200,7 @@ class RBFSimilarity(SOAPSimilarity):
         self,
         target_feature_vector: NDArray[np.float64],
         rbf_gamma: float | None = None,
-        adjust_gamma: bool = True,
+        adjust_gamma: bool = False,
         gamma_values: NDArray[np.float64] = np.logspace(-5, 1, 100),
         db_title: str = "RBFSimilarity"
     ):
@@ -384,7 +384,7 @@ class SpeciesSpecificRBFSim(SOAPSimilarity):
         species: str,
         species_to_compare: list[str],
         rbf_gamma: float | None = None,
-        adjust_gamma: bool = True,
+        adjust_gamma: bool = False,
         gamma_values: NDArray[np.float64] = np.logspace(-1, 4, 100),
         db_title: str = "SpeciesSpecificRBFSim"
     ):
