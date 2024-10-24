@@ -65,6 +65,25 @@ class FitnessFunction(ABC):
         """
         pass
 
+    def evaluate_individuals(self, individuals: list[Individual]) -> list[float]:
+        """Method to calculate the fitness value of a list of individuals.
+
+        Often it is more efficient to evaluate multiple individuals at once
+        instead of evaluating them one by one. E.g. through parallelization.
+        If not implemented by the class that inherits from this class,
+        this function will evaluate each individual one by one. 
+        (Not efficient)
+
+        :param individuals: List of individuals to evaluate.
+
+        :returns: List of fitness values for each individual.
+        """
+        fitnesses = []
+        for individual in individuals:
+            fitness = self.evaluate_individual(individual)
+            fitnesses.append(fitness)
+        return fitnesses
+
     def adjust_to_population(self, population: Population) -> None:
         """
         Optional function that can be used to adjust for example the

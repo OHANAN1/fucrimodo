@@ -1,8 +1,11 @@
 from .abstract import Mutation
-from fucrimodo.core.modules import Individual
+from fucrimodo.core.modules import Individual, FitnessFunction
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.utils.soap_similarity import RBFSimilarity 
 import ase.ga.standardmutations as ase_standard_mut
 import numpy as np
+
 
 class RattleMutation(Mutation):
     """
@@ -64,6 +67,146 @@ class RattleMutation(Mutation):
         mutant = ase_rattle.mutate(offspring)
 
         return mutant
+
+
+class SmartRattleMutation(Mutation):
+    """Tests `directions_to_test` random directions and moves the atom in the direction
+    that results in the highest fitness.
+
+    :param closest_distances: ClosestDistances object
+    :param fitness_function: Fitness function that evaluates what is the best 
+        crystal
+    :param descriptor_object: Descriptor to calculate the feature vectors
+        of all possible atom movements in parallel. This can safe computation
+        time. If None, the fitness function takes care of the descriptor if 
+        needed.
+    :param directions_to_test: Number of random directions to test
+    :param movement_step: Maximum movement step in Angstrom
+    :param max_steps: Maximum number of steps to take
+    """
+    def __init__(
+        self, 
+        closest_distances: CustomClosestDistances,
+        fitness_function: FitnessFunction,
+        descriptor_object: CustomSOAP | None = None,
+        directions_to_test: int = 3,
+        max_movement: float = 0.1,
+        max_steps: int = 10
+    ):
+        self.closest_distances = closest_distances
+        self.max_steps = max_steps
+        self.directions_to_test = directions_to_test
+        self.max_movement = max_movement
+        self.fitness_function = fitness_function
+        self.descriptor_object = descriptor_object
+
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
+        atom_index = np.random.randint(0, len(crystal) - 1)
+        candidates = []
+        for _ in range(self.directions_to_test):
+            # Copy the crystal to not change the original
+            candidate = crystal.copy()
+
+            # rattle random atom in random direction
+            candidate.positions[atom_index] += np.random.uniform(
+                -self.max_movement, self.max_movement, 3
+            )
+            candidates.append(candidate)
+
+        if self.descriptor_object is not None:
+            feature_vectors = self.descriptor_object.create(candidates)
+            for i, feature_vector in enumerate(feature_vectors):
+                candidates[i].features = feature_vector
+
+        # Evaluate fitness of all candidates
+        fitnesses = self.fitness_function.evaluate_individuals(candidates)
+
+        # Get the index of the best candidate and apply it to the crystal
+        best_crystal_ind = np.argmax(fitnesses)
+
+        new_positions = candidates[best_crystal_ind].positions
+        crystal.positions[atom_index] = new_positions[atom_index]
+
+        return crystal
+
+
+class GradientRattleMutation(Mutation):
+    """Picks a random atom and moves it in the direction of the gradient
+    of the SOAPs rbf similarity.
+
+    Currently only works with SOAP descriptor and the RBF similarity.
+
+    :param closest_distances: ClosestDistances object
+    :param rbf_similarity_obj: Object to calculate the rbf similarity
+        to the target crystal. Must have a descriptor_object set, so that
+        the gradient can be calculated.
+    :param max_steps: Maximum number of steps to take
+    :param n_atoms_to_move: Number of atoms to move
+    :param max_movement: Maximum movement step in Angstrom
+    :param normalize_gradient: If True, the gradient is normalized before
+        moving the atoms.
+
+    :raises AssertionError: If the descriptor object of the rbf_similarity_obj
+        is not set.
+    """
+    def __init__(
+        self,
+        closest_distances: CustomClosestDistances,
+        rbf_similarity_obj: RBFSimilarity,
+        max_steps: int = 10,
+        n_atoms_to_move: int = 1,
+        max_movement: float = 0.1,
+        normalize_gradient: bool = True
+    ):
+        self.closest_distances = closest_distances
+        self.max_steps = max_steps
+        self.rbf_similarity_obj = rbf_similarity_obj
+        self.n_atoms_to_move = n_atoms_to_move
+        self.max_movement = max_movement
+        self.normalize_gradient = normalize_gradient
+
+        # Check if the rbf_similarity_obj has a descriptor
+        # If it is not set, the derivative cannot be calculated
+        assert rbf_similarity_obj.descriptor_object is not None, \
+            "The descriptor object of the rbf_similarity_obj must be set."
+
+    def perform_mutation(self, crystal: Individual) -> Individual | None:
+        # adjust n_atoms_to_move if it is larger than the number of atoms
+        if self.n_atoms_to_move > len(crystal):
+            n_atoms_to_move = len(crystal)
+        else:
+            n_atoms_to_move = self.n_atoms_to_move
+
+        # Pick random atoms to move, all atoms indicees are only picked once
+        atomic_indices = np.random.choice(
+            np.arange(len(crystal)), size=n_atoms_to_move, replace=False
+        )
+
+        # Calculate the gradient
+        _, gradient = self.rbf_similarity_obj.derivative(
+            crystal, include=atomic_indices.tolist()
+        )
+
+        # Move the atoms
+        for i in range(len(atomic_indices)):
+            # Normalize the gradient
+            if self.normalize_gradient:
+                norm = np.linalg.norm(gradient[i])
+            else:
+                norm = 1
+
+            if norm != 0:
+                gradient[i] = [x / norm for x in gradient[i]]
+            else:
+                gradient[i] = [0, 0, 0]
+
+            # Move the atom with a random factor in the direction of the gradient
+            crystal.positions[atomic_indices[i]] += [
+                x * np.random.uniform(0, self.max_movement)
+                for x in gradient[i]
+            ]
+
+        return crystal
 
 
 class MirrorMutation(Mutation):

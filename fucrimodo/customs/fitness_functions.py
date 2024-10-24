@@ -59,7 +59,7 @@ class PhysicalityFitness(FitnessFunction):
 
         return fitness * norm_factor
 
-    def evaluate_individual(self, individual: ase.Atoms) -> float:
+    def evaluate_individual(self, individual: Individual) -> float:
         return self.__calculate_normalized_atom_distance_fitness(
             crystal=individual,
         )
@@ -84,34 +84,38 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         self.soap_obj = soap_object
         self.adjust = adjust
 
-    def __get_similarity_to_target_soap(
-        self,
-        soap_feature_vector: np.ndarray
-    ) -> float:
-        similarity = self.soap_similarity.get_similarity_of_feature_vector(
-            soap_feature_vector
-        )
-        return similarity
+    def __assign_features_to_individuals(self, individuals: list[Individual]):
+        """Assigns the features to the individuals if they are not already set."""
 
-    def __get_difference_to_target_fitness(
-        self,
-        soap_feature_vector: np.ndarray
-    ) -> float:
-        similarities_to_target_soap = self.__get_similarity_to_target_soap(
-            soap_feature_vector
-        )
-        return similarities_to_target_soap
+        # Collect individuals without features
+        individuals_without_features = []
+        for ind in individuals:
+            if ind.features is None:
+                individuals_without_features.append(ind)
+
+        if len(individuals_without_features) > 0:
+            feature_vectors = self.soap_obj.create(
+                individuals_without_features,
+                n_jobs=-1
+            )
+
+            # If only one individual is without features don't loop
+            if len(individuals_without_features) == 1:
+                individuals_without_features[0].features = feature_vectors
+            else:
+                # Else loop through the feature vectors and assign them to the 
+                # individuals
+                for i, feature_vector in enumerate(feature_vectors):
+                    individuals_without_features[i].features = feature_vector
 
     def evaluate_individual(self, individual: Individual) -> float:
-
         try:
-            if individual.features is not None:
-                soap_feature_vector = individual.features
+            # Assign the features to the individual if they are not set already
+            self.__assign_features_to_individuals([individual])
 
-            else:
-                soap_feature_vector = self.soap_obj.create(individual)
-                individual.features = soap_feature_vector
-
+            # Check again if the features are set
+            assert individual.features is not None, \
+                "Features are not set. This should not happen."
 
         except Exception as e:
             warnings.warn(
@@ -122,19 +126,71 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
             return 0
 
         try:
-            diff_to_target_fitnesses = self.__get_difference_to_target_fitness(
-                soap_feature_vector=soap_feature_vector
+            # Calculate the fitness for the individual, here the similarity
+            similarity = self.soap_similarity.get_similarity_of_feature_vector(
+                feature_vector=individual.features,
             )
-            return diff_to_target_fitnesses
+            return similarity
 
         except Exception as e:
             warnings.warn(
                 f"{self.db_title}:"
                 f"Could not calculate fitness for ind: {individual}\n"
                 f"Error: {e} \n"
-                f"Shape of feature vector: {soap_feature_vector.shape}"
+                f"Shape of feature vector: {individual.features.shape}"
             )
             return 0
+
+    def evaluate_individuals(self, individuals: list[Individual]) -> list[float]:
+        """Evaluate a similarity fitness for a list of individuals.
+
+        Uses the :attr:`Individual.features` attribute to calculate the fitness.
+        If not set calculates the features with the :attr:`CustomSOAP` object 
+        for all individuals without features in parallel.
+
+        :param individuals: List of individuals to evaluate.
+
+        :returns: List of fitness values for each individual.
+
+        :raises ValueError: If the features could not be assigned to the
+            individuals or the fitness could not be calculated.
+        """
+        # Use the evaluate_individual function if only one individual is given
+        if len(individuals) == 1:
+            return [self.evaluate_individual(individuals[0])]
+
+        # Else calculate the fitness for all individuals
+        try:
+            # Assign the features to the individuals if they are not set already
+            self.__assign_features_to_individuals(individuals)
+        except Exception as e:
+            raise ValueError(
+                f"{self.db_title}:"
+                f"Could not assign features to indviduals: {individuals}"
+                f"Error: {e}"
+            )
+
+        try:
+            # Calculate the fitness for each individual
+            features = []
+            for ind in individuals:
+                # Check again if the features are set
+                assert ind.features is not None, \
+                    "Features are not set. This should not happen."
+                features.append(ind.features)
+
+            # Use the feature vector to calculate the fitnesses/similarities
+            fitnesses = self.soap_similarity.get_similarity_of_feature_vectors(
+                feature_vectors=features
+            )
+            return fitnesses.tolist()
+
+        except Exception as e:
+            raise ValueError(
+                f"{self.db_title}:"
+                f"Could not calculate fitness for individuals: {individuals}\n"
+                f"Error: {e}"
+            )
 
     def __repr__(self) -> str:
         r_str = "SimilarityToTargetSOAPFitness("
