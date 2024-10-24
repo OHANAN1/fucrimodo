@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
+import ase
 from sklearn.metrics.pairwise import cosine_similarity, rbf_kernel
 from numpy.typing import NDArray
 import numpy as np
+from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from dscribe.kernels import AverageKernel
 import matplotlib.pyplot as plt
@@ -199,7 +201,8 @@ class RBFSimilarity(SOAPSimilarity):
     def __init__(
         self,
         target_feature_vector: NDArray[np.float64],
-        rbf_gamma: float | None = None,
+        descriptor_object: CustomSOAP | None = None,
+        rbf_gamma: float = 0.1,
         adjust_gamma: bool = False,
         gamma_values: NDArray[np.float64] = np.logspace(-5, 1, 100),
         db_title: str = "RBFSimilarity"
@@ -208,9 +211,10 @@ class RBFSimilarity(SOAPSimilarity):
         self.target_feature_vector = target_feature_vector
         self.gamma_values = gamma_values
         self.adjust_gamma = adjust_gamma
+        self.descriptor_object = descriptor_object
 
-        if self.rbf_gamma is None:
-            self.rbf_gamma = 1 / len(self.target_feature_vector)
+        # if self.rbf_gamma is None:
+        #     self.rbf_gamma = 1 / len(self.target_feature_vector)
 
         if self.adjust_gamma is True:
             assert self.gamma_values is not None, \
@@ -275,6 +279,100 @@ class RBFSimilarity(SOAPSimilarity):
 
     def get_db_title(self) -> str:
         return self.db_title
+
+    def derivative(
+        self,
+        individual: Individual,
+        include: list[int] | None = None,
+        exclude: list[int] | None = None,
+        kwargs: dict = {"n_jobs": -1},
+    ) -> tuple[float, list[list]]:
+        """Calculate the derivative of the similarity.
+
+        Descriptor object must be set for this method to work.
+        Uses the derivatives method of the SOAP descriptor to get the derivatives
+        of the feature vector with respect to the atomic positions.
+        Then calculates the derivative of the similarity with respect to the
+        atomic positions.
+
+        :param individual: The individual for which the derivative should be
+            calculated.
+        :param include: List of atom indices that should be included in the
+            calculation. If None, all atoms are included.
+        :param exclude: List of atom indices that should be excluded from the
+            calculation. If None, no atoms are excluded. If both include and
+            exclude are None, all atoms are included.
+            Do not set both include and exclude!
+        :param kwargs: Keyword arguments for the SOAP descriptor derivatives
+            method. Do not use the `include` and `exclude` arguments, since
+            they are set for this method internally.
+
+        :return: The similarity and the derivative of the similarity with
+            respect to the atomic positions for the specified atoms in the
+            individual. See derivative method of the Dscribe SOAP descriptor 
+            for more information. (Outputshape is the same)
+        """
+        assert self.descriptor_object is not None, \
+            "Descriptor object must be set for the derivative method to work."
+
+        # Check if individual is smaller than include and exclude
+        if include is not None:
+            assert len(individual) >= len(include), \
+                "Include list is longer than the number of atoms in the individual."
+        if exclude is not None:
+            assert len(individual) >= len(exclude), \
+                "Exclude list is longer than the number of atoms in the individual."
+
+        target_feature_vector = self.target_feature_vector
+
+        # Check if the include and exclude arguments are not used
+        assert "include" not in kwargs, \
+            "Do not use the 'include' argument in the kwargs."
+        assert "exclude" not in kwargs, \
+            "Do not use the 'exclude' argument in the kwargs."
+
+        # Check that only include or exclude is set and not both
+        # Would lead to an error in the derivative calculation
+        assert include is None or exclude is None, \
+            "Do not set both include and exclude."
+
+        derivatives_data, feature_vector = self.descriptor_object._dscribe_soap.derivatives(
+            individual, include=include, exclude=exclude, **kwargs
+        )
+
+        # Unpack the feature vector, since it is a list of one element
+        feature_vector = feature_vector[0]
+        assert type(feature_vector) is np.ndarray, \
+            "Feature vector is not a numpy array, adjust descriptor so output is a list of arrays."
+
+        # Unpack the derivatives data, since it is a list of one element
+        derivatives_data = derivatives_data[0]
+
+        # Calculate the similarity of the feature vector
+        similarity = self.get_similarity_of_feature_vector(feature_vector)
+
+        prefactor = 2 * self.rbf_gamma * similarity
+
+        # Calculate the difference between the target feature vector and the
+        # current feature vector
+        feature_vector_diff = target_feature_vector - feature_vector 
+
+        # Calculate the derivative for all returned derivatives
+        similarity_derivatives = []
+        for deriv_data in derivatives_data:
+            # Calculate the derivative for the directions x, y, z
+            direction_similarity_derivatives = []
+            for direction in range(3):
+                direction_similarity_derivatives.append(
+                     prefactor * np.dot(
+                        feature_vector_diff,
+                        deriv_data[direction]
+                    )
+                )
+
+            similarity_derivatives.append(direction_similarity_derivatives)
+
+        return similarity, similarity_derivatives
 
     def __repr__(self):
         r_str = "RBFSimilarity("
