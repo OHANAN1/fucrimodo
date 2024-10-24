@@ -1,22 +1,11 @@
 import numpy as np
 import ase
-from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.custom_soap import CustomSOAP
-from numpy.typing import NDArray
 from ase.geometry import get_distances
 import warnings
-from fucrimodo.core.modules import FitnessFunction
+from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.utils.soap_similarity import SOAPSimilarity
 
-
-# ╔══════════════════════════════════════════════════════════╗
-# ║                    Utility functions                     ║
-# ╚══════════════════════════════════════════════════════════╝
-
-
-# ╔══════════════════════════════════════════════════════════╗
-# ║                 Fitness Function Classes                 ║
-# ╚══════════════════════════════════════════════════════════╝
 
 class PhysicalityFitness(FitnessFunction):
     def __init__(
@@ -78,6 +67,7 @@ class PhysicalityFitness(FitnessFunction):
     def __repr__(self) -> str:
         r_str = "PhysicalityFitness()"
         return r_str
+
 
 class SimilarityToTargetSOAPFitness(FitnessFunction):
     def __init__(
