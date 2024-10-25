@@ -1,5 +1,8 @@
 import os
 import sys
+import numpy as np
+
+from fucrimodo.core.utils.custom_soap import CustomSOAP
 
 class CLICommand:
     """Perform descriptor inversion on provided input file."""
@@ -9,9 +12,13 @@ class CLICommand:
         add = parser.add_argument
         add(
             'input_file',
-            help='Give the path to the file with the features that should ' \
-                'be inverted and the parameters that define the descriptor. ' \
-                '(file-type: json).'
+            help=(
+                'Give the path to the input file with the features that should '
+                'be inverted and the parameters that define the descriptor. '
+                'Can be created with scripts. Docs will be added soon.'
+                'Or give the path to a directory where multiple input files ' 
+                'are stored. These files will then be processed in parallel.'
+            )
         )
         add('-v', '--verbose', action='store_true', help='More output.')
         add(
@@ -66,11 +73,8 @@ class Runner:
         else:
             self.save_dir = os.getcwd()
 
-        from fucrimodo.core.utils import soap_parser
-        self.target_features, self.soap_obj = soap_parser.load_soap_features_from_file(
-            self.input_file
-        )
-
+        # Get either the standard run config or the custom run config provided 
+        # by the user
         if args.config is not None:
             from fucrimodo.utils.import_helper import import_from_path
             run_config = import_from_path(args.config, "custom_run_config")
@@ -88,15 +92,74 @@ class Runner:
             from importlib import import_module
             self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
 
-    def run(self):
-        """Run the inversion."""
-        # Create the MultiStageSearch object
+    def __get_features_and_soap_obj(
+        self
+    ) -> list[tuple[np.ndarray, CustomSOAP]] | tuple[np.ndarray, CustomSOAP]:
+        from fucrimodo.core.utils import soap_parser
+        # If the input file is a directory, get all files in the directory
+        if os.path.isdir(self.input_file):
+            print("Processing multiple input files.")
+            # Set the attribute to indicate that multiple files are being processed
+            feature_soap_tuples = []
+            for f in os.listdir(self.input_file):
+                input_file = os.path.join(self.input_file, f)
+                feat_soap_tuple = soap_parser.load_soap_features_from_file(
+                    input_file
+                )
+                feature_soap_tuples.append(feat_soap_tuple)
+
+            # Check if any files were found in the directory
+            assert len(feature_soap_tuples) > 0, "No files in the directory."
+
+            return feature_soap_tuples
+
+        # If the input file is a single file, load the features from the file
+        else:
+            print("Processing a single input file.")
+            feature_soap_tuple = soap_parser.load_soap_features_from_file(
+                self.input_file
+            )
+            return feature_soap_tuple
+
+    def __run_single_file(self, features_soap_tuple: tuple[np.ndarray, CustomSOAP]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
         multi_stage_search = MultiStageSearch(
             save_dir=self.save_dir,
-            target_features=self.target_features,
-            descriptor_object=self.soap_obj,
+            target_features=features_soap_tuple[0],
+            descriptor_object=features_soap_tuple[1],
             descriptive_name=self.name,
         )
-
         self.run_config.main(multi_stage_search)
+
+    def __run_multiple_files(self, feature_soap_tuples: list[tuple[np.ndarray, CustomSOAP]]):
+        from fucrimodo.core.multi_stage_search import MultiStageSearch
+
+        # Create a MultiStageSearch object for each feature and SOAP object tuple
+        run_id = 1
+        multi_stage_searches = []
+        for features, soap_obj in feature_soap_tuples:
+            multi_stage_search = MultiStageSearch(
+                save_dir=self.save_dir,
+                target_features=features,
+                descriptor_object=soap_obj,
+                descriptive_name=f"{self.name}_id_{run_id}",
+            )
+            multi_stage_searches.append(multi_stage_search)
+            run_id += 1
+
+        # Run the inversion for each MultiStageSearch object in sequence
+        print("WARNING! Currently running multiple files in sequence not in parallel.")
+        print("This will be changed in the future.")
+        for multi_stage_search in multi_stage_searches:
+            self.run_config.main(multi_stage_search)
+
+    def run(self):
+        """Run the inversion."""
+        # Get the features and SOAP object/s from the input file/s
+        feature_soap_tuples = self.__get_features_and_soap_obj()
+
+        if isinstance(feature_soap_tuples, list):
+            self.__run_multiple_files(feature_soap_tuples)
+        else:
+            self.__run_single_file(feature_soap_tuples)
+
