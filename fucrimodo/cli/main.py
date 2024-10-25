@@ -14,7 +14,7 @@ commands = [
     ('run', 'fucrimodo.cli.run'),
     ('analyse', 'fucrimodo.cli.analyse'),
     ('init', 'fucrimodo.cli.init'),
-    # ('utils', 'fucrimodo.cli.utils'),
+    ('utils', 'fucrimodo.cli.utils'),
 ]
 
 
