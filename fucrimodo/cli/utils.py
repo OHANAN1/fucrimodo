@@ -48,6 +48,16 @@ class CLICommand:
                 'used. Only if the utility needs an id.'
             )
         )
+        add(
+            '-c', '--config', 
+            help=('Path to the config file. Must be a python file that '
+                'contains a method "main". Depending on the utility it takes '
+                'different arguments: \n'
+                'For "create_target": main(ase.Atoms) -> '
+                'tuple[descriptor_name: str, target_features: list, '
+                'descriptor_kwargs: dict, notes: str, save_name: str].\n '
+                'If not provided, the default config will be used.')
+        )
 
     @staticmethod
     def run(args):
@@ -80,7 +90,7 @@ class Runner:
 
         if args.path is not None:
             if not os.path.exists(args.path):
-                print("The Path to the file or directory does not exist.")
+                print(f"The Path '{args.path}' to the target file or directory does not exist.")
                 sys.exit(1)
             self.path = args.path
         else:
@@ -106,7 +116,7 @@ class Runner:
         assert self.path is not None, \
             "The path to the atoms file or ase database must be provided."
         assert os.path.isfile(self.path), \
-            "The path to the atoms file or ase database must be a file."
+            f"The provided path '{self.path}' to the atoms file or ase database must be a file."
 
         # Load the atoms object.
         if self.path.endswith(".db"):
@@ -135,13 +145,13 @@ class Runner:
             main = self.config.main
 
         # Run the utility.
-        features, descriptor_parameters, additional_notes, save_name = main(atoms)
+        descriptor_name, features, descriptor_parameters, additional_notes, save_name = main(atoms)
         additional_notes = add_to_notes + additional_notes
 
         from fucrimodo.utils.target_file_parser import save_to_target_file
         save_to_target_file(
             features,
-            descriptor_name=descriptor_parameters["descriptor"],
+            descriptor_name=descriptor_name,
             descriptor_parameters=descriptor_parameters,
             additional_notes=additional_notes,
             save_path=os.path.join(self.save_dir, save_name)

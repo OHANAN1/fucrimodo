@@ -53,7 +53,7 @@ def load_target_file(
         'features': list,
             The feature vector that should be inverted
 
-        'additional_notes': str
+        'additional_notes': str, Optional
             Additional notes that were saved to the file
     }
 
@@ -75,11 +75,11 @@ def load_target_file(
         "The descriptor name needs to be a string."
     )
 
-    assert "descriptor_parameters" in target_dict.keys(), (
-        "The json input needs to have a field called 'descriptor_parameters'.",
+    assert "parameters" in target_dict.keys(), (
+        "The json input needs to have a field called 'parameters'.",
         f"But keys are: {target_dict.keys()}"
     )
-    assert isinstance(target_dict["descriptor_parameters"], dict), (
+    assert isinstance(target_dict["parameters"], dict), (
         "The descriptor parameters need to be a dictionary."
     )
 
@@ -91,16 +91,12 @@ def load_target_file(
         "The features need to be a list."
     )
 
-    assert "additional_notes" in target_dict.keys(), (
-        "The json input needs to have a field called 'additional_notes'.",
-        f"But keys are: {target_dict.keys()}"
-    )
-    assert isinstance(target_dict["additional_notes"], str), (
-        "The additional notes need to be a string."
-    )
+    if not hasattr(target_dict, "additional_notes"):
+        print("No additional notes found in the target file.")
+        target_dict["additional_notes"] = ""
 
     if target_dict["descriptor_name"] == "CustomSOAP":
-        descriptor_object = CustomSOAP(**target_dict["descriptor_parameters"])
+        descriptor_object = CustomSOAP(**target_dict["parameters"])
     else:
         raise NotImplementedError(
             f"Descriptor {target_dict['descriptor_name']} is not implemented"

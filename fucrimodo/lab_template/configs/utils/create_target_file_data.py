@@ -1,12 +1,7 @@
 import ase
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 
-def main(atoms: ase.Atoms) -> tuple[list[float], dict, str, str]:
-    target_features = []
-    kwargs = {}
-    notes = ""
-    target_file_name = ""
-
+def main(atoms: ase.Atoms) -> tuple[str, list[float], dict, str, str]:
     # Create the SOAP descriptor object
     kwargs = {
         "r_cut": 15.0,
@@ -17,6 +12,7 @@ def main(atoms: ase.Atoms) -> tuple[list[float], dict, str, str]:
         "periodic": True,
         "average": "inner"
     }
+    descriptor_name = "CustomSOAP"
     soap = CustomSOAP(**kwargs)
 
     # Calculate the feature vector
@@ -26,12 +22,10 @@ def main(atoms: ase.Atoms) -> tuple[list[float], dict, str, str]:
     target_file_name = f"{atoms.get_chemical_formula()}_target_file.json"
 
     # Add additional notes about the atoms object
-    notes = f"Number of atoms: {len(atoms)}"
-    notes += f"\nChemical formula: {atoms.get_chemical_formula()}"
-    notes += f"\nCell volume: {atoms.get_volume()}"
-    notes += f"\nPBC: {atoms.get_pbc()}"
-    notes += f"\nPositions: {atoms.get_positions()}"
-    notes += f"\nCell: {atoms.get_cell()}"
-    notes += f"\nAtomic numbers: {atoms.get_atomic_numbers()}"
+    notes = "Information:\n"
+    notes += f"Number of atoms: {len(atoms)}\n"
+    notes += f"Chemical formula: {atoms.get_chemical_formula()}\n"
+    notes += f"Cell volume: {atoms.get_volume()}\n"
+    notes += f"PBC: {atoms.get_pbc()}\n"
 
-    return target_features.tolist(), kwargs, notes, target_file_name
+    return descriptor_name, target_features.tolist(), kwargs, notes, target_file_name
