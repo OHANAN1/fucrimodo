@@ -28,14 +28,14 @@ class CustomSOAP():
         if all(isinstance(s, int) for s in species):
             from ase.data import chemical_symbols
             str_species = [chemical_symbols[s] for s in species]
-            self._species = str_species
+            self._species = list(set(str_species))
         elif all(isinstance(s, str) for s in species):
             str_species = []
             for s in species:
                 if not isinstance(s, str):
                     raise ValueError('Species must be a list of strings or integers')
                 str_species.append(s)
-            self._species = str_species
+            self._species = list(set(str_species))
         else:
             raise ValueError('Species must be a list of strings or integers')
 
