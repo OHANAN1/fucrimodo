@@ -92,14 +92,21 @@ class Runner:
             from importlib import import_module
             self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
 
-    def __copy_input_file(self, run_dir: str):
+    def __copy_input_file(self, run_dir: str, input_file: str):
         """Copy the input file to the provided run directory. 
 
         The file will be renamed to 'input_file.json'.
         """
         import shutil
         save_path = os.path.join(run_dir, "input_file.json")
-        shutil.copy(self.input_file, save_path)
+        shutil.copy(input_file, save_path)
+
+    def __get_input_files_from_dir(self, input_dir: str) -> list[str]:
+        """Get all files in the provided directory."""
+        input_files = []
+        for f in os.listdir(input_dir):
+            input_files.append(os.path.join(input_dir, f))
+        return input_files
 
     def __get_features_and_soap_obj(
         self
@@ -110,8 +117,8 @@ class Runner:
             print("Processing multiple input files.")
             # Set the attribute to indicate that multiple files are being processed
             feature_soap_tuples = []
-            for f in os.listdir(self.input_file):
-                input_file = os.path.join(self.input_file, f)
+            input_files = self.__get_input_files_from_dir(self.input_file)
+            for input_file in input_files:
                 target_tuples = target_file_parser.load_target_file(
                     input_file
                 )
@@ -141,7 +148,7 @@ class Runner:
         additional_notes = features_soap_tuple[2]
 
         # Copy the input file to the created run directory
-        self.__copy_input_file(multi_stage_search.run_dir)
+        self.__copy_input_file(multi_stage_search.run_dir, self.input_file)
 
         # Run the inversion with the provided run config or the default run config
         self.run_config.main(multi_stage_search)
@@ -162,12 +169,15 @@ class Runner:
             multi_stage_searches.append(multi_stage_search)
             run_id += 1
 
+        # Get the input files for each MultiStageSearch object
+        input_files = self.__get_input_files_from_dir(self.input_file)
+
         # Run the inversion for each MultiStageSearch object in sequence
         print("WARNING! Currently running multiple files in sequence not in parallel.")
         print("This will be changed in the future.")
-        for multi_stage_search in multi_stage_searches:
-            # Copy the input file to the corresponding run directory
-            self.__copy_input_file(multi_stage_search.run_dir)
+        for i, multi_stage_search in enumerate(multi_stage_searches):
+            # Copy the correct input file to the corresponding run directory
+            self.__copy_input_file(multi_stage_search.run_dir, input_files[i])
 
             self.run_config.main(multi_stage_search)
 
