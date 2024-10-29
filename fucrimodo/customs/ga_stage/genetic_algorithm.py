@@ -214,6 +214,30 @@ class GeneticAlgorithm:
             )
         return fitness_tuple
 
+    def __evaluate_individuals(
+        self, individuals: list[Individual]
+    ) -> list[tuple[float, ...]]:
+        """Evaluates the fitnesses of the individuals for each fitness function.
+
+        Speeds up the evaluation by evaluating all fitnesses of an individual
+        at once.
+        """
+        # Create a list of empty tuples for each individual
+        fitness_tuples_list: list[tuple[float, ...]] = [
+            () for _ in range(len(individuals))
+        ]
+
+        # Evaluate the fitnesses of the individuals for each fitness function
+        for fitness_function in self.fitness_functions:
+            # Use the fitness function to evaluate the fitnesses of the individuals
+            fitnesses = fitness_function.evaluate_individuals(individuals)
+
+            # Append the fitnesses to the corresponding tuple of each individual
+            for ind_index in range(len(fitness_tuples_list)):
+                fitness_tuples_list[ind_index] += (fitnesses[ind_index],)
+
+        return fitness_tuples_list
+
     def __update_fitnesses(self,individuals: list[Individual]) -> int:
         """
         Checks which individuals in the population have invalid fitnesses.
@@ -222,11 +246,17 @@ class GeneticAlgorithm:
 
         :return: The number of individuals with invalid fitnesses.
         """
-        ("Updating fitnesses.")
         invalid_ind = [ind for ind in individuals if not ind.fitness.valid]
+
         for ind in invalid_ind:
             ind.reset() # Ensures that all features are reset
-            ind.fitness.values = self.__evaluate_individual(ind)
+
+        # Evaluate the fitnesses of the invalid individuals
+        fitness_tuples_list = self.__evaluate_individuals(invalid_ind)
+
+        # Assign the fitnesses to the individuals
+        for ind, fitness_tuple in zip(invalid_ind, fitness_tuples_list):
+            ind.fitness.values = fitness_tuple
 
         return len(invalid_ind)
 
