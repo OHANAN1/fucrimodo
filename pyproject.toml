@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools >= 61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -36,6 +36,7 @@ requires-python = ">=3.12"
 
 [project.optional-dependencies]
 docs = ['sphinx', 'sphinx_rtd_theme', 'nbsphinx', 'sphinxcontrib-tikz']
+dev = ['pytest']
 
 [project.urls]
 Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
@@ -46,3 +47,11 @@ fucrimodo = "fucrimodo.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+
+# Setup of pytest tests
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# High verbosity and short tracebacks
+addopts = "-v --tb=short"
