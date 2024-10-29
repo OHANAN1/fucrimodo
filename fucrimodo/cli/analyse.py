@@ -29,11 +29,12 @@ class CLICommand:
             help='More output.'
         )
         add(
-            '-s', '--show',
-            action='store_true',
+            '-s', '--save_dir',
             help= \
-            'Show the results. If not given, the results will be saved to '
-            'a file in the provided directory.'
+            'Save the results of the analysis in the provided directory. '
+            'The results will not be displayed if a directory is provided. '
+            'If no directory is provided, the results will only '
+            'be displayed.'
         )
         add(
             '-t', '--analysis_type', 
@@ -76,8 +77,16 @@ class Runner:
         assert type(args.verbose) == bool, "The flag --verbose must be a boolean"
         self.verbose: bool = args.verbose
 
-        assert type(args.show) == bool, "The flag --show must be a boolean"
-        self.show: bool = args.show
+        if args.save_dir is not None:
+            if not os.path.exists(args.save_dir):
+                print("Path does not exist")
+                sys.exit(1)
+            self.save_dir = args.save_dir
+            self.show = False
+
+        else:
+            self.save_dir = None
+            self.show = True
 
         # Check if the provided row can be converted to an integer
         if args.row is not None:
@@ -116,6 +125,7 @@ class Runner:
                 verbose=self.verbose,
                 row=self.row,
                 show=self.show,
+                save_dir = self.save_dir
             )
         elif self.analysis_object == "stage":
             from fucrimodo.analysis import stage_analysis as sa
@@ -125,6 +135,7 @@ class Runner:
                 row = self.row,
                 show = self.show,
                 analysis_type = self.analysis_type,
+                save_dir = self.save_dir
             )
         else:
             raise ValueError(
