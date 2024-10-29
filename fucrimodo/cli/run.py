@@ -1,5 +1,8 @@
 import os
 import sys
+import numpy as np
+
+from fucrimodo.core.utils.custom_soap import CustomSOAP
 
 class CLICommand:
     """Perform descriptor inversion on provided input file."""
@@ -9,9 +12,13 @@ class CLICommand:
         add = parser.add_argument
         add(
             'input_file',
-            help='Give the path to the file with the features that should ' \
-                'be inverted and the parameters that define the descriptor. ' \
-                '(file-type: json).'
+            help=(
+                'Give the path to the input file with the features that should '
+                'be inverted and the parameters that define the descriptor. '
+                'Can be created with scripts. Docs will be added soon.'
+                'Or give the path to a directory where multiple input files ' 
+                'are stored. These files will then be processed in parallel.'
+            )
         )
         add('-v', '--verbose', action='store_true', help='More output.')
         add(
@@ -66,11 +73,8 @@ class Runner:
         else:
             self.save_dir = os.getcwd()
 
-        from fucrimodo.core.utils import soap_parser
-        self.target_features, self.soap_obj = soap_parser.load_soap_features_from_file(
-            self.input_file
-        )
-
+        # Get either the standard run config or the custom run config provided 
+        # by the user
         if args.config is not None:
             from fucrimodo.utils.import_helper import import_from_path
             run_config = import_from_path(args.config, "custom_run_config")
@@ -88,15 +92,102 @@ class Runner:
             from importlib import import_module
             self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
 
-    def run(self):
-        """Run the inversion."""
-        # Create the MultiStageSearch object
+    def __copy_input_file(self, run_dir: str, input_file: str):
+        """Copy the input file to the provided run directory. 
+
+        The file will be renamed to 'input_file.json'.
+        """
+        import shutil
+        save_path = os.path.join(run_dir, "input_file.json")
+        shutil.copy(input_file, save_path)
+
+    def __get_input_files_from_dir(self, input_dir: str) -> list[str]:
+        """Get all files in the provided directory."""
+        input_files = []
+        for f in os.listdir(input_dir):
+            input_files.append(os.path.join(input_dir, f))
+        return input_files
+
+    def __get_features_and_soap_obj(
+        self
+    ) -> list[tuple[CustomSOAP, list, str]] | tuple[CustomSOAP, list, str]:
+        from fucrimodo.utils import target_file_parser
+        # If the input file is a directory, get all files in the directory
+        if os.path.isdir(self.input_file):
+            print("Processing multiple input files.")
+            # Set the attribute to indicate that multiple files are being processed
+            feature_soap_tuples = []
+            input_files = self.__get_input_files_from_dir(self.input_file)
+            for input_file in input_files:
+                target_tuples = target_file_parser.load_target_file(
+                    input_file
+                )
+                feature_soap_tuples.append(target_tuples)
+
+            # Check if any files were found in the directory
+            assert len(feature_soap_tuples) > 0, "No files in the directory."
+
+            return feature_soap_tuples
+
+        # If the input file is a single file, load the features from the file
+        else:
+            print("Processing a single input file.")
+            target_tuple = target_file_parser.load_target_file(
+                self.input_file
+            )
+            return target_tuple
+
+    def __run_single_file(self, features_soap_tuple: tuple[CustomSOAP, list, str]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
         multi_stage_search = MultiStageSearch(
             save_dir=self.save_dir,
-            target_features=self.target_features,
-            descriptor_object=self.soap_obj,
+            target_features=np.array(features_soap_tuple[1]),
+            descriptor_object=features_soap_tuple[0],
             descriptive_name=self.name,
         )
+        additional_notes = features_soap_tuple[2]
 
+        # Copy the input file to the created run directory
+        self.__copy_input_file(multi_stage_search.run_dir, self.input_file)
+
+        # Run the inversion with the provided run config or the default run config
         self.run_config.main(multi_stage_search)
+
+    def __run_multiple_files(self, target_tuples: list[tuple[CustomSOAP, list, str]]):
+        from fucrimodo.core.multi_stage_search import MultiStageSearch
+
+        # Create a MultiStageSearch object for each feature and SOAP object tuple
+        run_id = 1
+        multi_stage_searches = []
+        for soap_obj, features, additional_notes in target_tuples:
+            multi_stage_search = MultiStageSearch(
+                save_dir=self.save_dir,
+                target_features=np.array(features),
+                descriptor_object=soap_obj,
+                descriptive_name=f"{self.name}_id_{run_id}",
+            )
+            multi_stage_searches.append(multi_stage_search)
+            run_id += 1
+
+        # Get the input files for each MultiStageSearch object
+        input_files = self.__get_input_files_from_dir(self.input_file)
+
+        # Run the inversion for each MultiStageSearch object in sequence
+        print("WARNING! Currently running multiple files in sequence not in parallel.")
+        print("This will be changed in the future.")
+        for i, multi_stage_search in enumerate(multi_stage_searches):
+            # Copy the correct input file to the corresponding run directory
+            self.__copy_input_file(multi_stage_search.run_dir, input_files[i])
+
+            self.run_config.main(multi_stage_search)
+
+    def run(self):
+        """Run the inversion."""
+        # Get the features and SOAP object/s from the input file/s
+        target_tuples = self.__get_features_and_soap_obj()
+
+        if isinstance(target_tuples, list):
+            self.__run_multiple_files(target_tuples)
+        else:
+            self.__run_single_file(target_tuples)
+
