@@ -408,6 +408,7 @@ def cli_runner(
     show: bool = False,
     verbose: bool = False,
     analysis_type: str | None = None,
+    save_dir: str | None = None
 ):
     # Load the stage data
     stage_data = StageData(stage_dir)
@@ -459,8 +460,14 @@ def cli_runner(
         if show:
             plt.show()
         else:
-            plt.savefig(f"{analysis_type}_{row}_overview.png")
-            plt.close()
+            if save_dir is not None:
+                if not os.path.exists(save_dir):
+                    os.makedirs(save_dir)
+                plt.savefig(f"{save_dir}/{analysis_type}_{row}_overview.png")
+
+            else:
+                plt.savefig(f"{analysis_type}_{row}_overview.png")
+                plt.close()
 
 
     else:

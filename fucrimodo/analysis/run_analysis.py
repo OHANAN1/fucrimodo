@@ -383,6 +383,7 @@ def cli_runner(
     show: bool = True,
     verbose: bool = False,
     row: int | None = None,
+    save_dir: str | None = None
 ) -> None:
     run_data = RunData(run_dir)
 
@@ -404,8 +405,12 @@ def cli_runner(
         if show:
             plt.show()
         else:
-            plt.savefig(f"global_statistic_{row}.png")
-            plt.close()
+            if save_dir is not None:
+                plt.savefig(f"{save_dir}/global_statistic_{row}.png")
+                plt.close()
+            else:
+                plt.savefig(f"global_statistic_{row}.png")
+                plt.close()
 
     # If no row is provided, plot all global statistics
     else:
@@ -414,8 +419,12 @@ def cli_runner(
             if show:
                 plt.show()
             else:
-                plt.savefig(f"global_statistic_{i}.png")
-                plt.close()
+                if save_dir is not None:
+                    plt.savefig(f"{save_dir}/global_statistic_{i}.png")
+                    plt.close()
+                else:
+                    plt.savefig(f"global_statistic_{i}.png")
+                    plt.close()
 
 
 if __name__ == "__main__":
