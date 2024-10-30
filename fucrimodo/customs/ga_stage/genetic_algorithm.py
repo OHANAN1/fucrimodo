@@ -248,6 +248,9 @@ class GeneticAlgorithm:
         """
         invalid_ind = [ind for ind in individuals if not ind.fitness.valid]
 
+        if len(invalid_ind) == 0:
+            return 0
+
         for ind in invalid_ind:
             ind.reset() # Ensures that all features are reset
 
