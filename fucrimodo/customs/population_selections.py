@@ -304,6 +304,23 @@ class SelectAllPopulation(PopulationSelection):
 
 
 class TournamentDCDSelection(PopulationSelection):
+    """Selects a population using the tournament selection algorithm with DCD.
+
+    Wrapper around the DEAP tournament selection algorithm with DCD. More
+    information about the algorithm can be found in the DEAP documentation:
+    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selTournamentDCD`
+
+    :param sort_by: A function that sorts the selected individuals. The
+        function should take an individual as input and return a value to
+        sort by. If None, the selected individuals are not sorted.
+    """
+    def __init__(
+        self,
+        sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values[0],
+    ):
+        super().__init__()
+        self.sort_by = sort_by
+
     def select(
         self, individuals: list[Individual], n: int
     ) -> list[Individual]:
@@ -318,6 +335,11 @@ class TournamentDCDSelection(PopulationSelection):
         for individual in selected_individuals:
             if hasattr(individual, "crowding_dist"):
                 del individual.crowding_dist
+
+        if self.sort_by is not None:
+            selected_individuals.sort(
+                key=self.sort_by,
+            )
 
         return selected_individuals
 
