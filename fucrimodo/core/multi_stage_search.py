@@ -7,12 +7,9 @@ from fucrimodo.core.modules.individual import Individual
 from fucrimodo.core.utils.log_utils import setup_stage_logger
 from .modules import Stage, Population
 import os
-import pickle
 import datetime
 import json
 import logging
-import warnings
-warnings.filterwarnings("once")
 
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.

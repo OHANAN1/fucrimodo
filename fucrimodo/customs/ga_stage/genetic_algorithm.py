@@ -9,9 +9,7 @@ from typing import Sequence
 from deap import tools
 import numpy as np
 import random
-
 import logging
-# logger = logging.getLogger('run_logger')
 
 class GeneticAlgorithm:
     def __init__(
@@ -591,6 +589,19 @@ class GeneticAlgorithm:
                 global_log=global_log,
                 stage_id=stage_id,
             )
-            print(global_log.stream, end="\r")
+
+            # Check if the break condition is met
+            if self.break_condition.check(
+                population.individuals, self.generation
+            ):
+                # If the break condition is met, print the final statistics
+                # in a way that it is not overwritten
+                self.logger.info("Break condition met.")
+                print(global_log.stream)
+                break
+            else:
+                # If the break condition is not met, print the statistics
+                # in a way that it is overwritten
+                print(global_log.stream, end="\r")
 
         return population
