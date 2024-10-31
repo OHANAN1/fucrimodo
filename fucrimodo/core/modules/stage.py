@@ -5,6 +5,7 @@ from .population import Population
 from ase.db.core import Database
 from deap import tools
 from typing import Callable
+import logging
 
 class Stage(ABC):
     """Abstract base class for stages in the optimization algorithm.
@@ -21,6 +22,16 @@ class Stage(ABC):
     def __init__(self, name: str, description: str) -> None:
         self._name = name
         self._description = description
+
+    @property
+    def logger(self) -> logging.Logger:
+        if not hasattr(self, "_logger"):
+            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
 
     @abstractmethod
     def run(

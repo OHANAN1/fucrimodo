@@ -259,6 +259,9 @@ class GAStage(Stage):
     ) -> Population:
         assert hasattr(self, "id"), "Stage ID not set."
 
+        # Attach the logger to the ga_runner
+        self.ga_runner.logger = self.logger
+
         population = self.ga_runner.run(
             population=population, 
             global_log=global_log,

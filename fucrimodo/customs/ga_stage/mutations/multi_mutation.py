@@ -2,8 +2,6 @@ from .abstract import Mutation
 from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 import random
-import logging
-logger = logging.getLogger('run_logger')
 
 
 class MultipleMutations(Mutation):
@@ -69,7 +67,7 @@ class MultipleMutations(Mutation):
 
         for i in range(self.number_of_mutations):
             mutation = selected_mutations[i]
-            logger.info(f"\tPerforming {mutation.__class__.__name__}")
+            self.logger.debug(f"\tPerforming {mutation.__class__.__name__}")
             offspring = self.mutations[i].perform_mutation(offspring)
 
             if offspring is None:

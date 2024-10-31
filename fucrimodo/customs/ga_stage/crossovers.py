@@ -1,26 +1,19 @@
-from typing import Callable
 import random
-from ase.cell import Cell
 import numpy as np
 from abc import ABC, abstractmethod
 import ase
+from ase.cell import Cell
+from ase.ga.cutandsplicepairing import CutAndSplicePairing
+from ase.build import stack
 from numpy.typing import NDArray
+from ase import build
+from ase.geometry import get_distances
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from ase.build import stack, cut
-import concurrent.futures
+from fucrimodo.customs.population_generator import convert_ase_atoms_to_individual
 from fucrimodo.core.modules import Individual
-from ase.geometry import get_distances
-import ase
-from ase import build
-from typing import Callable
-import concurrent.futures
-from ase.ga.cutandsplicepairing import CutAndSplicePairing
-
 import logging
 
-from fucrimodo.customs.population_generator import convert_ase_atoms_to_individual
-logger = logging.getLogger('run_logger')
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Utility functions                     ║
@@ -117,19 +110,6 @@ def adjust_atoms_positions(
 
 
 # ╔══════════════════════════════════════════════════════════╗
-# ║                    Utility functions                     ║
-# ╚══════════════════════════════════════════════════════════╝
-
-def run_function_with_timeout(funktion: Callable, timeout: int = 60):
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(funktion)
-        try:
-            return future.result(timeout=timeout)
-        except concurrent.futures.TimeoutError:
-            logger.error("Funktion hat zu lange gedauert und wurde abgebrochen")
-            return None
-
-# ╔══════════════════════════════════════════════════════════╗
 # ║                 Abstract Crossover Class                 ║
 # ╚══════════════════════════════════════════════════════════╝
 
@@ -139,9 +119,18 @@ class Crossover(ABC):
     for _every_ crossover. The Crossover class will copy the parents,
     so that the original population is never changed.
     """
-
     def __init__(self, closest_distances: CustomClosestDistances):
         self.closest_distances = closest_distances
+
+    @property
+    def logger(self) -> logging.Logger:
+        if not hasattr(self, "_logger"):
+            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
 
     def __repr__(self):
         class_name = self.__class__.__name__
@@ -216,7 +205,7 @@ class Crossover(ABC):
         Returns the two offsprings and a boolean if the crossover was successful.
         True if successful, False if not.
         """
-        logger.info("Performing {}.".format(self.__class__.__name__))
+        self.logger.debug("Performing {}.".format(self.__class__.__name__))
 
         if not hasattr(self, "max_steps") or self.max_steps == 0:
             self.max_steps = 1
@@ -236,7 +225,7 @@ class Crossover(ABC):
                 )
 
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     "{}: Unknown Error. No crossover possible. {}".format(
                         self.__class__.__name__, e)
                 )
@@ -251,7 +240,7 @@ class Crossover(ABC):
                     offspring_1.wrap()
                     offspring_2.wrap()
                 except Exception as e:
-                    logger.error(
+                    self.logger.error(
                         "{}: Unknown Error in wrapping. {}".format(
                             self.__class__.__name__, e)
                     )
@@ -266,7 +255,7 @@ class Crossover(ABC):
                     offspring_2
                 )
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     "{}: Unknown Error in crystal_is_valid_object. {}".format(
                         self.__class__.__name__, e)
                 )
@@ -277,7 +266,7 @@ class Crossover(ABC):
                 offspring_1_is_physical = self.crystal_is_physical(offspring_1)
                 offspring_2_is_physical = self.crystal_is_physical(offspring_2)
             except Exception as e:
-                logger.error(
+                self.logger.error(
                     "{}: Unknown Error in crystal_is_physical. {}".format(
                         self.__class__.__name__, e)
                 )
@@ -285,7 +274,7 @@ class Crossover(ABC):
                 continue
 
             if not offspring_1_is_valid or not offspring_2_is_valid:
-                logger.warning(
+                self.logger.warning(
                     "{}: Offspring is not a valid object.".format(
                         self.__class__.__name__
                     ) + f"\nOffspring: {offspring_1} or {offspring_2}"
@@ -324,15 +313,15 @@ class Crossover(ABC):
                 parent2.set_cell(offspring_2_cell)
                 parent2.set_pbc([True, True, True])
 
-                logger.info("Done! After {} steps.".format(step+1))
+                self.logger.debug("Done! After {} steps.".format(step+1))
                 return (parent1, parent2, True)
 
             else:
-                logger.info("Crossover failed.")
+                self.logger.debug("Crossover failed.")
                 return (parent1, parent2, False)
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "{}: Unknown Error. Couldnt return offspring. {}".format(
                     self.__class__.__name__, e)
             )
