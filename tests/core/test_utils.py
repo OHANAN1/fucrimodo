@@ -14,4 +14,4 @@ def test_custom_soap():
     import fucrimodo.core.utils.custom_soap
 
 def test_log():
-    import fucrimodo.core.utils.log
+    import fucrimodo.core.utils.log_utils
