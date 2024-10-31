@@ -31,7 +31,7 @@ def setup_stage_logger(
 
     # Define how the log messages should look like
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        '%(asctime)s - %(levelname)s - %(message)s'
     )
     file_handler.setFormatter(formatter)
 
