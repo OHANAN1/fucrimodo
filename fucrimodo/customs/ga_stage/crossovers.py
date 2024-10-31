@@ -12,10 +12,14 @@ import concurrent.futures
 from fucrimodo.core.modules import Individual
 from ase.geometry import get_distances
 import ase
+from ase import build
 from typing import Callable
 import concurrent.futures
+from ase.ga.cutandsplicepairing import CutAndSplicePairing
 
 import logging
+
+from fucrimodo.customs.population_generator import convert_ase_atoms_to_individual
 logger = logging.getLogger('run_logger')
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -541,101 +545,64 @@ class OnePointPositionCrossover(Crossover):
 
 
 class CutAndSpliceCrossover(Crossover):
-
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
-        max_steps: int = 2,
-        max_atoms_to_cut: int = 5,
+        n_top: int | str = "all",
+        max_steps: int = 1,
     ):
         self.max_steps = max_steps
         self.closest_distances = closest_distances
         self.cell_bounds = cell_bounds
-        self.max_atoms_to_cut = max_atoms_to_cut
-
-    def __get_slap_from_parent(
-        self,
-        parent: Individual,
-        a_len: float = 10.,
-        b_len: float = 10.
-    ) -> Individual | None:
-        slab = cut(
-            parent, a=(a_len, 0, 0), b=(0, b_len, 0), tolerance=0.1,
-            maxatoms=self.max_atoms_to_cut, nlayers=1
-        )
-        if len(slab) == 0:
-            return None
-        else:
-            return slab
-
-    def __timed_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
-    ) -> tuple[Individual, Individual] | tuple[None, None]:
-
-        min_length = min(len(parent1), len(parent2))
-        if min_length < self.max_atoms_to_cut:
-            return (None, None)
-
-        par1 = parent1.copy()
-        par2 = parent2.copy()
-
-        cell_par1 = par1.cell.cellpar()
-        cell_par2 = par2.cell.cellpar()
-
-        a_len = min([cell_par1[0], cell_par2[0]])
-        a_lens = [a_len/cell_par1[0], a_len/cell_par2[0]]
-
-        b_len = min([cell_par1[1], cell_par2[1]])
-        b_lens = [b_len/cell_par1[1], b_len/cell_par2[1]]
-
-        slab1 = self.__get_slap_from_parent(
-            par1,  a_len=a_lens[0], b_len=b_lens[0]
-        )
-        slab2 = self.__get_slap_from_parent(
-            par2, a_len=a_lens[1], b_len=b_lens[1]
-        )
-
-        offspring1 = stack(
-            slab1, slab2, axis=2
-        )
-        offspring2 = stack(
-            slab2, slab1, axis=2
-        )
-
-        if offspring1 is None or offspring2 is None:
-            return (None, None)
-        else:
-            if (
-                self.cell_bounds.is_within_bounds(
-                    offspring1.get_cell()  # type: ignore
-                )
-                and self.cell_bounds.is_within_bounds(
-                    offspring2.get_cell())  # type: ignore
-            ):
-                return (offspring1, offspring2)  # type: ignore
-
-            else:
-                return (None, None)
+        self.n_top = n_top
+        self.cell_bounds = cell_bounds
 
     def perform_crossover(
         self,
         parent1: Individual,
         parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
+        if self.n_top == "all":
+            n_top = len(parent1)
+        else:
+            n_top = self.n_top
 
-        result = run_function_with_timeout(
-            lambda: self.__timed_crossover(parent1, parent2),
-            timeout=30
+        # sort parents, since the stoichometry is not the same if not sorted
+        # and the CutAndSplicePairing will not work
+        parent1 = build.sort(parent1)
+        parent2 = build.sort(parent2)
+
+        cut_and_splice_pairing = CutAndSplicePairing(
+            slab=ase.Atoms(),
+            blmin=self.closest_distances,
+            n_top=n_top,
+            cellbounds=self.cell_bounds
         )
-        if result is None:
-            logger.error("Crossover took too long. I dont know why tho")
 
+        # Create the first offspring
+        offspring_1 = cut_and_splice_pairing.cross(
+            parent1, parent2
+        )
+
+        # If it is not possible to create offspring, return None
+        if offspring_1 is None:
             return (None, None)
 
-        return result
+        # Create the second offspring
+        offspring_2 = cut_and_splice_pairing.cross(
+            parent2, parent1
+        )
+
+        # If it is not possible to create offspring, return None
+        if offspring_2 is None:
+            return (None, None)
+
+        # If both offspring are valid, return them
+        return (
+            convert_ase_atoms_to_individual(offspring_1),
+            convert_ase_atoms_to_individual(offspring_2)
+        )
 
 
 class DoNothingCrossover(Crossover):
