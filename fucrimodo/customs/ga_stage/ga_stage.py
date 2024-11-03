@@ -24,6 +24,7 @@ class GAStage(Stage):
         parent_ratio: float = 0.5,
         description: str = "",
         save_n_crystals: int = 10,
+        verbose: bool = True,
     ):
         super().__init__(name, description)
 
@@ -50,7 +51,10 @@ class GAStage(Stage):
             survivor_selection=survivor_selection,
             parent_selection=parent_selection,
             parent_ratio=parent_ratio,
+            verbose=verbose,
         )
+
+        self.verbose = verbose
 
     def __seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]

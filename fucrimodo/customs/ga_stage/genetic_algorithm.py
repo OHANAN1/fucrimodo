@@ -27,6 +27,7 @@ class GeneticAlgorithm:
         parent_ratio: float,
         survivor_selection: PopulationSelection,
         save_n_best_crystals: int = 10,
+        verbose: bool = False,
     ):
         self.fitness_functions = fitness_functions
         self.fitness_weights = fitness_weights
@@ -41,6 +42,7 @@ class GeneticAlgorithm:
         self.survivor_selection = survivor_selection
         self._hall_of_fame = tools.HallOfFame(save_n_best_crystals)
         self.parent_ratio = parent_ratio
+        self.verbose = verbose
 
     @property
     def logger(self) -> logging.Logger:
@@ -534,7 +536,8 @@ class GeneticAlgorithm:
             stage_id=stage_id
         )
 
-        print(global_log.stream)
+        if self.verbose:
+            print(global_log.stream)
 
         self._generation = 0
         while not self.break_condition.check(
@@ -597,11 +600,13 @@ class GeneticAlgorithm:
                 # If the break condition is met, print the final statistics
                 # in a way that it is not overwritten
                 self.logger.info("Break condition met.")
-                print(global_log.stream)
+                if self.verbose:
+                    print(global_log.stream)
                 break
             else:
                 # If the break condition is not met, print the statistics
                 # in a way that it is overwritten
-                print(global_log.stream, end="\r")
+                if self.verbose:
+                    print(global_log.stream, end="\r")
 
         return population
