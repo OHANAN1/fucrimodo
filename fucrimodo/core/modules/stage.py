@@ -33,6 +33,16 @@ class Stage(ABC):
     def logger(self, value):
         self._logger = value
 
+    @property
+    def stage_dir(self) -> str:
+        if not hasattr(self, "_stage_dir"):
+            raise AttributeError(f"{self.__class__.__name__}: No stage directory set. Please set a stage directory.")
+        return self._stage_dir
+
+    @stage_dir.setter
+    def stage_dir(self, value: str):
+        self._stage_dir = value
+
     @abstractmethod
     def run(
         self, 
