@@ -4,14 +4,12 @@ from ase.db.core import Database
 from deap import tools
 import numpy as np
 from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.log import setup_run_logger
+from fucrimodo.core.utils.log_utils import setup_stage_logger
 from .modules import Stage, Population
 import os
-import pickle
 import datetime
 import json
 import logging
-logger = logging.getLogger('run_logger')
 
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.
@@ -70,10 +68,8 @@ class MultiStageSearch:
         # Set the current stage id to 0
         self.current_stage_id = 0
 
-        setup_run_logger(
-            log_file_path=f"{self.run_dir}/run.log", 
-            log_level=log_level
-        )
+        # Set the log level of the run
+        self.log_level = log_level
 
     @property
     def name(self) -> str:
@@ -254,7 +250,7 @@ class MultiStageSearch:
         with open(file_path, "w") as f:
             json.dump(stage_info_dict, f, indent=4)
 
-        logger.info(f"Saved info.json of stage at {file_path}")
+        stage.logger.info(f"Saved info.json of stage at {file_path}")
 
     def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
         """Method to set up the stage for a run.
@@ -270,8 +266,6 @@ class MultiStageSearch:
         :param stage: Stage that should be set up.
         :param stage_id: A unique ID that should be assigned to the stage.
         """
-        logger.info(f"Setting up stage with id {stage_id}")
-
         # Assign the stage ID to the stage
         stage.id = stage_id
 
@@ -280,6 +274,22 @@ class MultiStageSearch:
         relative_stage_dir = f"stage_{stage_id}"
         stage_dir = os.path.join(self.run_dir, relative_stage_dir)
         os.mkdir(stage_dir)
+
+        # Set the stage directory in the stage
+        stage.stage_dir = stage_dir
+
+        # Set up a logger for the stage
+        stage_logger, log_name = setup_stage_logger(
+            log_file_path=f"{stage_dir}/stage.log",
+            run_name=self.name,
+            stage_name=stage.name,
+            log_level=self.log_level,
+        )
+
+        # Attach logger to the stage
+        stage.logger = stage_logger
+
+        stage_logger.info(f"Set up stage {stage_id}: {stage.name}")
 
         # Save the info of the stage in a JSON file in the stage directory
         self.__save_stage_info(stage, stage_dir)
@@ -331,7 +341,6 @@ class MultiStageSearch:
         file_path = os.path.join(self.run_dir, "global_statistics.json")
         with open(file_path, "w") as f:
             json.dump(global_stats_dict, f, indent=4)
-        logger.info(f"Saved run results at {file_path}")
 
     def save_info(self):
         file_path = os.path.join(self.run_dir, "info.json")
@@ -342,7 +351,6 @@ class MultiStageSearch:
         }
         with open(file_path, "w") as f:
             json.dump(info_dict, f, indent=4)
-        logger.info(f"Saved run info at {file_path}")
 
     def run(self, population: Population, stage: Stage) -> Population:
         """Method to run a stage of the optimization algorithm.
@@ -374,6 +382,8 @@ class MultiStageSearch:
         )
 
         print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
+        print(f"Save directory: {stage_dir}")
+        print()
         stage.save_results(
             save_dir = stage_dir,
             crystals_db = self.crystal_database,

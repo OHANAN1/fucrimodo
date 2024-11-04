@@ -6,4 +6,8 @@ def test_configs_utils():
     import fucrimodo.lab_template.configs.utils.create_target_file_data
 
 def test_configs_analyse():
-    import fucrimodo.lab_template.configs.analysis.notebook_generator
+    from fucrimodo.lab_template.configs.analysis.run.default import main
+
+    from fucrimodo.lab_template.configs.analysis.stage.default import main
+
+    from fucrimodo.lab_template.configs.analysis.notebook.default import main

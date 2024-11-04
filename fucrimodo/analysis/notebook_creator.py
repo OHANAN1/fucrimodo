@@ -1,38 +1,29 @@
 import nbformat
 from nbformat.v4 import new_notebook
 from nbformat import validate
-from fucrimodo.lab_template.configs.analysis.notebook_generator.default_cells_run_analysis \
-    import get_setup_cells, get_run_info_cells, get_stage_info_cells
 import os
-from .run_analysis import RunData
 from nbclient.client import NotebookClient
 
 
-def create_results_notebook(
-    run_dir
-) -> nbformat.notebooknode.NotebookNode:
-    """Methode to generate the results notebook."""
-
-    print("Creating notebook for run dir:", run_dir)
-
-    run_data = RunData(run_dir)
-
-    nb = new_notebook()
-    nb.cells.extend(get_setup_cells(run_data))
-    nb.cells.extend(get_run_info_cells(run_data))
-    nb.cells.extend(get_stage_info_cells(run_data))
-
-    return nb
-
-
-def cli_runner(
+def create_and_test_results_notebook(
     run_dir: str,
-    notebook_name: str = "results_notebook.ipynb",
+    cell_list: list[nbformat.notebooknode.NotebookNode],
     fold_chapters: bool = True,
     run_notebook: bool = True,
     verbose: bool = False,
+    notebook_name: str = "results_notebook.ipynb",
 ):
-    notebook = create_results_notebook(run_dir)
+    """Methode to generate the results notebook.
+
+    :param run_dir: The directory of the run to create the notebook for.
+        Here the notebook will be saved.
+    :param fold_chapters: If True, the notebook will have collapsible headings.
+    :param run_notebook: If True, the notebook will be executed. If False, the
+        notebook will be validated instead.
+    :param verbose: If True, additional information will be printed.
+    """
+    notebook = new_notebook()
+    notebook.cells.extend(cell_list)
 
     # Add Metadata to the notebook to make the headings collapsible
     # To enable folding run: jupyter nbextension enable collapsible_headings/main

@@ -9,9 +9,7 @@ from typing import Sequence
 from deap import tools
 import numpy as np
 import random
-
 import logging
-logger = logging.getLogger('run_logger')
 
 class GeneticAlgorithm:
     def __init__(
@@ -29,6 +27,7 @@ class GeneticAlgorithm:
         parent_ratio: float,
         survivor_selection: PopulationSelection,
         save_n_best_crystals: int = 10,
+        verbose: bool = False,
     ):
         self.fitness_functions = fitness_functions
         self.fitness_weights = fitness_weights
@@ -43,6 +42,17 @@ class GeneticAlgorithm:
         self.survivor_selection = survivor_selection
         self._hall_of_fame = tools.HallOfFame(save_n_best_crystals)
         self.parent_ratio = parent_ratio
+        self.verbose = verbose
+
+    @property
+    def logger(self) -> logging.Logger:
+        if not hasattr(self, "_logger"):
+            raise AttributeError("No logger set. Please set a logger.")
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
 
     @property
     def fitness_stats(self) -> tools.MultiStatistics:
@@ -369,7 +379,7 @@ class GeneticAlgorithm:
             if mut_info[1] == False or cross_info[1] == False:
                 modified_offspring.append(offspring[i])
 
-        logger.info("Modified {} individuals".format(len(modified_offspring)))
+        self.logger.info("Modified {} individuals".format(len(modified_offspring)))
 
         return modified_offspring
 
@@ -491,6 +501,20 @@ class GeneticAlgorithm:
             global_log=global_log
         )
 
+    def __attach_logger_to_mut_and_cross(self, logger: logging.Logger) -> None:
+        """Attaches the logger to mutations and crossovers of stage.
+
+        This method is used to attach the logger to all objects of the stage
+        that have a logger attribute. This is useful to have a consistent
+        logging behavior in the stage.
+        """
+        self.logger.info("Attaching logger to the mutations and crossovers of the GA.")
+        for obj in [
+            *self.crossover_list,
+            *self.mutation_list,
+        ]:
+            obj.logger = logger
+
     def run(
         self,
         population: Population,
@@ -498,14 +522,22 @@ class GeneticAlgorithm:
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
     ) -> Population:
+        # Store the initial population size
         population_size = population.size
+
+        # Attach the logger to all objects of the stage
+        self.__attach_logger_to_mut_and_cross(self.logger)
+
+        # Initialize the evolution process
         self.__initialize_evolution(
             population=population, 
             global_stats=global_stats,
             global_log=global_log,
             stage_id=stage_id
         )
-        print(global_log.stream)
+
+        if self.verbose:
+            print(global_log.stream)
 
         self._generation = 0
         while not self.break_condition.check(
@@ -514,14 +546,14 @@ class GeneticAlgorithm:
             self._generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
-            logger.info(f"Evolving Gen: {self._generation}")
-            logger.info(f"Population size: {population.size}")
+            self.logger.info(f"Evolving Gen: {self._generation}")
+            self.logger.info(f"Population size: {population.size}")
 
             # ── Select Parents ───────────────────────────────────────────────
             parents = self.parent_selection.select(
                 population.individuals, int(population_size * self.parent_ratio)
             )
-            logger.info("Selected {} parents".format(len(parents)))
+            self.logger.info("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
             offspring = self.__create_offspring(parents)
@@ -534,13 +566,13 @@ class GeneticAlgorithm:
             for ind in offspring:
                 if ind not in population_pool:
                     population_pool.append(ind)
-            logger.info("Created population pool")
+            self.logger.info("Created population pool")
 
             # Select survivors from the old population and offspring
             new_population = self.survivor_selection.select(
                 population_pool, population_size
             )
-            logger.info("Selected {} survivors".format(len(new_population)))
+            self.logger.info("Selected {} survivors".format(len(new_population)))
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(
@@ -560,6 +592,21 @@ class GeneticAlgorithm:
                 global_log=global_log,
                 stage_id=stage_id,
             )
-            print(global_log.stream)
+
+            # Check if the break condition is met
+            if self.break_condition.check(
+                population.individuals, self.generation
+            ):
+                # If the break condition is met, print the final statistics
+                # in a way that it is not overwritten
+                self.logger.info("Break condition met.")
+                if self.verbose:
+                    print(global_log.stream)
+                break
+            else:
+                # If the break condition is not met, print the statistics
+                # in a way that it is overwritten
+                if self.verbose:
+                    print(global_log.stream, end="\r")
 
         return population

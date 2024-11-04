@@ -1,8 +1,9 @@
-from nbformat.v4 import new_notebook, new_code_cell, new_markdown_cell
-from nbformat import NotebookNode, validate
-import os
+from nbformat.v4 import new_code_cell, new_markdown_cell
+from nbformat import NotebookNode
 from fucrimodo.analysis import run_analysis as ra
 from fucrimodo.analysis import stage_analysis as sa
+from fucrimodo.analysis import notebook_creator as nc
+
 
 def get_setup_cells(run_data: ra.RunData) -> list[NotebookNode]:
    return [
@@ -88,47 +89,77 @@ def get_stage_info_cells(run_data: ra.RunData) -> list[NotebookNode]:
             break
 
         stage_data = stages_dict[stage_id]
-
-        # Add general stage overview to the notebook
         stage_info_cells += [
             new_markdown_cell(f"### Stage {stage_id}: {stage_data.name}"),
-            new_markdown_cell("#### Overview"),
-            new_markdown_cell(
-                sa.get_stage_overview(stage_data).T.to_html(header=False)
-            )
         ]
 
-        # Add information about the fitness functions used in the stage
-        stage_info_cells += [
-            new_markdown_cell("#### Fitness Functions"),
-            # Load the dataframe so it can be sorted or filtered
-            new_code_cell(
-                f"df = sa.get_fitness_overview(run_data.stages[{stage_id}]) "
-                "# Feel free to sort or filter the dataframe\n"
-                "HTML(df.to_html())"
-            ),
-            new_code_cell(
-                "# Adjust row to the fitness function you want to plot\n"
-                f"sa.plot_fitness_statistics(run_data.stages[{stage_id}], row=0)"
-            )
-        ]
+        if stage_data.type == "GAStage":
 
-        # Add information about the mutation and crossover used in the stage
-        for modification_type in ["Mutation", "Crossover"]:
+            # Add general stage overview to the notebook
             stage_info_cells += [
-                new_markdown_cell(f"#### {modification_type}s"),
-                new_code_cell(
-                    "df = sa.get_modification_overview("
-                        f"run_data.stages[{stage_id}], '{modification_type}') "
-                        "# Feel free to sort or filter the dataframe\n"
-                        "HTML(df.to_html())"
-                ),
-                new_code_cell(
-                    "# Adjust row to the operator you want to plot\n"
-                    f"sa.plot_modification_statistics(run_data.stages[{stage_id}], '{modification_type}', row=0)"
+                new_markdown_cell("#### Overview"),
+                new_markdown_cell(
+                    sa.get_stage_overview(stage_data).T.to_html(header=False)
                 )
             ]
+
+            # Add information about the fitness functions used in the stage
+            stage_info_cells += [
+                new_markdown_cell("#### Fitness Functions"),
+                # Load the dataframe so it can be sorted or filtered
+                new_code_cell(
+                    f"df = sa.get_fitness_overview(run_data.stages[{stage_id}]) "
+                    "# Feel free to sort or filter the dataframe\n"
+                    "HTML(df.to_html())"
+                ),
+                new_code_cell(
+                    "# Adjust row to the fitness function you want to plot\n"
+                    f"sa.plot_fitness_statistics(run_data.stages[{stage_id}], row=0)"
+                )
+            ]
+
+            # Add information about the mutation and crossover used in the stage
+            for modification_type in ["Mutation", "Crossover"]:
+                stage_info_cells += [
+                    new_markdown_cell(f"#### {modification_type}s"),
+                    new_code_cell(
+                        "df = sa.get_modification_overview("
+                            f"run_data.stages[{stage_id}], '{modification_type}') "
+                            "# Feel free to sort or filter the dataframe\n"
+                            "HTML(df.to_html())"
+                    ),
+                    new_code_cell(
+                        "# Adjust row to the operator you want to plot\n"
+                        f"sa.plot_modification_statistics(run_data.stages[{stage_id}], '{modification_type}', row=0)"
+                    )
+                ]
+
+        if stage_data.type == "GAParallelStage":
+            print("Parallel stage not yet supported")
 
         stage_id += 1
 
     return stage_info_cells
+
+
+def main(
+    run_dir: str,
+    notebook_name: str = "results_notebook.ipynb",
+    fold_chapters: bool = True,
+    run_notebook: bool = True,
+    verbose: bool = False,
+):
+    run_data = ra.RunData(run_dir)
+
+    cell_list = get_setup_cells(run_data)
+    cell_list += get_run_info_cells(run_data)
+    cell_list += get_stage_info_cells(run_data)
+
+    nc.create_and_test_results_notebook(
+        run_dir = run_dir,
+        cell_list = cell_list,
+        fold_chapters = fold_chapters,
+        run_notebook = run_notebook,
+        verbose = verbose,
+        notebook_name = notebook_name
+    )

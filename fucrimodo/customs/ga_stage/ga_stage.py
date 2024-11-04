@@ -24,6 +24,7 @@ class GAStage(Stage):
         parent_ratio: float = 0.5,
         description: str = "",
         save_n_crystals: int = 10,
+        verbose: bool = True,
     ):
         super().__init__(name, description)
 
@@ -50,7 +51,22 @@ class GAStage(Stage):
             survivor_selection=survivor_selection,
             parent_selection=parent_selection,
             parent_ratio=parent_ratio,
+            verbose=verbose,
         )
+
+        self.verbose = verbose
+
+    @property
+    def verbose(self) -> bool:
+        return self._verbose
+
+    @verbose.setter
+    def verbose(self, value: bool) -> None:
+        # Set the stage verbose attribute
+        self._verbose = value
+
+        # Set the verbose attribute of the ga_runner
+        self.ga_runner.verbose = value
 
     def __seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]
@@ -258,6 +274,9 @@ class GAStage(Stage):
         global_stats: tools.MultiStatistics | None,
     ) -> Population:
         assert hasattr(self, "id"), "Stage ID not set."
+
+        # Attach the logger to the ga_runner
+        self.ga_runner.logger = self.logger
 
         population = self.ga_runner.run(
             population=population, 

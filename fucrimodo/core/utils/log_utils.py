@@ -1,0 +1,43 @@
+import logging
+
+def setup_stage_logger(
+    log_file_path: str,
+    run_name: str,
+    stage_name: str,
+    log_level: int = logging.INFO,
+) -> tuple[logging.Logger, str]:
+    """Set up a logger for each stage of the run.
+
+    :param log_file_path: Path to the log file. Normally the directory of the 
+            stage.
+    :param run_name: Name of the run.
+    :param stage_name: Name of the stage.
+    :param log_level: Level of the log messages. Default is logging.INFO.
+
+    :return: A tuple containing the logger and the name of the logger.
+        The name of the logger is the run name and the stage name separated by
+        a underscore {run_name}_{stage_name}_logger.
+    """
+    # Create logger name
+    logger_name = f'{run_name}_{stage_name}_logger'
+
+    # Create a logger
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(log_level)
+
+    # Create a file for the log output
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setLevel(log_level)
+
+    # Define how the log messages should look like
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+
+    # Add the file handler to the logger
+    # Avoid adding multiple handlers to the logger
+    if not logger.hasHandlers():
+        logger.addHandler(file_handler)
+
+    return logger, logger_name

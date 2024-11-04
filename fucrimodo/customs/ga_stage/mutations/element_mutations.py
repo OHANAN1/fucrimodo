@@ -1,14 +1,11 @@
 from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.modules import Individual
 import ase.ga.standardmutations as ase_standard_mut
 import ase
 import ase.data as ase_data
 import random
 import numpy as np
-import logging
-logger = logging.getLogger('run_logger')
 
 
 class ReplaceAtomsMutation(Mutation):
@@ -103,7 +100,7 @@ class AddAtomsMutation(Mutation):
             distances = np.linalg.norm(positions - candidate, axis=1)
 
             if np.all(distances >= target_distance):
-                logger.debug("Could not find a distant point")
+                self.logger.debug("Could not find a distant point")
                 return candidate
 
         return None

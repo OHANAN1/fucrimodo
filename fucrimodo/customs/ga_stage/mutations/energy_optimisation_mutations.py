@@ -55,7 +55,7 @@ class SoftMutation(Mutation):
             return None
         ase_soft = ase_soft_mut.SoftMutation(
             blmin=self.closest_distances,
-            verbose=True,
+            verbose=False,
             used_modes_file=None  # type: ignore
         )
 

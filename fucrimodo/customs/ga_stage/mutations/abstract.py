@@ -4,7 +4,6 @@ import ase
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.modules import Individual
 import logging
-logger = logging.getLogger('run_logger')
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║            Abstract Base Class for Mutations             ║
@@ -24,6 +23,16 @@ class Mutation(ABC):
     ):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
+
+    @property
+    def logger(self) -> logging.Logger:
+        if not hasattr(self, "_logger"):
+            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        self._logger = value
 
     def __repr__(self):
         class_name = self.__class__.__name__
@@ -88,7 +97,7 @@ class Mutation(ABC):
         Returns the offspring and a boolean if the mutation was successful.
         True if successful, False if not.
         """
-        logger.info("Performing {}.".format(self.__class__.__name__))
+        self.logger.debug("Performing {}.".format(self.__class__.__name__))
         try:
             if not hasattr(self, "max_steps") or self.max_steps == 0:
                 self.max_steps = 1
@@ -103,7 +112,7 @@ class Mutation(ABC):
                     offspring = self.perform_mutation(offspring)
 
                 except Exception as e:
-                    logger.warning(
+                    self.logger.warning(
                         "{}: Unknown Error. No mutation possible. {}".format(
                             self.__class__.__name__, e)
                     )
@@ -120,7 +129,7 @@ class Mutation(ABC):
                     offspring_is_valid = self.crystal_is_valid_object(
                         offspring)
                 except Exception as e:
-                    logger.warning(
+                    self.logger.warning(
                         "{}: Unknown Error crystal_is_valid_object. {}".format(
                             self.__class__.__name__, e)
                     )
@@ -130,7 +139,7 @@ class Mutation(ABC):
                 try:
                     offspring_is_physical = self.crystal_is_physical(offspring)
                 except Exception as e:
-                    logger.warning(
+                    self.logger.warning(
                         "{}: Unknown Error in crystal_is_physical. {}".format(
                             self.__class__.__name__, e)
                     )
@@ -138,7 +147,7 @@ class Mutation(ABC):
                     continue
 
                 if not offspring_is_valid:
-                    logger.warning(
+                    self.logger.warning(
                         "{}: Offspring is not a valid object.".format(
                             self.__class__.__name__
                         ) + f"\nOffspring: {offspring}"
@@ -163,15 +172,15 @@ class Mutation(ABC):
                 crystal.set_cell(offspring_cell)
                 crystal.set_pbc([True, True, True])
 
-                logger.info("Done! After {} steps.".format(step+1))
+                self.logger.debug("Done! After {} steps.".format(step+1))
                 return crystal, True
 
             else:
-                logger.info("Mutation failed.")
+                self.logger.debug("Mutation failed.")
                 return crystal, False
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "{}: Unknown Error. Couldnt perform mutation. {}".format(
                     self.__class__.__name__, e)
             )
