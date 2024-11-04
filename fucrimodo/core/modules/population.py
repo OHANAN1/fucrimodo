@@ -30,6 +30,10 @@ class Population:
         """The generation number of the population."""
         return self._generation
 
+    @generation.setter
+    def generation(self, value: int):
+        self._generation = value
+
     @property
     def size(self) -> int:
         """Returns the number of individuals in the population."""
