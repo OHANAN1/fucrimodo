@@ -20,3 +20,6 @@ def test_genetic_algorithm():
 
 def test_presets():
     import fucrimodo.customs.ga_stage.presets
+
+def test_parallel_ga_stage():
+    import fucrimodo.customs.ga_stage.parallel_ga_stage
