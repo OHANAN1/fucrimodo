@@ -286,7 +286,7 @@ class SelectAllPopulation(PopulationSelection):
     ):
         self.database_name = database_name
 
-    def select_start_pop(
+    def select(
         self,
         individuals: list[Individual],
         n: int
@@ -345,6 +345,7 @@ class TournamentDCDSelection(PopulationSelection):
 
     def __repr__(self) -> str:
         return "TournamentDCDSelection()"
+
 
 class DopePopulationSelection(PopulationSelection):
     def __init__(
