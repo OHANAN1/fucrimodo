@@ -275,6 +275,9 @@ class MultiStageSearch:
         stage_dir = os.path.join(self.run_dir, relative_stage_dir)
         os.mkdir(stage_dir)
 
+        # Set the stage directory in the stage
+        stage.stage_dir = stage_dir
+
         # Set up a logger for the stage
         stage_logger, log_name = setup_stage_logger(
             log_file_path=f"{stage_dir}/stage.log",
