@@ -56,6 +56,18 @@ class GAStage(Stage):
 
         self.verbose = verbose
 
+    @property
+    def verbose(self) -> bool:
+        return self._verbose
+
+    @verbose.setter
+    def verbose(self, value: bool) -> None:
+        # Set the stage verbose attribute
+        self._verbose = value
+
+        # Set the verbose attribute of the ga_runner
+        self.ga_runner.verbose = value
+
     def __seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]
     ) -> tuple[list, tuple]:
