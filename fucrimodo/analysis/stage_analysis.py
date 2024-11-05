@@ -47,6 +47,33 @@ class StageData():
         return str(self._info_dict["description"])
 
     @property
+    def start_time(self) -> str:
+        if not hasattr(self, "_start_time"):
+            try:
+                self._start_time = str(self._info_dict["start_time"])
+            except KeyError:
+                self._start_time = "Not available."
+        return self._start_time
+
+    @property
+    def end_time(self) -> str:
+        if not hasattr(self, "_end_time"):
+            try:
+                self._end_time = str(self._info_dict["end_time"])
+            except KeyError:
+                self._end_time = "Not available."
+        return self._end_time
+
+    @property
+    def total_runtime(self) -> str:
+        if not hasattr(self, "_total_runtime"):
+            try:
+                self._total_runtime = str(self._info_dict["total_runtime"])
+            except KeyError:
+                self._total_runtime = "Not available."
+        return self._total_runtime
+
+    @property
     def id(self) -> int:
         # Ensure that the id is an integer
         assert type(self._info_dict["id"]) == int, \
@@ -395,6 +422,7 @@ def get_stage_overview(stage_data: StageData) -> pd.DataFrame:
             "N_fit": len(stage_data.fitnesses),
             "N_mut": len(stage_data.mutations),
             "N_cross": len(stage_data.crossovers),
+            "Total Runtime": stage_data.total_runtime,
         },
         index=[0] # type: ignore
     )
