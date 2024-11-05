@@ -10,7 +10,7 @@ class CLICommand:
         add = parser.add_argument
         add(
             'analysis_object', 
-            help='Possible values: notebook, run, stage'
+            help='Possible values: notebook, run, stage, multi_run.'
         )
         add(
             'dir_path',
@@ -165,6 +165,23 @@ class Runner:
             save_dir = self.save_dir
         )
 
+    def __analyse_multi_run(self):
+        # Use the provided configuration file if it exists
+        if self.config is not None:
+            main = self.config.main
+
+        # If no configuration file is provided, use the default configuration
+        else:
+            from fucrimodo.lab_template.configs.analysis.multi_run.default import main
+
+        main(
+            multi_run_dir=self.dir_path,
+            verbose=self.verbose,
+            row=self.row,
+            show=self.show,
+            save_dir = self.save_dir
+        )
+
     def __generate_notebook(self):
         if self.config is not None:
             main = self.config.main
@@ -191,8 +208,10 @@ class Runner:
             self.__analyse_run()
         elif self.analysis_object == "stage":
             self.__analyse_stage()
+        elif self.analysis_object == "multi_run":
+            self.__analyse_multi_run()
         else:
             raise ValueError(
                 "Provided analysis type not found, " 
-                    "only 'notebook', 'run', 'stage' are allowed."
+                    "only 'notebook', 'run', 'stage', 'multi_run' are allowed."
             )
