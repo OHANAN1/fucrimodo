@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from fucrimodo.core.modules.individual import Individual
 from .population import Population
@@ -22,6 +23,38 @@ class Stage(ABC):
     def __init__(self, name: str, description: str) -> None:
         self._name = name
         self._description = description
+
+    @property
+    def start_time(self) -> datetime:
+        if not hasattr(self, "_start_time"):
+            raise AttributeError(
+                f"{self.__class__.__name__}: No start time set. "
+                    "Please set a start time with the set_start_time method."
+            )
+        return self._start_time
+
+    def set_start_time(self):
+        """Set the start time of the stage to the current time.
+
+        Will be set automatically before the run method by the
+        :class:`MultiStageSearch`.
+        """
+        self._start_time = datetime.now()
+
+    @property
+    def end_time(self) -> datetime:
+        """Return the end time of the stage.
+
+        If the end time is not set, the start time is returned.
+        Will be set automatically after the run method by the
+        :class:`MultiStageSearch`.
+        """
+        if not hasattr(self, "_end_time"):
+            return self.start_time
+        return self._end_time
+
+    def set_end_time(self):
+        self._end_time = datetime.now()
 
     @property
     def logger(self) -> logging.Logger:

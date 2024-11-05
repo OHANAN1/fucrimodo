@@ -71,6 +71,9 @@ class MultiStageSearch:
         # Set the log level of the run
         self.log_level = log_level
 
+        # Set the start time of the run
+        self._start_time = datetime.datetime.now()
+
     @property
     def name(self) -> str:
         return self._name
@@ -82,6 +85,21 @@ class MultiStageSearch:
     @description.setter
     def description(self, value: str):
         self._description = value
+
+    @property
+    def start_time(self) -> datetime.datetime:
+        return self._start_time
+
+    @property
+    def end_time(self) -> datetime.datetime:
+        if not hasattr(self, "_end_time"):
+            # If the end time is not set, return the start time
+            return self.start_time
+        return self._end_time
+
+    def set_end_time(self):
+        """Method to set the end time of the run to the current time."""
+        self._end_time = datetime.datetime.now()
 
     @property
     def global_statistics_dict(self) -> dict[str, Callable[[Individual], float]] | None:
@@ -244,6 +262,9 @@ class MultiStageSearch:
             "type": stage.type(),
             "name": stage.name,
             "description": stage.description,
+            "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_runtime": str(stage.end_time - stage.start_time),
         })
 
         file_path = os.path.join(stage_dir, "info.json")
@@ -268,6 +289,9 @@ class MultiStageSearch:
         """
         # Assign the stage ID to the stage
         stage.id = stage_id
+
+        # Add the current time as the start time of the stage
+        stage.set_start_time()
 
         # Create a directory for the stage in the run directory
         # stage should be saved in a directory relative to the run
@@ -347,6 +371,9 @@ class MultiStageSearch:
         info_dict = {
             "name": self.name,
             "description": self.description,
+            "start_time": self.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": self.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_runtime": str(self.end_time - self.start_time),
             "stage_history": self.stage_history
         }
         with open(file_path, "w") as f:
@@ -390,8 +417,14 @@ class MultiStageSearch:
             global_statistics_dict = self._global_statistics_dict
         )
 
+        # Set the end time of the stage to the current time
+        stage.set_end_time()
+
         # Save the stage_info_dict again, to update data. E.g. number of generations
         self.__save_stage_info(stage, stage_dir)
+
+        # Set the end time of the run. Will be overwritten if run again.
+        self.set_end_time()
 
         # Overwrite the info.json in the run directory
         self.save_info()
