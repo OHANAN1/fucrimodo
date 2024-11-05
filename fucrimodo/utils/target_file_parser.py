@@ -91,7 +91,7 @@ def load_target_file(
         "The features need to be a list."
     )
 
-    if not hasattr(target_dict, "additional_notes"):
+    if not "additional_notes" in target_dict.keys():
         print("No additional notes found in the target file.")
         target_dict["additional_notes"] = ""
 
