@@ -39,17 +39,3 @@ def main(
             else:
                 plt.savefig(f"global_statistic_{row}.png")
                 plt.close()
-
-    # If no row is provided, plot all global statistics
-    else:
-        for i in range(len(global_stats_overview)):
-            plot_global_statistics(run_data, i)
-            if show:
-                plt.show()
-            else:
-                if save_dir is not None:
-                    plt.savefig(f"{save_dir}/global_statistic_{i}.png")
-                    plt.close()
-                else:
-                    plt.savefig(f"global_statistic_{i}.png")
-                    plt.close()
