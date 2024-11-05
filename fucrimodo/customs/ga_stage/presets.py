@@ -10,12 +10,22 @@ from fucrimodo.customs.ga_stage import crossovers as cross
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.custom_soap import CustomSOAP
-from fucrimodo.core.modules import FitnessFunction
+from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.customs.ga_stage.ga_stage import GAStage
+from fucrimodo.customs.ga_stage.parallel_ga_stage import GAParallelStage
 from fucrimodo.utils import soap_similarity as soap_sim
 from fucrimodo.customs.ga_stage.break_conditions import BreakCondition
 from fucrimodo.customs.population_selections import PopulationSelection
 from fucrimodo.customs.fitness_functions import FitnessFunction
+
+
+# Define function globally so it can be pickled, which is necessary for 
+# multiprocessing
+def get_first_fitness_val(individual: Individual) -> float:
+    return individual.fitness.values[0]
+
+def get_volume(individual: Individual) -> float:
+    return individual.get_volume()
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    ABC for GA presets                    ║
@@ -32,6 +42,7 @@ class GAPreset(ABC):
     object.
     The properties are set when the GAStage object is created.
     Use `del` to reset the properties of the class to its default values.
+    If species is not set, the species of the SOAP object is used.
     """
     def __init__(
         self,
@@ -39,11 +50,17 @@ class GAPreset(ABC):
         cell_bounds: CustomCellBounds,
         soap_object: CustomSOAP,
         soap_features: np.ndarray,
+        species: list[str] | None = None
     ):
         self._closest_distances = closest_distances
         self._cell_bounds = cell_bounds
         self._soap_object = soap_object
         self._soap_features = soap_features
+
+        if species is None:
+            self._species = soap_object.species
+        else:
+            self._species = species
 
     @property
     def name(self) -> str:
@@ -97,7 +114,7 @@ class GAPreset(ABC):
     @property
     def mutation_probability(self) -> float:
         if not hasattr(self, "_mutation_probability"):
-            self._mutation_probability = 0.8
+            self._mutation_probability = 0.5
         return self._mutation_probability
 
     @mutation_probability.setter
@@ -107,7 +124,7 @@ class GAPreset(ABC):
     @property
     def crossover_probability(self) -> float:
         if not hasattr(self, "_crossover_probability"):
-            self._crossover_probability = 0.8
+            self._crossover_probability = 0.5
         return self._crossover_probability
 
     @crossover_probability.setter
@@ -127,8 +144,8 @@ class GAPreset(ABC):
     @property
     def parent_selection(self) -> PopulationSelection:
         if not hasattr(self, "_parent_selection"):
-            self._parent_selection = pop_sel.TournamentSelection(
-                tournament_size=4
+            self._parent_selection = pop_sel.TournamentDCDSelection(
+                sort_by=get_volume
             )
         return self._parent_selection
 
@@ -192,6 +209,21 @@ class GAPreset(ABC):
             description=self.description,
             save_n_crystals=self.save_n_crystals
         )
+
+    @property
+    def species(self) -> list[str]:
+        return self._species
+
+    @species.setter
+    def species(self, value: list[str]):
+        self._species = value
+
+        # Reset the mutations and crossovers if they are already set as
+        # private properties so they are recalculated with the new species.
+        if hasattr(self, "_mutation_list"):
+            del self._mutation_list
+        if hasattr(self, "_crossover_list"):
+            del self._crossover_list
 
     def change_cell_bounds(self, cell_bounds: CustomCellBounds):
         """Set new cell bounds.
@@ -350,6 +382,10 @@ class ExlorationGAPreset(GAPreset):
                 cross.OnePointElementCrossover(self._closest_distances),
                 cross.OnePointPositionCrossover(self._closest_distances),
                 cross.UnitCellCrossover(self._closest_distances),
+                cross.CutAndSpliceCrossover(
+                    self._closest_distances,
+                    self._cell_bounds
+                ),
             ]
         return self._crossover_list
     
@@ -364,14 +400,14 @@ class ExlorationGAPreset(GAPreset):
                     closest_distances=self._closest_distances, n_top=1, rattle_strength=0.1
                 ),
                 mut.elem_mut.AddAtomsMutation(
-                    possible_elements=self._soap_object.species,
+                    possible_elements=self.species,
                     closest_distances=self._closest_distances
                 ),
                 mut.elem_mut.DeleteRandomAtomsMutation(
                     closest_distances=self._closest_distances
                 ),
                 mut.elem_mut.ReplaceAtomsMutation(
-                    possible_elements=self._soap_object.species,
+                    possible_elements=self.species,
                     closest_distances=self._closest_distances
                 ),
                 mut.energy_mut.SoftMutation(
@@ -393,7 +429,7 @@ class ExlorationGAPreset(GAPreset):
                 ),
                 mut.cell_mut.StrainMutation(
                     closest_distances=self._closest_distances,
-                    n_variable_cell_vectors=3,
+                    n_variable_cell_vectors=2,
                     cell_bounds=self._cell_bounds,
                 ),
                 mut.cell_mut.CutoutMutation(
@@ -466,12 +502,24 @@ class OptimizationGAPreset(GAPreset):
             self._crossover_list =[
                 cross.OnePointElementCrossover(self._closest_distances),
                 cross.OnePointPositionCrossover(self._closest_distances),
+                cross.CutAndSpliceCrossover(
+                    self._closest_distances,
+                    self._cell_bounds
+                ),
             ]
         return self._crossover_list
     
     @GAPreset.mutation_list.getter
     def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
+            # Define the similarity fitness function with gamma = 0.01
+            # used for the gradient rattle mutation.
+            soap_sim_for_deriv = soap_sim.RBFSimilarity(
+                target_feature_vector=self._soap_features,
+                rbf_gamma=0.01,
+                descriptor_object=self._soap_object,
+            )
+
             all_muts = [
                 mut.elem_mut.PermutationMutation(
                     closest_distances=self._closest_distances,
@@ -504,6 +552,20 @@ class OptimizationGAPreset(GAPreset):
                 mut.cell_mut.RotationMutation(
                     closest_distances=self._closest_distances
                 ),
+                mut.pos_mut.GradientRattleMutation(
+                    closest_distances=self._closest_distances,
+                    rbf_similarity_obj=soap_sim_for_deriv,
+                    max_steps=10,
+                    n_atoms_to_move=1,
+                    max_movement=0.01,
+                ),
+                mut.pos_mut.GradientRattleMutation(
+                    closest_distances=self._closest_distances,
+                    rbf_similarity_obj=soap_sim_for_deriv,
+                    max_steps=10,
+                    n_atoms_to_move=1,
+                    max_movement=0.001,
+                ),
             ]
             multi_mut = mut.multi_mut.MultipleMutations(
                 mutations=all_muts,
@@ -527,3 +589,144 @@ class OptimizationGAPreset(GAPreset):
             ])
         return self._break_condition
 
+
+class BuildUpParallelGA():
+    """Creates a GAParallelStage object where each GAStage is created with
+    the ExplorationGAPreset but each GAStage has a different species_specific
+    species_specific fitness function and a soap similarity fitness function
+    with gamma = 0.01.
+    """
+    def __init__(
+        self,
+        soap_object: CustomSOAP,
+        soap_features: np.ndarray,
+        closest_distances: CustomClosestDistances,
+        cell_bounds: CustomCellBounds,
+        rbf_gamma: float = 0.01,
+        description: str = "",
+        name: str = "Build up parallel GA",
+    ):
+        self._name = name
+        self._description = description
+        self._soap_object = soap_object
+        self._soap_features = soap_features
+        self._closest_distances = closest_distances
+        self._cell_bounds = cell_bounds
+        self._rbf_gamma = rbf_gamma
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def cell_bounds(self) -> CustomCellBounds:
+        return self._cell_bounds
+
+    @cell_bounds.setter
+    def cell_bounds(self, value: CustomCellBounds):
+        self._cell_bounds = value
+
+    @property
+    def mutation_probability(self) -> float:
+        """Is set for all stages. 
+
+        Default: 0.5
+        """
+        if not hasattr(self, "_mutation_probability"):
+            self._mutation_probability = 0.5
+        return self._mutation_probability
+
+    @mutation_probability.setter
+    def mutation_probability(self, value: float):
+        self._mutation_probability = value
+
+    @property
+    def crossover_probability(self) -> float:
+        """Is set for all stages.
+
+        Default: 0.5
+        """
+        if not hasattr(self, "_crossover_probability"):
+            self._crossover_probability = 0.5
+        return self._crossover_probability
+
+    @crossover_probability.setter
+    def crossover_probability(self, value: float):
+        self._crossover_probability = value
+
+    def create(self) -> GAParallelStage:
+        """Create the GAParallelStage object with the preset properties."""
+
+        species_specific_fitnesses = get_species_specific_soap_fitness_list(
+            target_soap_features=self._soap_features,
+            soap_species=self._soap_object.species,
+            soap_object=self._soap_object,
+            rbf_gamma=self._rbf_gamma
+        )
+
+        soap_species = self._soap_object.species
+        species_combinations = []
+        for i in range(len(soap_species)):
+            for j in range(i, len(soap_species)):
+                # Only add the unique species combinations
+                species_comb = list(set([soap_species[i], soap_species[j]]))
+                species_combinations.append(species_comb)
+
+        similarity_fitnesses = get_soap_similarity_fitness_list(
+            target_soap_features=self._soap_features,
+            soap_object=self._soap_object,
+        )
+        sim_fit_1_00 = similarity_fitnesses[0]
+        sim_fit_0_10 = similarity_fitnesses[1]
+        sim_fit_0_01 = similarity_fitnesses[2]
+
+        explore_ga = ExlorationGAPreset(
+            closest_distances=self._closest_distances,
+            cell_bounds=self._cell_bounds,
+            soap_object=self._soap_object,
+            soap_features=self._soap_features
+        )
+
+        stages = []
+        for i, fitness_function in enumerate(species_specific_fitnesses):
+            explore_ga.name = f"{self.name} .fit {i+1}"
+
+            # Only optimize the respective species
+            # No this does not seem to work, bc I somehow optimize structures
+            # with incorrect species
+            # explore_ga.species = species_combinations[i]
+
+            # Set the correct fitness functions
+            explore_ga.fitness_functions = [
+                (sim_fit_0_01, 0.5), fitness_function
+            ]
+
+            # Adjust the break condition to less generations if nothing is found
+            explore_ga.break_condition = break_cond.MultipleOrBreak(
+                [
+                    break_cond.GenerationBreak(100),
+                    break_cond.MultipleAndBreak(
+                        [
+                            break_cond.MinFitnessBreak(0, 1e-30),
+                            break_cond.GenerationBreak(50)
+                        ]
+                    )
+                ]
+            )
+
+            # Adjust mutation and crossover probability
+            explore_ga.crossover_probability = self.crossover_probability
+            explore_ga.mutation_probability = self.mutation_probability
+
+            stages.append(explore_ga.create())
+
+        return GAParallelStage(
+            name=self.name,
+            stage_list=stages,
+            description=self._description,
+            n_processes=len(stages),
+        )

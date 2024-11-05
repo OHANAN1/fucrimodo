@@ -6,6 +6,7 @@ from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from ase.ga.startgenerator import StartGenerator
 import warnings
 import ase
+import numpy as np
 
 import logging
 logger = logging.getLogger('run_logger')
@@ -42,43 +43,69 @@ class OneAtomicCrystalGenerator(PopulationGenerator):
         self.closest_distances = closest_distances
         self.volume = volume
 
-    def generate_individuals(self, n: int) -> list[Individual]:
-        # Create a generator for each atom type
-        # This is just how the ase.ga.startgenerator.StartGenerator works
-        # block defines the number of atoms of each type, here 1
-        generators = [StartGenerator(
-            slab=ase.Atoms('', pbc=True),
-            blocks=[(atom_type, 1)],
-            blmin=self.closest_distances._ase_closest_distances,
-            number_of_variable_cell_vectors=3,
-            cellbounds=self.cell_bounds._ase_cellbounds,
-            box_volume=self.volume,
-            splits={(2,): 1, (1,): 1},
-            test_dist_to_slab=False,
-            test_too_far=False,
-        ) for atom_type in self.atom_types]
+    def __generate_individuals_with_specific_species(
+        self,
+        n: int,
+        species: list[str],
+    ) -> list[Individual]:
 
-        max_steps = 2 * n
-        # Generate individuals
+        a_min_max = self.cell_bounds.bounds["a"]
+        b_min_max = self.cell_bounds.bounds["b"]
+        c_min_max = self.cell_bounds.bounds["c"]
+
         step = 0
-        individuals = []
-        while len(individuals) < n:
-            # Get a random generator for a specific atom type
-            gen_index = random.randint(0, len(generators) - 1)
+        max_steps = 2 * n
+        inds = []
+        while len(inds) < n:
+            cell_vectors = [
+                [np.random.uniform(a_min_max[0], a_min_max[1]), 0, 0],
+                [0, np.random.uniform(b_min_max[0], b_min_max[1]), 0],
+                [0, 0, np.random.uniform(c_min_max[0], c_min_max[1])]
+            ]
+            ase_atoms = ase.Atoms(
+                symbols=species,
+                positions=[[0, 0, 0]],
+                cell=cell_vectors,
+                pbc=True
+            )
 
-            # Get a new candidate from the generator
-            crystal = generators[gen_index].get_new_candidate(maxiter=1000)
-
-            # The generator returns None, if the crystal could not be created
-            # in the internal max number of steps
-            if crystal is not None:
-
-                # Convert the ase.Atoms object to an Individual object
-                individuals.append(
-                    convert_ase_atoms_to_individual(crystal)
+            if not self.closest_distances.atoms_are_too_close(ase_atoms):
+                inds.append(
+                    convert_ase_atoms_to_individual(ase_atoms)
                 )
 
-            # Increase step and check if max steps is reached
+            step += 1
+
+            if step > max_steps:
+                warnings.warn(
+                    "Could not generate {} individuals".format(n), UserWarning
+                )
+                break
+
+        return inds
+
+    def generate_individuals(self, n: int) -> list[Individual]:
+        # Generate individuals
+        individuals = []
+        for atom_type in self.atom_types:
+            inds = self.__generate_individuals_with_specific_species(
+                n // len(self.atom_types),
+                [atom_type]
+            )
+            individuals.extend(inds)
+
+        # If not enough individuals were generated, generate the rest with
+        # random species
+        step = 0
+        max_steps = 2 * n
+        while len(individuals) < n:
+            atom_type = random.choice(self.atom_types)
+            inds = self.__generate_individuals_with_specific_species(
+                1,
+                [atom_type]
+            )
+            individuals.extend(inds)
+
             step += 1
             if step > max_steps:
                 warnings.warn(
