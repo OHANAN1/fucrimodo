@@ -11,3 +11,5 @@ def test_configs_analyse():
     from fucrimodo.lab_template.configs.analysis.stage.default import main
 
     from fucrimodo.lab_template.configs.analysis.notebook.default import main
+
+    from fucrimodo.lab_template.configs.analysis.multi_run.default import main
