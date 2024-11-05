@@ -46,6 +46,41 @@ class RunData():
         return self._name
 
     @property
+    def description(self) -> str:
+        if not hasattr(self, "_description"):
+            self._description = str(self._info_dict["description"])
+        return self._description
+
+    @property
+    def start_time(self) -> str:
+        if not hasattr(self, "_start_time"):
+            try:
+                self._start_time = str(self._info_dict["start_time"])
+            except KeyError:
+                self._start_time = "Not available."
+        return self._start_time
+
+    @property
+    def end_time(self) -> str:
+        if not hasattr(self, "_end_time"):
+            try:
+                self._end_time = str(self._info_dict["end_time"])
+            except KeyError:
+                self._end_time = "Not available."
+
+        return self._end_time
+
+    @property
+    def total_runtime(self) -> str:
+        if not hasattr(self, "_total_runtime"):
+            try:
+                self._total_runtime = str(self._info_dict["total_runtime"])
+            except KeyError:
+                self._total_runtime = "Not available."
+
+        return self._total_runtime
+
+    @property
     def crystals(self) -> list[ase.Atoms]:
         """
         List of all atoms of all stages, ordered with the stage ids.
@@ -59,12 +94,6 @@ class RunData():
         :attr:`RunResults.crystals`.
         """
         return self._key_value_pairs
-
-    @property
-    def description(self) -> str:
-        if not hasattr(self, "_description"):
-            self._description = str(self._info_dict["description"])
-        return self._description
 
     @property
     def global_statistics(self) -> pd.DataFrame:
@@ -371,7 +400,8 @@ def get_run_overview(run_data: RunData) -> pd.DataFrame:
         "name": run_data.name,
         "description": run_data.description,
         "n_stages": run_data.n_stages,
-        "total_generations": run_data.total_generations
+        "total_generations": run_data.total_generations,
+        "total_runtime": run_data.total_runtime,
     },
     index=[0] # type: ignore
     )
