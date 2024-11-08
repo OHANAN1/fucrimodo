@@ -71,9 +71,6 @@ class MultiStageSearch:
         # Set the log level of the run
         self.log_level = log_level
 
-        # Set the start time of the run
-        self._start_time = datetime.datetime.now()
-
     @property
     def name(self) -> str:
         return self._name
@@ -393,6 +390,10 @@ class MultiStageSearch:
         """
         # Update the current stage ID, to ensure the stages have unique IDs
         self.current_stage_id += 1
+
+        # Set the start time of the run to the current time
+        if self.current_stage_id == 1:
+            self._start_time = datetime.datetime.now()
 
         # Create a directory for the stage first, to ensure data can be saved
         stage_dir = self.__set_up_stage(stage, self.current_stage_id)
