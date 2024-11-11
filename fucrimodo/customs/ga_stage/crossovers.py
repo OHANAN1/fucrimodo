@@ -562,6 +562,16 @@ class CutAndSpliceCrossover(Crossover):
         parent1 = build.sort(parent1)
         parent2 = build.sort(parent2)
 
+        # Check if the parents are of the same length, this is necessary
+        # for the CutAndSplicePairing of ase
+        if len(parent1) != len(parent2):
+            return (None, None)
+
+        # Check if the parents have a minimum of 2 atoms, else the 
+        # CutAndSplicePairing is unnecessary
+        if len(parent1) < 2:
+            return (None, None)
+
         cut_and_splice_pairing = CutAndSplicePairing(
             slab=ase.Atoms(),
             blmin=self.closest_distances,
