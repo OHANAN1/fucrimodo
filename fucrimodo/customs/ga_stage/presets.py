@@ -658,6 +658,31 @@ class BuildUpParallelGA():
     def crossover_probability(self, value: float):
         self._crossover_probability = value
 
+    @property
+    def break_condition(self) -> BreakCondition:
+        """Is set for all stages.
+
+        Default: GenerationBreak(200)
+        """
+        if not hasattr(self, "_break_condition"):
+            self._break_condition = break_cond.MultipleOrBreak(
+                [
+                    break_cond.GenerationBreak(100),
+                    break_cond.MultipleAndBreak(
+                        [
+                            break_cond.MinFitnessBreak(0, 1e-30),
+                            break_cond.GenerationBreak(50)
+                        ]
+                    )
+                ]
+            )
+
+        return self._break_condition
+
+    @break_condition.setter
+    def break_condition(self, value: BreakCondition):
+        self._break_condition = value
+
     def create(self) -> GAParallelStage:
         """Create the GAParallelStage object with the preset properties."""
 
@@ -706,18 +731,7 @@ class BuildUpParallelGA():
             ]
 
             # Adjust the break condition to less generations if nothing is found
-            explore_ga.break_condition = break_cond.MultipleOrBreak(
-                [
-                    break_cond.GenerationBreak(100),
-                    break_cond.MultipleAndBreak(
-                        [
-                            break_cond.MinFitnessBreak(0, 1e-30),
-                            break_cond.GenerationBreak(50)
-                        ]
-                    )
-                ]
-            )
-
+            explore_ga.break_condition = self.break_condition
             # Adjust mutation and crossover probability
             explore_ga.crossover_probability = self.crossover_probability
             explore_ga.mutation_probability = self.mutation_probability
