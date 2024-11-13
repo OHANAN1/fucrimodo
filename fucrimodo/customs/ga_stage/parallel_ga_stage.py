@@ -82,6 +82,11 @@ class GAParallelStage(Stage):
         stages are run. If None, no survivor selection is performed.
         If set, the number of individuals in the population will be kept
         constant.
+    :param parent_selection: Parent selection method to use on the population
+        before the stages are run. If None, all individuals in the population
+        are used as the population.
+    :param parent_ratio: Ratio of the population that is selected by the
+        parent selection method.
     :param n_processes: Number of processes to use to run the stages in
         parallel.
     :param random_seed: Random seed to use for the parallel stage.
@@ -95,6 +100,8 @@ class GAParallelStage(Stage):
         description: str,
         stage_list: list[GAStage],
         survivor_selection: PopulationSelection | None = None,
+        parent_selection: PopulationSelection | None = None,
+        parent_ratio: float = 1.0,
         n_processes: int = 4,
         random_seed: int = 42,
         verbose: bool = True
@@ -105,6 +112,8 @@ class GAParallelStage(Stage):
         self.random_seed = random_seed
         self.verbose = verbose
         self.survivor_selection = survivor_selection
+        self.parent_selection = parent_selection
+        self.parent_ratio = parent_ratio
 
     def __get_stage_history(self) -> dict:
         """Method to get the stage history of the parallel stage.
@@ -166,13 +175,13 @@ class GAParallelStage(Stage):
             "n_generations": n_generations,
             "stage_history": self.__get_stage_history(),
             "survivor_selection": self.survivor_selection,
+            "parent_selection": self.parent_selection,
+            "parent_ratio": self.parent_ratio,
         }
 
         # Add these entries, so the info_dict is consistent with the other
         # stages
         info_dict["break_condition"] = None
-        info_dict["parent_selection"] = None
-        info_dict["parent_ratio"] = None
         return info_dict
 
     def __write_local_crystals_db_to_global_crystals_db(
@@ -463,6 +472,12 @@ class GAParallelStage(Stage):
         global_stats: tools.MultiStatistics | None
     ) -> Population:
         self.__set_up_self()
+
+        if self.parent_selection is not None:
+            n_parents = int(self.parent_ratio * population.size)
+            population.individuals = self.parent_selection.select(
+                population.individuals, n_parents
+            )
 
         if self.verbose:
             print(f"Running {self.name} with {self.n_processes} processes...")
