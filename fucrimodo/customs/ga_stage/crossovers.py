@@ -539,7 +539,7 @@ class CutAndSpliceCrossover(Crossover):
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
         n_top: int | str = "all",
-        number_of_variable_cell_vectors: int = 3,
+        number_of_variable_cell_vectors: int = 0,
         max_steps: int = 1,
     ):
         self.max_steps = max_steps
