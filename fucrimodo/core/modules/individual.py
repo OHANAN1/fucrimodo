@@ -6,6 +6,7 @@ from operator import mul, truediv
 from collections.abc import Sequence
 import sys
 import numpy as np
+import datetime
 
 
 class FitnessStorage(object):
@@ -147,6 +148,7 @@ class Individual(ase.Atoms):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.info = {}
+        self._creation_time = datetime.datetime.now()
 
     @property
     def fitness_weights(self) -> Sequence[float] | None:
@@ -222,6 +224,11 @@ class Individual(ase.Atoms):
     def features(self, value: np.ndarray | None):
         self._features = value
 
+    @property
+    def creation_time(self) -> datetime.datetime:
+        return self._creation_time
+
     def reset(self):
         self._features = None
+        self._creation_time = datetime.datetime.now()
         del self.fitness.values

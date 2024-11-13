@@ -7,6 +7,7 @@ import ase.db
 from typing import Callable
 from deap import tools
 from multiprocessing import Pool
+import json
 
 from fucrimodo.core.utils.log_utils import setup_stage_logger
 from fucrimodo.core.modules import Stage, Individual, Population, PopulationSelection
@@ -36,9 +37,32 @@ def perform_stage(
     random.seed(seed)
     np.random.seed(seed)
 
+    # Set the start time of the stage
+    stage.set_start_time()
+
     population = stage.run(population, global_log, global_stats)
 
+    # Set the end time of the stage to the current time
+    stage.set_end_time()
+
+    # Save stage results
     stage.save_results(stage.stage_dir, crystal_db)
+
+    # Save stage info
+    stage_info_dict = stage.info_dict.copy()
+    stage_info_dict.update({
+        "id": stage.id,
+        "type": stage.type(),
+        "name": stage.name,
+        "description": stage.description,
+        "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "total_runtime": str(stage.end_time - stage.start_time),
+    })
+
+    file_path = os.path.join(stage.stage_dir, "info.json")
+    with open(file_path, "w") as f:
+        json.dump(stage_info_dict, f, indent=4)
 
     return population, global_log
 
@@ -58,6 +82,11 @@ class GAParallelStage(Stage):
         stages are run. If None, no survivor selection is performed.
         If set, the number of individuals in the population will be kept
         constant.
+    :param parent_selection: Parent selection method to use on the population
+        before the stages are run. If None, all individuals in the population
+        are used as the population.
+    :param parent_ratio: Ratio of the population that is selected by the
+        parent selection method.
     :param n_processes: Number of processes to use to run the stages in
         parallel.
     :param random_seed: Random seed to use for the parallel stage.
@@ -71,6 +100,8 @@ class GAParallelStage(Stage):
         description: str,
         stage_list: list[GAStage],
         survivor_selection: PopulationSelection | None = None,
+        parent_selection: PopulationSelection | None = None,
+        parent_ratio: float = 1.0,
         n_processes: int = 4,
         random_seed: int = 42,
         verbose: bool = True
@@ -81,15 +112,76 @@ class GAParallelStage(Stage):
         self.random_seed = random_seed
         self.verbose = verbose
         self.survivor_selection = survivor_selection
+        self.parent_selection = parent_selection
+        self.parent_ratio = parent_ratio
+
+    def __get_stage_history(self) -> dict:
+        """Method to get the stage history of the parallel stage.
+
+        The stage history is a dictionary with the stage IDs, names and info
+        dicts of the stages in the parallel stage.
+        Uses the info dicts that were saved in the info.json files of the stages
+        at the end of each run if they exist.
+        """
+        # Load a stage history for each of the parallel stage
+        stage_history = {
+            "names": [stage.name for stage in self.stage_list],
+            "info_dicts": [stage.info_dict for stage in self.stage_list]
+        }
+
+        # Try to load the final info dicts that were saved in the info.json
+        # files of each stage at the end of each run
+        for i, stage in enumerate(self.stage_list):
+
+            # Check if the stage directory can be loaded.
+            # if not, continue to the next stage
+            try:
+                stage_dir = stage.stage_dir
+            except:
+                continue
+
+            # If the stage directory is None, it is not set jet
+            # continue to the next stage
+            if stage_dir is None:
+                continue
+
+            # Check if the info file exists
+            info_file_path = os.path.join(stage_dir, "info.json")
+            if os.path.isfile(info_file_path):
+
+                # Load the info dict from the file
+                with open(info_file_path, "r") as f:
+                    stage_info_dict = json.load(f)
+
+                    # overwrite the info dict in the stage history
+                    # with the loaded info dict
+                    stage_history["info_dicts"][i] = stage_info_dict
+
+        return stage_history
 
     @property
     def info_dict(self) -> dict:
+        stage_history = self.__get_stage_history()
+        n_generations = np.sum([
+            stage_info_dict["n_generations"] 
+            for stage_info_dict in stage_history["info_dicts"]
+        ]).tolist()
+
         info_dict = {
             "type": "GAParallelStage",
             "name": self._name,
             "description": self._description,
-            "stage_list": [stage.info_dict for stage in self.stage_list]
+            "n_processes": self.n_processes,
+            "n_generations": n_generations,
+            "stage_history": self.__get_stage_history(),
+            "survivor_selection": self.survivor_selection,
+            "parent_selection": self.parent_selection,
+            "parent_ratio": self.parent_ratio,
         }
+
+        # Add these entries, so the info_dict is consistent with the other
+        # stages
+        info_dict["break_condition"] = None
         return info_dict
 
     def __write_local_crystals_db_to_global_crystals_db(
@@ -122,6 +214,87 @@ class GAParallelStage(Stage):
 
             global_crystals_db.write(atoms, key_value_pairs)
 
+    def __combine_stage_data(self) -> None:
+        """Combines the data of all the stages in the parallel stage into shared files
+
+        Each GAStage stores its data in a separate directory. The files are
+        called: 'mutations.json', 'crossovers.json', 'fitnesses.json',
+        This method combines the data of all the stages into shared files in the
+        parallel stage directory.
+        """
+        # Define the dictionaries to store the combined data
+        # Must have the same keys as the data of the stages
+        # Look at the GAStage methods to see the keys used
+        mutation_dict_combined = {
+            "names": [],
+            "weights": [],
+            "reprs": [],
+            "hashes": [],
+            "results": [],
+            "stage_id": []
+        }
+        crossover_dict_combined = {
+            "names": [],
+            "weights": [],
+            "reprs": [],
+            "hashes": [],
+            "results": [],
+            "stage_id": []
+        }
+        fitnesses_dict_combined  = {
+            "names": [],
+            "weights": [],
+            "reprs": [],
+            "titles": [],
+            "hashes": [],
+            "results": []
+        }
+
+        # Define a method to append the data of a stage to the combined
+        # dictionaries
+        def append_json_to_combined_dict(
+            json_file_path: str, combined_dict: dict, stage_id: int
+        ) -> None:
+            # Load the data of the stage from the json file
+            with open(json_file_path, "r") as f:
+                data = json.load(f)
+
+            # Append the stage_id to idetify where the data comes from
+            data["stage_id"] = [stage_id] * len(data["names"])
+
+            # Append the data of the stage to the combined dictionaries
+            # Must have the same keys
+            for key in combined_dict.keys():
+                combined_dict[key] += data[key]
+
+        for stage in self.stage_list:
+            parallel_stage_dir = stage.stage_dir
+
+            # Append the data of the stage to the combined dictionaries
+            append_json_to_combined_dict(
+                os.path.join(parallel_stage_dir, "mutations.json"),
+                mutation_dict_combined,
+                stage.id
+            )
+            append_json_to_combined_dict(
+                os.path.join(parallel_stage_dir, "crossovers.json"),
+                crossover_dict_combined,
+                stage.id
+            )
+            append_json_to_combined_dict(
+                os.path.join(parallel_stage_dir, "fitnesses.json"),
+                fitnesses_dict_combined,
+                stage.id
+            )
+
+        # Write the combined data to the parallel stage directory
+        with open(os.path.join(self.stage_dir, "mutations.json"), "w") as f:
+            json.dump(mutation_dict_combined, f, indent=4)
+        with open(os.path.join(self.stage_dir, "crossovers.json"), "w") as f:
+            json.dump(crossover_dict_combined, f, indent=4)
+        with open(os.path.join(self.stage_dir, "fitnesses.json"), "w") as f:
+            json.dump(fitnesses_dict_combined, f, indent=4)
+
     def save_results(
         self,
         save_dir: str,
@@ -134,6 +307,8 @@ class GAParallelStage(Stage):
             crystals_db,
             global_statistics_dict
         )
+
+        self.__combine_stage_data()
 
         # Remove the temporary crystals database
         self.logger.debug(
@@ -297,6 +472,12 @@ class GAParallelStage(Stage):
         global_stats: tools.MultiStatistics | None
     ) -> Population:
         self.__set_up_self()
+
+        if self.parent_selection is not None:
+            n_parents = int(self.parent_ratio * population.size)
+            population.individuals = self.parent_selection.select(
+                population.individuals, n_parents
+            )
 
         if self.verbose:
             print(f"Running {self.name} with {self.n_processes} processes...")
