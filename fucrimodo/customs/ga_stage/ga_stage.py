@@ -214,6 +214,7 @@ class GAStage(Stage):
         - 'names': The names of the fitness functions
         - 'weights': The weights of the fitness functions
         - 'reprs': The representations of the fitness functions
+        - 'titles': The `db_title` of the fitness functions
         - 'hashes': The hashes of the fitness functions
         - 'results': A list of dictionaries containing the following information:
             
@@ -230,6 +231,7 @@ class GAStage(Stage):
             "names": [func.__class__.__name__ for func in self.ga_runner.fitness_functions],
             "weights": list(self.ga_runner.fitness_weights),
             "reprs": [func.__repr__() for func in self.ga_runner.fitness_functions],
+            "titles": [func.db_title for func in self.ga_runner.fitness_functions],
             "hashes": [func.__hash__() for func in self.ga_runner.fitness_functions],
             "results": []
         }
