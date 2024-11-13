@@ -162,7 +162,8 @@ class Runner:
             verbose=self.verbose,
             row=self.row,
             show=self.show,
-            save_dir = self.save_dir
+            save_dir = self.save_dir,
+            analysis_type=self.analysis_type
         )
 
     def __analyse_multi_run(self):
