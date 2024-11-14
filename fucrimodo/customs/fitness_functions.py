@@ -5,6 +5,7 @@ import warnings
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.utils.soap_similarity import SOAPSimilarity
+import datetime
 
 
 class PhysicalityFitness(FitnessFunction):
@@ -232,6 +233,59 @@ class NumberOfAtomsFitness(FitnessFunction):
     def __repr__(self) -> str:
         r_str = "NumberOfAtomsFitness()"
         return r_str
+
+
+class AgeFitness(FitnessFunction):
+    """Decreases the fitness with the age of the individual relative to the init time.
+
+    The fitness is calculated as: fitness = (1 - np.exp(- self.gamma * relative_age_seconds))
+    Where the relative age is the time between the creation time of the individual
+    and the init time of the fitness function.
+
+    Does not calculate the age of an individual directly, since the fitness 
+    values are only calculated during the creation of an individual.
+    With this approach the age of different individuals can be compared
+    relative to the init time of the fitness function.
+    Please avoid creation times smaller than the init time of the fitness 
+    function.
+
+    Very different from, but inspired by:
+
+    Wenhui Yang, Edirisuriya M. Dilanga Siriwardane, Jianjun Hu;
+    Doi: doi.org/10.48550/arXiv.2107.01346
+
+    :param gamma: Scaling factor for the age.
+    :param db_title: Title of the database.
+    """
+    def __init__(self, gamma: float = 0.01, db_title: str = "AgeFitness"):
+        super().__init__(db_title=db_title)
+        self.gamma = gamma
+        self.init_time = datetime.datetime.now()
+
+    def evaluate_individual(self, individual: Individual) -> float:
+        try:
+            # Calculate the age relative to the init time
+            relative_age = individual.creation_time - self.init_time
+
+            # Convert the datetime object to integer seconds
+            relative_age_seconds = int(relative_age.total_seconds())
+
+            # Avoid division by zero
+            # Avoid negative values that would drastically increase the fitness
+            if relative_age_seconds <= 0:
+                return 0.
+
+            else:
+                # Add + 0.0 to make sure the fitness is a float
+                return (1 - np.exp(- self.gamma * relative_age_seconds)) + 0.0
+
+        except Exception as e:
+            warnings.warn(
+                f"{self.db_title}: "
+                f"Could not calculate fitness for ind: {individual}\n"
+                f"Error: {e}"
+            )
+            return 0
 
 
 class DummyFitness(FitnessFunction):
