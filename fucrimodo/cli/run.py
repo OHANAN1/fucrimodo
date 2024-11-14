@@ -103,9 +103,16 @@ class Runner:
 
     def __get_input_files_from_dir(self, input_dir: str) -> list[str]:
         """Get all files in the provided directory."""
+
+        # Sort the files lexicographically to ensure that the order is always 
+        # the same on every system and for every run
+        sorted_file_names = sorted(os.listdir(input_dir))
+
+        # Set the full paths to each file
         input_files = []
-        for f in os.listdir(input_dir):
+        for f in sorted_file_names:
             input_files.append(os.path.join(input_dir, f))
+
         return input_files
 
     def __get_features_and_soap_obj(
