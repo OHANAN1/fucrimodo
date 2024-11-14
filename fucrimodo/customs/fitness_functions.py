@@ -5,6 +5,7 @@ import warnings
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.utils.soap_similarity import SOAPSimilarity
+import datetime
 
 
 class PhysicalityFitness(FitnessFunction):
@@ -199,6 +200,40 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         return r_str
 
 
+class VolumeFitness(FitnessFunction):
+    """Decreases the fitness with the volume of the individual.
+
+    The fitness is calculated as: fitness = np.exp(-self.gamma * volume)
+    The bigger the volume the smaller the fitness.
+
+    :param gamma: Scaling factor for the volume.
+    :param db_title: Title of the database.
+    :param round_volume: Round the volume to this number of decimals to
+        avoid prefering only slightly smaller volumes.
+    """
+    def __init__(
+        self,
+        db_title: str | None = None,
+        gamma: float = 0.01,
+        round_volume: int = 1
+    ):
+        super().__init__(db_title=db_title)
+        self.gamma = gamma
+        self.round_volume = round_volume
+
+    def evaluate_individual(self, individual: ase.Atoms) -> float:
+        try:
+            volume = round(individual.get_volume(), self.round_volume)
+            return np.exp(-self.gamma * volume)
+        except Exception as e:
+            warnings.warn(
+                f"{self.db_title}: "
+                f"Could not calculate fitness for ind: {individual}\n"
+                f"Error: {e}"
+            )
+            return 0
+
+
 class NumberOfAtomsFitness(FitnessFunction):
     """
     Uses the arctan function to scale the fitness.
@@ -232,6 +267,69 @@ class NumberOfAtomsFitness(FitnessFunction):
     def __repr__(self) -> str:
         r_str = "NumberOfAtomsFitness()"
         return r_str
+
+
+class AgeFitness(FitnessFunction):
+    """Decreases the fitness with the age of the individual relative to the init time.
+
+    The fitness is calculated as: fitness = (1 - np.exp(- self.gamma * relative_age_seconds))
+    Where the relative age is the time between the creation time of the individual
+    and the init time of the fitness function.
+
+    Does not calculate the age of an individual directly, since the fitness 
+    values are only calculated during the creation of an individual.
+    With this approach the age of different individuals can be compared
+    relative to the init time of the fitness function.
+    Please avoid creation times smaller than the init time of the fitness 
+    function.
+
+    Very different from, but inspired by:
+
+    Wenhui Yang, Edirisuriya M. Dilanga Siriwardane, Jianjun Hu;
+    Doi: doi.org/10.48550/arXiv.2107.01346
+
+    :param gamma: Scaling factor for the age.
+    :param db_title: Title of the database.
+    :param round_fitness: Round the fitness to this number of decimals
+        to avoid prefering structures that where created only slightly
+        earlier due to unrelated timing of structure creation.
+    """
+    def __init__(
+        self,
+        gamma: float = 0.001,
+        db_title: str = "AgeFitness",
+        round_fitness: int = 15
+    ):
+        super().__init__(db_title=db_title)
+        self.gamma = gamma
+        self.init_time = datetime.datetime.now()
+        self.round_fitness = round_fitness
+
+    def evaluate_individual(self, individual: Individual) -> float:
+        try:
+            # Calculate the age relative to the init time
+            relative_age = individual.creation_time - self.init_time
+
+            # Convert the datetime object to integer seconds
+            relative_age_seconds = int(relative_age.total_seconds())
+
+            # Avoid division by zero
+            # Avoid negative values that would drastically increase the fitness
+            if relative_age_seconds <= 0:
+                return 0.
+
+            else:
+                # Add + 0.0 to make sure the fitness is a float
+                fitness = (1 - np.exp(- self.gamma * relative_age_seconds)) + 0.0
+                return round(fitness, self.round_fitness)
+
+        except Exception as e:
+            warnings.warn(
+                f"{self.db_title}: "
+                f"Could not calculate fitness for ind: {individual}\n"
+                f"Error: {e}"
+            )
+            return 0
 
 
 class DummyFitness(FitnessFunction):
