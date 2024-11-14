@@ -683,6 +683,20 @@ class BuildUpParallelGA():
     def break_condition(self, value: BreakCondition):
         self._break_condition = value
 
+    @property
+    def additional_fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+        """Additional fitness functions that are added to the ExplorationGAPreset.
+
+        Default: []
+        """
+        if not hasattr(self, "_additional_fitness_functions"):
+            self._additional_fitness_functions = []
+        return self._additional_fitness_functions
+
+    @additional_fitness_functions.setter
+    def additional_fitness_functions(self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]):
+        self._additional_fitness_functions = value
+
     def create(self) -> GAParallelStage:
         """Create the GAParallelStage object with the preset properties."""
 
@@ -726,9 +740,14 @@ class BuildUpParallelGA():
             # explore_ga.species = species_combinations[i]
 
             # Set the correct fitness functions
-            explore_ga.fitness_functions = [
-                (sim_fit_0_01, 0.5), fitness_function
-            ]
+            if len(self.additional_fitness_functions) == 0:
+                explore_ga.fitness_functions = [
+                    (sim_fit_0_01, 0.5), fitness_function
+                ]
+            else:
+                explore_ga.fitness_functions = [
+                    (sim_fit_0_01, 0.5), fitness_function, *self.additional_fitness_functions
+                ]
 
             # Adjust the break condition to less generations if nothing is found
             explore_ga.break_condition = self.break_condition
