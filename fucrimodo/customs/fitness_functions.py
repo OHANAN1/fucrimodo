@@ -296,9 +296,9 @@ class AgeFitness(FitnessFunction):
     """
     def __init__(
         self,
-        gamma: float = 0.01,
+        gamma: float = 0.001,
         db_title: str = "AgeFitness",
-        round_fitness: int = 10
+        round_fitness: int = 15
     ):
         super().__init__(db_title=db_title)
         self.gamma = gamma
