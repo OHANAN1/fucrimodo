@@ -307,14 +307,24 @@ class GAParallelStage(Stage):
             crystals_db,
             global_statistics_dict
         )
-
-        self.__combine_stage_data()
-
         # Remove the temporary crystals database
         self.logger.debug(
             f"Removing temporary crystals database at: {self.local_crystals_db_path}"
         )
         os.remove(self.local_crystals_db_path)
+
+        self.__combine_stage_data()
+        # Remove the mutations, crossovers and fitnesses files of the stages
+        # Since they are combined into shared files
+        self.logger.debug(
+            "Removing mutations, crossovers, info and fitnesses files of the stages"
+        )
+        for stage in self.stage_list:
+            stage_dir = stage.stage_dir
+            os.remove(os.path.join(stage_dir, "mutations.json"))
+            os.remove(os.path.join(stage_dir, "crossovers.json"))
+            os.remove(os.path.join(stage_dir, "fitnesses.json"))
+            os.remove(os.path.join(stage_dir, "info.json"))
 
     def __set_up_stage(self, stage: GAStage, stage_id: int) -> str:
         """Method to set up each of the stages in the parallel run."""
@@ -334,7 +344,7 @@ class GAParallelStage(Stage):
         stage_logger, _ = setup_stage_logger(
             log_file_path=f"{stage_dir}/stage.log",
             run_name=self.name,
-            stage_name=stage.name,
+            stage_name=stage.name + f" (ID: {stage_id})", # Make sure the stage name is unique
             log_level=self.logger.level
         )
 
