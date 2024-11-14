@@ -174,8 +174,8 @@ class GAParallelStage(Stage):
             "n_processes": self.n_processes,
             "n_generations": n_generations,
             "stage_history": self.__get_stage_history(),
-            "survivor_selection": self.survivor_selection,
-            "parent_selection": self.parent_selection,
+            "survivor_selection": self.survivor_selection.__repr__(),
+            "parent_selection": self.parent_selection.__repr__(),
             "parent_ratio": self.parent_ratio,
         }
 
