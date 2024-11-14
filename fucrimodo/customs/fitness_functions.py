@@ -290,11 +290,20 @@ class AgeFitness(FitnessFunction):
 
     :param gamma: Scaling factor for the age.
     :param db_title: Title of the database.
+    :param round_fitness: Round the fitness to this number of decimals
+        to avoid prefering structures that where created only slightly
+        earlier due to unrelated timing of structure creation.
     """
-    def __init__(self, gamma: float = 0.01, db_title: str = "AgeFitness"):
+    def __init__(
+        self,
+        gamma: float = 0.01,
+        db_title: str = "AgeFitness",
+        round_fitness: int = 10
+    ):
         super().__init__(db_title=db_title)
         self.gamma = gamma
         self.init_time = datetime.datetime.now()
+        self.round_fitness = round_fitness
 
     def evaluate_individual(self, individual: Individual) -> float:
         try:
@@ -311,7 +320,8 @@ class AgeFitness(FitnessFunction):
 
             else:
                 # Add + 0.0 to make sure the fitness is a float
-                return (1 - np.exp(- self.gamma * relative_age_seconds)) + 0.0
+                fitness = (1 - np.exp(- self.gamma * relative_age_seconds)) + 0.0
+                return round(fitness, self.round_fitness)
 
         except Exception as e:
             warnings.warn(
