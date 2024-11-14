@@ -22,11 +22,6 @@ def main(
 
     print(f"{analysis_type} Overview:")
 
-    # Check if the stage is a parallel stage and return if it is
-    if stage_data.type == "GAParallelStage":
-        print("Parallel stage not yet supported")
-        return
-
     # Depending on the analysis type, set a different overview dataframe and
     # plot a different plot function
     if analysis_type is not None:
