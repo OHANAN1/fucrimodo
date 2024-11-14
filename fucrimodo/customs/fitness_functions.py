@@ -200,6 +200,40 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         return r_str
 
 
+class VolumeFitness(FitnessFunction):
+    """Decreases the fitness with the volume of the individual.
+
+    The fitness is calculated as: fitness = np.exp(-self.gamma * volume)
+    The bigger the volume the smaller the fitness.
+
+    :param gamma: Scaling factor for the volume.
+    :param db_title: Title of the database.
+    :param round_volume: Round the volume to this number of decimals to
+        avoid prefering only slightly smaller volumes.
+    """
+    def __init__(
+        self,
+        db_title: str | None = None,
+        gamma: float = 0.01,
+        round_volume: int = 1
+    ):
+        super().__init__(db_title=db_title)
+        self.gamma = gamma
+        self.round_volume = round_volume
+
+    def evaluate_individual(self, individual: ase.Atoms) -> float:
+        try:
+            volume = round(individual.get_volume(), self.round_volume)
+            return np.exp(-self.gamma * volume)
+        except Exception as e:
+            warnings.warn(
+                f"{self.db_title}: "
+                f"Could not calculate fitness for ind: {individual}\n"
+                f"Error: {e}"
+            )
+            return 0
+
+
 class NumberOfAtomsFitness(FitnessFunction):
     """
     Uses the arctan function to scale the fitness.
