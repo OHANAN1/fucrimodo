@@ -20,7 +20,8 @@ class ScaleUnitCellMutation(Mutation):
         max_scale: float = 2.0,
         min_scale: float = 0.5,
         scale_atoms: bool = True,
-        max_steps: int = 100
+        max_steps: int = 100,
+        n_variable_cell_vectors: int = 3
     ):
         self.max_scale = max_scale
         self.min_scale = min_scale
@@ -28,19 +29,33 @@ class ScaleUnitCellMutation(Mutation):
         self.max_steps = max_steps
         self.closest_distances = closest_distances
         self.cell_bounds = cell_bounds
+        self.n_variable_cell_vectors = n_variable_cell_vectors
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
-        offspring = crystal
+        offspring = crystal.copy()
         cell = offspring.get_cell()[:]  # type: ignore
 
         random_factor = np.random.uniform(self.min_scale, self.max_scale)
-        new_cell = cell * random_factor
+
+        # Select random cell vectors to scale
+        cell_indicees = np.random.choice(
+            [0, 1, 2], self.n_variable_cell_vectors, replace=False
+        )
+        for i in cell_indicees:
+            cell[i] *= random_factor
 
         offspring.set_cell(
-            new_cell, scale_atoms=self.scale_atoms, apply_constraint=True
+            Cell(cell), scale_atoms=self.scale_atoms, apply_constraint=True
         )
 
+        # If structure did not change, return None, to avoid false positives
+        if offspring == crystal:
+            self.logger.debug("Structure did not change.")
+            return None
+
+        # Check if the new cell is within the bounds
         if not self.cell_bounds.is_within_bounds(offspring.cell):
+            self.logger.debug("Structure is outside the bounds.")
             return None
 
         return offspring
