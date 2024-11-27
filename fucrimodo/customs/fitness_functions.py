@@ -77,13 +77,17 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         soap_object: CustomSOAP,
         soap_similarity: SOAPSimilarity,
         adjust: bool = False,
-        db_title: str | None = None
+        db_title: str | None = None,
+        round_result: int | None = None,
+        n_jobs: int = -1,
     ):
         super().__init__(db_title=db_title)
         self.target_soap_features = target_soap_features
         self.soap_similarity = soap_similarity
         self.soap_obj = soap_object
         self.adjust = adjust
+        self.round_result = round_result
+        self.n_jobs = n_jobs
 
     def __assign_features_to_individuals(self, individuals: list[Individual]):
         """Assigns the features to the individuals if they are not already set."""
@@ -97,7 +101,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         if len(individuals_without_features) > 0:
             feature_vectors = self.soap_obj.create(
                 individuals_without_features,
-                n_jobs=-1
+                n_jobs=self.n_jobs
             )
 
             # If only one individual is without features don't loop
@@ -131,7 +135,10 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
             similarity = self.soap_similarity.get_similarity_of_feature_vector(
                 feature_vector=individual.features,
             )
-            return similarity
+            if self.round_result is not None:
+                return round(similarity, self.round_result)
+            else:
+                return similarity
 
         except Exception as e:
             warnings.warn(
@@ -184,7 +191,10 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
             fitnesses = self.soap_similarity.get_similarity_of_feature_vectors(
                 feature_vectors=features
             )
-            return fitnesses.tolist()
+            if self.round_result is not None:
+                return [round(f, self.round_result) for f in fitnesses]
+            else:
+                return fitnesses.tolist()
 
         except Exception as e:
             raise ValueError(
