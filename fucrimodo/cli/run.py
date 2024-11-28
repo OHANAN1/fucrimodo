@@ -42,6 +42,13 @@ class CLICommand:
                 'If not provided, the name will be set to the current time '
                 'and date.')
         )
+        add(
+            '-p', '--parallel',
+            help=('Only used if multiple input files are provided. '
+                'Define the number of parallel processes to use. '
+            )
+        )
+
 
 
     @staticmethod
@@ -60,6 +67,11 @@ class Runner:
         self.verbose = args.verbose
         self.input_file = args.input_file
         self.name = args.name
+
+        if args.parallel is None:
+            self.parallel = 1
+        else:
+            self.parallel = int(args.parallel)
 
         if not os.path.exists(self.input_file):
             print("The Path to the input-file does not exist.")
@@ -92,6 +104,7 @@ class Runner:
             # Import the default run config from the lab_template
             from importlib import import_module
             self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
+
 
     def __copy_input_file(self, run_dir: str, input_file: str):
         """Copy the input file to the provided run directory. 
@@ -163,6 +176,7 @@ class Runner:
 
     def __run_multiple_files(self, target_tuples: list[tuple[CustomSOAP, list, str]]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
+        import multiprocessing
 
         # Create a MultiStageSearch object for each feature and SOAP object tuple
         run_id = 1
@@ -177,17 +191,17 @@ class Runner:
             multi_stage_searches.append(multi_stage_search)
             run_id += 1
 
+
         # Get the input files for each MultiStageSearch object
         input_files = self.__get_input_files_from_dir(self.input_file)
-
-        # Run the inversion for each MultiStageSearch object in sequence
-        print("WARNING! Currently running multiple files in sequence not in parallel.")
-        print("This will be changed in the future.")
         for i, multi_stage_search in enumerate(multi_stage_searches):
             # Copy the correct input file to the corresponding run directory
             self.__copy_input_file(multi_stage_search.run_dir, input_files[i])
 
-            self.run_config.main(multi_stage_search)
+        # Run the inversion for each MultiStageSearch object in sequence
+        print(f"Running {len(multi_stage_searches)} inversion runs in parallel on {self.parallel} processes.")
+        with multiprocessing.Pool(processes=self.parallel) as pool:
+            pool.map(self.run_config.main, multi_stage_searches)
 
     def run(self):
         """Run the inversion."""
