@@ -4,6 +4,7 @@ import ase
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.modules import Individual
 import logging
+from copy import deepcopy
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║            Abstract Base Class for Mutations             ║
@@ -103,11 +104,16 @@ class Mutation(ABC):
                 self.max_steps = 1
 
             offspring = None
+            if hasattr(crystal, "constraints"):
+                constraints = deepcopy(crystal.constraints)
+            else:
+                constraints = []
 
             keep_offspring = False
             step = 0
             for step in range(self.max_steps):
                 offspring = crystal.copy()
+                offspring.constraints = constraints
                 try:
                     offspring = self.perform_mutation(offspring)
 
@@ -169,6 +175,9 @@ class Mutation(ABC):
                 # Lables and attributes stay the same
                 del crystal[:]
                 crystal.extend(offspring)
+
+                # make sure constraints are set
+                crystal.set_constraint(constraints)
                 crystal.set_cell(offspring_cell)
                 crystal.set_pbc([True, True, True])
 
