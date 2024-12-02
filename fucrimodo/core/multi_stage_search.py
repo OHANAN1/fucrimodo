@@ -99,6 +99,20 @@ class MultiStageSearch:
         self._end_time = datetime.datetime.now()
 
     @property
+    def max_number_of_parallel_jobs(self) -> int:
+        """Maximum number of parallel jobs that should be run.
+
+        Only for information. The number of parallel jobs must be set in the
+        correctly in the stages but this can be used to check if the number
+        of parallel jobs is set correctly in all stages.
+        """
+        return self._max_number_of_parallel_jobs
+
+    @max_number_of_parallel_jobs.setter
+    def max_number_of_parallel_jobs(self, value: int):
+        self._max_number_of_parallel_jobs = value
+
+    @property
     def global_statistics_dict(self) -> dict[str, Callable[[Individual], float]] | None:
         return self._global_statistics_dict
 

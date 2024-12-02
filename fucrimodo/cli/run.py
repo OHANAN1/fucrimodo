@@ -174,9 +174,24 @@ class Runner:
         # Run the inversion with the provided run config or the default run config
         self.run_config.main(multi_stage_search)
 
-    def __run_multiple_files(self, target_tuples: list[tuple[CustomSOAP, list, str]]):
+    def __run_multiple_files(
+        self,
+        target_tuples: list[tuple[CustomSOAP, list, str]]
+    ):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
-        import multiprocessing
+        from concurrent.futures import ProcessPoolExecutor
+
+        # Calculate the maximum number of tasks per child process
+        # This depends on the number of available CPU cores and the number of
+        # parallel processes defined by the user
+        cpu_count = os.cpu_count()
+        assert cpu_count is not None, \
+            "Could not determine the number of CPU cores with os.cpu_count."
+        max_tasks_per_child =  cpu_count // self.parallel
+
+        # Make sure that at least one task is run per child process
+        if max_tasks_per_child == 0:
+            max_tasks_per_child = 1
 
         # Create a MultiStageSearch object for each feature and SOAP object tuple
         run_id = 1
@@ -188,6 +203,7 @@ class Runner:
                 descriptor_object=soap_obj,
                 descriptive_name=f"{self.name}_id_{run_id}",
             )
+            multi_stage_search.max_number_of_parallel_jobs = max_tasks_per_child
             multi_stage_searches.append(multi_stage_search)
             run_id += 1
 
@@ -198,10 +214,17 @@ class Runner:
             # Copy the correct input file to the corresponding run directory
             self.__copy_input_file(multi_stage_search.run_dir, input_files[i])
 
-        # Run the inversion for each MultiStageSearch object in sequence
-        print(f"Running {len(multi_stage_searches)} inversion runs in parallel on {self.parallel} processes.")
-        with multiprocessing.Pool(processes=self.parallel) as pool:
-            pool.map(self.run_config.main, multi_stage_searches)
+        print(
+            f"Starting multi target run:\n"
+                f"\tNumber of targets: {len(multi_stage_searches)}\n" 
+                f"\tNumber of processes run in parallel: {self.parallel}\n"
+                f"\tMax tasks per child process: {max_tasks_per_child}\n\n"
+        )
+        with ProcessPoolExecutor(max_workers=self.parallel) as executor:
+            executor.map(
+                self.run_config.main,
+                multi_stage_searches,
+            )
 
     def run(self):
         """Run the inversion."""
@@ -212,4 +235,3 @@ class Runner:
             self.__run_multiple_files(target_tuples)
         else:
             self.__run_single_file(target_tuples)
-
