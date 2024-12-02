@@ -203,6 +203,7 @@ class Runner:
                 descriptor_object=soap_obj,
                 descriptive_name=f"{self.name}_id_{run_id}",
             )
+            multi_stage_search.max_number_of_parallel_jobs = max_tasks_per_child
             multi_stage_searches.append(multi_stage_search)
             run_id += 1
 
