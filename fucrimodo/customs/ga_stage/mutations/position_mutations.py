@@ -1,3 +1,4 @@
+from copy import deepcopy
 from .abstract import Mutation
 from fucrimodo.core.modules import Individual, FitnessFunction
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
@@ -66,9 +67,6 @@ class RattleMutation(Mutation):
 
         # If constrains of Atoms made rattle movement not applicable
         # return None to signalize mutation failed
-        # If only one position was not changed still use structure
-        # This is important so n_top = all still works when constrains
-        # are applied
         if np.any(positions != crystal.get_positions()):
             return None
 
@@ -113,10 +111,24 @@ class SmartRattleMutation(Mutation):
             # Copy the crystal to not change the original
             candidate = crystal.copy()
 
-            # rattle random atom in random direction
-            candidate.positions[atom_index] += np.random.uniform(
+            # rattle positions in random direction
+            positions = candidate.positions.copy()
+            positions[atom_index] += np.random.uniform(
                 -self.max_movement, self.max_movement, 3
             )
+
+            # Set new positions (constraints apply)
+            candidate.set_positions(positions)
+
+            # If the candidate did not change due to constraints chance is 
+            # that the constraints apply for the selected atom_index
+            # Return None since no change can be done with this atom_index
+            if np.any(candidate.set_positions != positions):
+                self.logger.debug(
+                    "Could not mutate, since constrains are applied for "
+                    f"selected atom_index {atom_index}."
+                )
+
             candidates.append(candidate)
 
         if self.descriptor_object is not None:
@@ -193,6 +205,8 @@ class GradientRattleMutation(Mutation):
             crystal, include=atomic_indices.tolist()
         )
 
+        positions = crystal.positions.copy()
+
         # Move the atoms
         for i in range(len(atomic_indices)):
             # Normalize the gradient
@@ -206,11 +220,20 @@ class GradientRattleMutation(Mutation):
             else:
                 gradient[i] = [0, 0, 0]
 
-            # Move the atom with a random factor in the direction of the gradient
-            crystal.positions[atomic_indices[i]] += [
+            # Move the atomic positions with a random factor in the direction
+            # of the gradient
+            positions[atomic_indices[i]] += [
                 x * np.random.uniform(0, self.max_movement)
                 for x in gradient[i]
             ]
+
+        # Set the new positions (constraints apply)
+        crystal.set_positions(positions)
+
+        # If no positions could be changed return None
+        # To symbolize that mutation failed
+        if np.all(positions != crystal.positions):
+            return None
 
         return crystal
 
