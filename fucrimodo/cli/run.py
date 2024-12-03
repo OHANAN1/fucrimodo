@@ -164,7 +164,7 @@ class Runner:
         self, save_dir: str, start_time: datetime, end_time: datetime
     ):
         """Add an info file to the multi run directory."""
-        info_file_path = os.path.join(save_dir, "info.txt")
+        info_file_path = os.path.join(save_dir, "info.json")
         info_dict = {
             "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
             "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
