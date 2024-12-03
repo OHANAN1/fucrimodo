@@ -20,15 +20,15 @@ class MultiRunData():
         info_path = os.path.join(self.multi_run_dir, "info.json")
         if os.path.exists(info_path):
             with open(info_path, "r") as f:
-                self.info_dict = json.load(f)
+                self._info_dict = json.load(f)
 
     @property
-    def total_runtime(self) -> str:
+    def total_runtime(self) -> str | None:
         """Returns the total runtime of all loaded runs."""
-        if self.info_dict is not None:
-            return self.info_dict["total_runtime"]
+        if self._info_dict is not None:
+            return self._info_dict["total_runtime"]
         else:
-            return "N/A"
+            return None
         
 
     @property
