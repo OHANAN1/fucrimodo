@@ -8,12 +8,13 @@ from typing import Callable
 from deap import tools
 from multiprocessing import Pool
 import json
+from itertools import cycle
 
 from fucrimodo.core.utils.log_utils import setup_stage_logger
 from fucrimodo.core.modules import Stage, Individual, Population, PopulationSelection
+from fucrimodo.customs.ga_stage.break_conditions import BreakCondition
 from fucrimodo.customs.ga_stage import GAStage
 from fucrimodo.customs.population_generator import convert_ase_atoms_to_individual
-from fucrimodo.customs.population_selections import SelectAllPopulation
 
 
 # Method that is run in parallel to perform the stages
@@ -25,6 +26,8 @@ def perform_stage(
     global_stats: tools.MultiStatistics,
     crystal_db: Database,
     seed: int,
+    global_break_condition: BreakCondition | None,
+    global_break_condition_checker_file: str
 ) -> tuple[Population, tools.Logbook]:
     """Method to perform a stage in parallel.
 
@@ -64,6 +67,24 @@ def perform_stage(
     with open(file_path, "w") as f:
         json.dump(stage_info_dict, f, indent=4)
 
+    # Check the global break condition here since it should be checked 
+    # independently of the other processes
+    if global_break_condition is not None:
+        if (
+            global_break_condition.check(
+                population.individuals, population.generation
+            )
+            and not os.path.isfile(global_break_condition_checker_file)
+        ):
+            # If the global break condition is met, create a file to indicate
+            # that the condition was met
+            # This is noticed by the main process to stop all other processes
+            with open(global_break_condition_checker_file, "w") as f:
+                f.write(
+                    "Just a file to indicate that the global break "
+                    "condition was met so all processes can be stopped."
+                )
+
     return population, global_log
 
 
@@ -85,6 +106,9 @@ class GAParallelStage(Stage):
     :param parent_selection: Parent selection method to use on the population
         before the stages are run. If None, all individuals in the population
         are used as the population.
+    :param global_break_condition: The condition is checked after each
+        stage was performed. If the condition is met, all stages are stopped.
+        The results of the other stages are saved.
     :param parent_ratio: Ratio of the population that is selected by the
         parent selection method.
     :param n_processes: Number of processes to use to run the stages in
@@ -101,6 +125,7 @@ class GAParallelStage(Stage):
         stage_list: list[GAStage],
         survivor_selection: PopulationSelection | None = None,
         parent_selection: PopulationSelection | None = None,
+        global_break_condition: BreakCondition | None = None,
         parent_ratio: float = 1.0,
         n_processes: int = 4,
         random_seed: int = 42,
@@ -113,6 +138,7 @@ class GAParallelStage(Stage):
         self.verbose = verbose
         self.survivor_selection = survivor_selection
         self.parent_selection = parent_selection
+        self.global_break_condition = global_break_condition
         self.parent_ratio = parent_ratio
 
     def __get_stage_history(self) -> dict:
@@ -176,6 +202,7 @@ class GAParallelStage(Stage):
             "stage_history": self.__get_stage_history(),
             "survivor_selection": self.survivor_selection.__repr__(),
             "parent_selection": self.parent_selection.__repr__(),
+            "global_break_condition": self.global_break_condition.__repr__(),
             "parent_ratio": self.parent_ratio,
         }
 
@@ -267,7 +294,15 @@ class GAParallelStage(Stage):
             for key in combined_dict.keys():
                 combined_dict[key] += data[key]
 
-        for stage in self.stage_list:
+        for i, stage in enumerate(self.stage_list):
+            # Check if the stage was terminated and therefore did not save
+            # its data
+            if self.process_finished[i] is False:
+                self.logger.info(
+                    f"Stage {stage.name} at {stage.stage_dir} did not finish, "
+                        "skipping it."
+                )
+                continue
             parallel_stage_dir = stage.stage_dir
 
             # Append the data of the stage to the combined dictionaries
@@ -319,7 +354,12 @@ class GAParallelStage(Stage):
         self.logger.debug(
             "Removing mutations, crossovers, info and fitnesses files of the stages"
         )
-        for stage in self.stage_list:
+        for i, stage in enumerate(self.stage_list):
+            # If the stage was terminated, no data was saved, and
+            # therefore no files need to be removed
+            if self.process_finished[i] is False:
+                continue
+
             stage_dir = stage.stage_dir
             os.remove(os.path.join(stage_dir, "mutations.json"))
             os.remove(os.path.join(stage_dir, "crossovers.json"))
@@ -491,6 +531,13 @@ class GAParallelStage(Stage):
 
         if self.verbose:
             print(f"Running {self.name} with {self.n_processes} processes...")
+
+        # define path to a file that is created when global break condition
+        # is met in a worker process
+        global_break_condition_checker_file = os.path.join(
+            self.stage_dir, "global_break_condition_checker.txt"
+        )
+
         with Pool(self.n_processes) as p:
             # Run the stages in parallel with a pool of processes
             results = p.starmap_async(
@@ -504,29 +551,71 @@ class GAParallelStage(Stage):
                         # Set unique seed for each stage so it is reproducible 
                         # and seeds do not conflict, should be unique even 
                         # from main seed so it is not reset (therefore I use +1)
-                        self.random_seed + i + 1
+                        self.random_seed + i + 1,
+                        self.global_break_condition,
+                        global_break_condition_checker_file
                     )
                     for i, stage in enumerate(self.stage_list)
-                ]
+                ],
             )
 
+            # Define a variable to store the results if the process is 
+            # terminated due to the global break condition
+            temp_results = None
+
             # Wait for the results to be ready with fun little animation
-            wait_indicator = ["/", "-", "\\", "|"]
+            wait_indicator = cycle(["/", "-", "\\", "|"])
             while not results.ready():
                 if self.verbose:
-                    if len(wait_indicator) == 0:
-                        wait_indicator = ["/", "-", "\\", "|"]
-                    print(f"Waiting for results to be ready... {wait_indicator.pop()}", end="\r")
+                    print(f"Waiting for results to be ready... {next(wait_indicator)}", end="\r")
 
-                    sleep(0.5)
+                # Check if the global break condition was met
+                # By checking if a file exists that gets created by the 
+                # perform_stage script if the global break cond is met
+                if os.path.isfile(global_break_condition_checker_file):
 
-            # Unpack the results and combine the populations
-            # Stages also need to be unpacked to use their attributes
-            individuals = []
-            stage_global_logs = []
-            for pop, glob_log in results.get():
+                    # Load temporary results from the result object
+                    # Since this is not officially supported, 
+                    # unexpected errors can occur
+                    temp_results = results._value # type: ignore
+
+                    # Terminate the pool and close it
+                    p.terminate()
+                    p.close()
+                    p.join()
+                    break
+
+                sleep(0.5)
+
+        # Define a list to keep track of which processes finished for data
+        # saving purposes
+        self.process_finished = []
+
+        # Unpack the results and combine the populations
+        # Stages also need to be unpacked to use their attributes
+        individuals = []
+        stage_global_logs = []
+        if temp_results is None:
+            # If process was not terminated get the results as normal
+            for pop, glob_log in results.get(timeout=10):
+                self.process_finished.append(True)
                 individuals += pop.individuals
                 stage_global_logs.append(glob_log)
+        else:
+            # If process was terminated, get the results from the temp_results
+            for res in temp_results:
+                # If res is None, the process was terminated and the results
+                # are not available
+                if res is None:
+                    self.process_finished.append(False)
+                    continue
+
+                # Extract results from the temp_results
+                pop, glob_log = res
+                individuals += pop.individuals
+                stage_global_logs.append(glob_log)
+
+                self.process_finished.append(True)
 
         # Add the global logs from the stages to the global log
         global_gen = self.__write_logs_to_global_log(
