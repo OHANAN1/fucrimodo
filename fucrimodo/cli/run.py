@@ -1,6 +1,8 @@
 import os
 import sys
 import numpy as np
+import json
+from datetime import datetime
 
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 
@@ -158,6 +160,21 @@ class Runner:
             )
             return target_tuple
 
+    def __add_info_file_to_multi_run(
+        self, save_dir: str, start_time: datetime, end_time: datetime
+    ):
+        """Add an info file to the multi run directory."""
+        info_file_path = os.path.join(save_dir, "info.txt")
+        info_dict = {
+            "start_time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_runtime": str(end_time - start_time),
+            "run_name": self.name,
+
+        }
+        with open(info_file_path, "w") as f:
+            f.write(json.dumps(info_dict, indent=4))
+
     def __run_single_file(self, features_soap_tuple: tuple[CustomSOAP, list, str]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
         multi_stage_search = MultiStageSearch(
@@ -220,11 +237,25 @@ class Runner:
                 f"\tNumber of processes run in parallel: {self.parallel}\n"
                 f"\tMax tasks per child process: {max_tasks_per_child}\n\n"
         )
+
+        # Save the start time of the run
+        start_time = datetime.now()
+
+        # Run the inversion with the provided run config or the default run config
         with ProcessPoolExecutor(max_workers=self.parallel) as executor:
             executor.map(
                 self.run_config.main,
                 multi_stage_searches,
             )
+
+        # Save the end time of the run
+        end_time = datetime.now()
+
+        # Add an info file to the multi run directory
+        self.__add_info_file_to_multi_run(
+            self.save_dir, start_time, end_time
+        )
+
 
     def run(self):
         """Run the inversion."""
