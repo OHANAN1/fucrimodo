@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import json
 
 from fucrimodo.analysis.run_analysis import (
     RunData,
@@ -13,6 +14,22 @@ class MultiRunData():
 
         # Create a list of RunData objects
         self.runs = self.__load_runs_from_dir()
+
+        # Load the info.json of the multi run, if it exists
+        self._info_dict = None
+        info_path = os.path.join(self.multi_run_dir, "info.json")
+        if os.path.exists(info_path):
+            with open(info_path, "r") as f:
+                self.info_dict = json.load(f)
+
+    @property
+    def total_runtime(self) -> str:
+        """Returns the total runtime of all loaded runs."""
+        if self.info_dict is not None:
+            return self.info_dict["total_runtime"]
+        else:
+            return "N/A"
+        
 
     @property
     def name_list(self) -> list[str]:
