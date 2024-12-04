@@ -4,12 +4,13 @@ from ase.db.core import Database
 from deap import tools
 import numpy as np
 from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.log_utils import setup_stage_logger
+from fucrimodo.core.utils.log_utils import setup_stage_logger, setup_run_logger
 from .modules import Stage, Population
 import os
 import datetime
 import json
 import logging
+
 
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.
@@ -31,8 +32,10 @@ class MultiStageSearch:
         iteration that modifies the population (e.g. in Genetic Algorithms they
         are calculated for each generation) of all stages of the optimization
         algorithm.
-    :param log_enable: Optional boolean to enable logging of the run.
-        Currently not implemented and will always log to a file.
+    :param log_level: Log level of the global logger. Set to logging.INFO to
+        see the progress of the run.
+    :param verbose: If set to True, the global logger also logs to the console
+        in addition to the log file.
     """
     def __init__(
         self,
@@ -43,6 +46,7 @@ class MultiStageSearch:
         description: str = "",
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
         log_level: int = logging.INFO,
+        verbose: bool = True,
     ) -> None:
         # If no descriptive name is given, use the current time and date.
         # Define name attribute without setter, since it should never be changed
@@ -68,8 +72,15 @@ class MultiStageSearch:
         # Set the current stage id to 0
         self.current_stage_id = 0
 
-        # Set the log level of the run
-        self.log_level = log_level
+        # Set up the global logger for the run
+        self.logger = setup_run_logger(
+            log_file_path=f"{self.run_dir}/run.log",
+            run_name=self.name,
+            log_level=log_level,
+            verbose=verbose,
+        )
+
+        self.logger.info(f"Initialized run {self.name}")
 
     @property
     def name(self) -> str:
@@ -82,6 +93,18 @@ class MultiStageSearch:
     @description.setter
     def description(self, value: str):
         self._description = value
+
+    @property
+    def log_level(self) -> int:
+        return self.logger.level
+
+    @log_level.setter
+    def log_level(self, value: int):
+        # set new log level attribute
+        self._log_level = value
+
+        # update the log level of the global logger
+        self.logger.setLevel(value)
 
     @property
     def start_time(self) -> datetime.datetime:
@@ -282,7 +305,7 @@ class MultiStageSearch:
         with open(file_path, "w") as f:
             json.dump(stage_info_dict, f, indent=4)
 
-        stage.logger.info(f"Saved info.json of stage at {file_path}")
+        stage.logger.debug(f"Saved info.json of stage at {file_path}")
 
     def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
         """Method to set up the stage for a run.
@@ -413,19 +436,16 @@ class MultiStageSearch:
         stage_dir = self.__set_up_stage(stage, self.current_stage_id)
 
         # Run the stage and save the results
-        print(f"Running stage:")
-        print(f"Name: {stage.name}")
-        print(f"ID: {stage.id}")
-        print(f"Population size: {population.size}")
+        self.logger.info(f"Run {self.name}: Running stage: {stage.name}, ID: {stage.id}")
+        self.logger.debug(f"Population size: {population.size}")
         population = stage.run(
             population=population,
             global_log=self.global_logbook,
             global_stats=self.global_statistics, 
         )
 
-        print(f"Saving results of stage {self.current_stage_id}: {stage.name}")
-        print(f"Save directory: {stage_dir}")
-        print()
+        self.logger.info(f"Run {self.name}: Finished stage: {stage.name}, ID: {stage.id}")
+        self.logger.debug(f"Saving at directory: {stage_dir}")
         stage.save_results(
             save_dir = stage_dir,
             crystals_db = self.crystal_database,
@@ -448,4 +468,3 @@ class MultiStageSearch:
         self.save_results()
 
         return population
-
