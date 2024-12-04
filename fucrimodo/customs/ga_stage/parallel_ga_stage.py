@@ -538,6 +538,10 @@ class GAParallelStage(Stage):
             self.stage_dir, "global_break_condition_checker.txt"
         )
 
+        self.logger.info(
+            f"Starting pool to run {len(self.stage_list)} stages in parallel "
+                "with {self.n_processes} processes.."
+        )
         with Pool(self.n_processes) as p:
             # Run the stages in parallel with a pool of processes
             results = p.starmap_async(
@@ -569,10 +573,15 @@ class GAParallelStage(Stage):
                 if self.verbose:
                     print(f"Waiting for results to be ready... {next(wait_indicator)}", end="\r")
 
+                sleep(0.5)
+
                 # Check if the global break condition was met
                 # By checking if a file exists that gets created by the 
                 # perform_stage script if the global break cond is met
                 if os.path.isfile(global_break_condition_checker_file):
+                    self.logger.info(
+                        "Global break condition was met, stopping pool."
+                    )
 
                     # Load temporary results from the result object
                     # Since this is not officially supported, 
@@ -585,7 +594,7 @@ class GAParallelStage(Stage):
                     p.join()
                     break
 
-                sleep(0.5)
+        self.logger.info("Pool finished. Saving results...")
 
         # Define a list to keep track of which processes finished for data
         # saving purposes
@@ -637,5 +646,7 @@ class GAParallelStage(Stage):
 
         if self.verbose:
             print(f"Finished running {self.name} with {self.n_processes} processes.")
+
+        self.logger.info("Results saved in class attributes.")
 
         return population
