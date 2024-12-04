@@ -24,7 +24,6 @@ class GAStage(Stage):
         parent_ratio: float = 0.5,
         description: str = "",
         save_n_crystals: int = 10,
-        verbose: bool = True,
     ):
         super().__init__(name, description)
 
@@ -51,22 +50,22 @@ class GAStage(Stage):
             survivor_selection=survivor_selection,
             parent_selection=parent_selection,
             parent_ratio=parent_ratio,
-            verbose=verbose,
         )
 
-        self.verbose = verbose
-
     @property
-    def verbose(self) -> bool:
-        return self._verbose
+    def stop_event(self) -> Any | None:
+        """Optional attribute to stop the GA if `stop_event.is_set()` is True.
 
-    @verbose.setter
-    def verbose(self, value: bool) -> None:
-        # Set the stage verbose attribute
-        self._verbose = value
+        Use a `multiprocessing.Event` to set the stop event.
+        """
+        if not hasattr(self, "_stop_event"):
+            return None
 
-        # Set the verbose attribute of the ga_runner
-        self.ga_runner.verbose = value
+        return self._stop_event
+
+    @stop_event.setter
+    def stop_event(self, value) -> None:
+        self._stop_event = value
 
     def __seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]
@@ -281,10 +280,11 @@ class GAStage(Stage):
         self.ga_runner.logger = self.logger
 
         population = self.ga_runner.run(
-            population=population, 
+            population=population,
             global_log=global_log,
             global_stats=global_stats,
-            stage_id=self.id
+            stage_id=self.id,
+            stop_event=self.stop_event
         )
 
         self.crossover_logbook = self.ga_runner.crossover_logbook
