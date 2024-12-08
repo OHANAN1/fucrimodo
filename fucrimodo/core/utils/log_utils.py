@@ -41,3 +41,51 @@ def setup_stage_logger(
         logger.addHandler(file_handler)
 
     return logger, logger_name
+
+
+def setup_run_logger(
+    log_file_path: str,
+    run_name: str,
+    log_level: int = logging.INFO,
+    verbose: bool = True,
+) -> logging.Logger:
+    """Set up a logger for the run.
+
+    :param log_file_path: Path to the log file. Normally the directory of the 
+            run.
+    :param run_name: Name of the run.
+    :param log_level: Level of the log messages.
+    :param verbose: If True, log messages will be printed to the console
+        through the StreamHandler.
+
+    :return: A tuple containing the logger and the name of the logger.
+        The name of the logger is the run name separated by an underscore
+        {run_name}_logger.
+    """
+    # Create logger name
+    logger_name = f'{run_name}_logger'
+
+    # Create a logger
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(log_level)
+
+    # Create a file for the log output
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setLevel(log_level)
+
+    # Define how the log messages should look like
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    )
+    file_handler.setFormatter(formatter)
+
+    # Add the file handler to the logger
+    # Avoid adding multiple handlers to the logger
+    if not logger.hasHandlers():
+        logger.addHandler(file_handler)
+
+    # Add a StreamHandler if verbose is True to print to console
+    if verbose:
+        logger.addHandler(logging.StreamHandler())
+
+    return logger
