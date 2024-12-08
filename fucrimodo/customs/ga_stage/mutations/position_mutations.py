@@ -163,6 +163,8 @@ class GradientRattleMutation(Mutation):
     :param max_movement: Maximum movement step in Angstrom
     :param normalize_gradient: If True, the gradient is normalized before
         moving the atoms.
+    :param n_jobs: Number of jobs to use for the calculation of the gradient
+        of the soap descriptor. If set to -1, all reported CPUs are used.
 
     :raises AssertionError: If the descriptor object of the rbf_similarity_obj
         is not set.
@@ -174,7 +176,8 @@ class GradientRattleMutation(Mutation):
         max_steps: int = 10,
         n_atoms_to_move: int = 1,
         max_movement: float = 0.1,
-        normalize_gradient: bool = True
+        normalize_gradient: bool = True,
+        n_jobs: int = 1
     ):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
@@ -182,6 +185,7 @@ class GradientRattleMutation(Mutation):
         self.n_atoms_to_move = n_atoms_to_move
         self.max_movement = max_movement
         self.normalize_gradient = normalize_gradient
+        self.n_jobs = n_jobs
 
         # Check if the rbf_similarity_obj has a descriptor
         # If it is not set, the derivative cannot be calculated
@@ -202,7 +206,9 @@ class GradientRattleMutation(Mutation):
 
         # Calculate the gradient
         _, gradient = self.rbf_similarity_obj.derivative(
-            crystal, include=atomic_indices.tolist()
+            crystal,
+            include=atomic_indices.tolist(),
+            kwargs={"n_jobs": self.n_jobs}
         )
 
         positions = crystal.positions.copy()
