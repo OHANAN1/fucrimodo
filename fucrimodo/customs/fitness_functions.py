@@ -79,7 +79,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         adjust: bool = False,
         db_title: str | None = None,
         round_result: int | None = None,
-        n_jobs: int = -1,
+        n_jobs: int = 1,
     ):
         super().__init__(db_title=db_title)
         self.target_soap_features = target_soap_features
