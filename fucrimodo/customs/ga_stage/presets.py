@@ -280,7 +280,8 @@ def get_soap_similarity_fitness_list(
         "soap_similarity_mid",
         "soap_similarity_weak"
     ],
-    round_result: None | int = None
+    round_result: None | int = None,
+    n_jobs: int = 1
 ) -> list[FitnessFunction]:
 
     assert len(function_titles) == len(rbf_gammas), "Define same number of titles as rbf gammas."
@@ -298,6 +299,7 @@ def get_soap_similarity_fitness_list(
                 ),
                 db_title=function_titles[i],
                 round_result=round_result,
+                n_jobs=n_jobs
             )
         )
 
@@ -310,7 +312,8 @@ def get_species_specific_soap_fitness_list(
     soap_object: CustomSOAP,
     rbf_gamma: int | float = 0.1,
     function_name: str = "species_specific_fit",
-    round_result: None | int = None
+    round_result: None | int = None,
+    n_jobs: int = 1
     ) -> list[FitnessFunction] :
     species_specific_fitnesses= []
     for i in range(len(soap_species)):
@@ -330,6 +333,7 @@ def get_species_specific_soap_fitness_list(
                     function_name, soap_species[i], soap_species[j]
                 ),
                 round_result=round_result,
+                n_jobs=n_jobs
             )
             species_specific_fitnesses.append(soap_fit_spec)
 
