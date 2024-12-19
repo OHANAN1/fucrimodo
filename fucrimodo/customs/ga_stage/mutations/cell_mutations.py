@@ -67,11 +67,13 @@ class StrainMutation(Mutation):
         closest_distances: CustomClosestDistances,
         n_variable_cell_vectors: int = 3,
         cell_bounds: CustomCellBounds | None = None,
+        stddev: float = 0.7
     ) -> None:
         self.closest_distances = closest_distances
         self.n_variable_cell_vectors = n_variable_cell_vectors
         self.cell_bounds = cell_bounds
         self.max_steps = 1
+        self.stddev = stddev
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
         if self.cell_bounds is None:
@@ -94,8 +96,10 @@ class StrainMutation(Mutation):
             blmin=self.closest_distances,
             number_of_variable_cell_vectors=self.n_variable_cell_vectors,
             cellbounds=cell_bounds,
+            stddev=self.stddev,
             verbose=True
         )
+        ase_strain.update_scaling_volume([crystal])
 
         offspring = crystal
         mutant = ase_strain.mutate(offspring)
