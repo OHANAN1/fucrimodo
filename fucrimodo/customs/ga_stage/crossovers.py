@@ -564,6 +564,12 @@ class CutAndSpliceCrossover(Crossover):
         parent1 = build.sort(parent1)
         parent2 = build.sort(parent2)
 
+        # Check if the parents have the same stoichiometry since this is
+        # necessary for the CutAndSplicePairing of ase
+        # Return None if it is not the case, to signal that the crossover failed
+        if not np.array_equal(parent1.numbers, parent2.numbers):
+            return (None, None)
+
         # Check if the parents are of the same length, this is necessary
         # for the CutAndSplicePairing of ase
         if len(parent1) != len(parent2):
@@ -573,6 +579,14 @@ class CutAndSpliceCrossover(Crossover):
         # CutAndSplicePairing is unnecessary
         if len(parent1) < 2:
             return (None, None)
+
+        # If the cell vectors are not the same and not variable
+        # They can not be crossed. Return None in this case
+        cell1 = parent1.get_cell()
+        cell2 = parent2.get_cell()
+        for i in range(self.number_of_variable_cell_vectors, 3):
+            if not np.allclose(cell1[i], cell2[i]):  # type: ignore
+                return (None, None)
 
         cut_and_splice_pairing = CutAndSplicePairing(
             slab=ase.Atoms(),
