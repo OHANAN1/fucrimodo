@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Ignore the personal organization .norg file
+fucrimodo.norg
+
 # C extensions
 *.so
 
