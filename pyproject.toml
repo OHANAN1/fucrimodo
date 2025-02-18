@@ -29,7 +29,8 @@ dependencies = [
     "nbformat>=5.10.1",
     "pandas>=2.2.3",
     "deap>=1.4.1",
-    "spglib==1.15.0",
+    "spglib>=1.15.0",
+    "pyxtal>=1.0.6",
     "dscribe==2.1.1"
 ]
 # also add "dscribe>=2.1.1", this currently clashed with matid and needs to be installed with conda instead, see environment.yml
