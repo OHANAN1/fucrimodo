@@ -8,7 +8,6 @@ from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from dscribe.kernels import AverageKernel
 import matplotlib.pyplot as plt
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import warnings
 

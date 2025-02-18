@@ -242,11 +242,19 @@ class Runner:
         start_time = datetime.now()
 
         # Run the inversion with the provided run config or the default run config
-        with ProcessPoolExecutor(max_workers=self.parallel) as executor:
-            executor.map(
-                self.run_config.main,
-                multi_stage_searches,
-            )
+        # If only one process is used, run the inversion sequentially
+        if self.parallel == 1:
+            print("Running inversion sequentially.")
+            for multi_stage_search in multi_stage_searches:
+                self.run_config.main(multi_stage_search)
+        # If more than one process is used, run the inversion in parallel
+        else:
+            print(f"Running inversion in parallel with {self.parallel} processes.")
+            with ProcessPoolExecutor(max_workers=self.parallel) as executor:
+                executor.map(
+                    self.run_config.main,
+                    multi_stage_searches,
+                )
 
         # Save the end time of the run
         end_time = datetime.now()
