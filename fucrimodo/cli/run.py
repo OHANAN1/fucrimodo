@@ -189,7 +189,22 @@ class Runner:
         self.__copy_input_file(multi_stage_search.run_dir, self.input_file)
 
         # Run the inversion with the provided run config or the default run config
-        self.run_config.main(multi_stage_search)
+        try:
+            self.run_config.main(multi_stage_search, additional_notes)
+
+        except TypeError:
+            multi_stage_search.logger.error(
+                "DeprecationWarning: The run_config.main method should take "
+                "two arguments: main(multi_stage_search, additional_notes). "
+                "The additional_notes argument is optional tho."
+            )
+            self.run_config.main(multi_stage_search)
+
+        except Exception as e:
+            multi_stage_search.logger.error(
+                f"An error occurred during the inversion: {e}"
+            )
+            raise e
 
     def __run_multiple_files(
         self,
