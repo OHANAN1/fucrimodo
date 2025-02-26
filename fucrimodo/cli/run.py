@@ -211,7 +211,6 @@ class Runner:
         target_tuples: list[tuple[CustomSOAP, list, str]]
     ):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
-        from concurrent.futures import ProcessPoolExecutor
 
         # Calculate the maximum number of tasks per child process
         # This depends on the number of available CPU cores and the number of
@@ -228,6 +227,7 @@ class Runner:
         # Create a MultiStageSearch object for each feature and SOAP object tuple
         run_id = 1
         multi_stage_searches = []
+        additional_notes_list = []
         for soap_obj, features, additional_notes in target_tuples:
             multi_stage_search = MultiStageSearch(
                 save_dir=self.save_dir,
@@ -237,6 +237,7 @@ class Runner:
             )
             multi_stage_search.max_number_of_parallel_jobs = max_tasks_per_child
             multi_stage_searches.append(multi_stage_search)
+            additional_notes_list.append(additional_notes)
             run_id += 1
 
 
@@ -256,20 +257,25 @@ class Runner:
         # Save the start time of the run
         start_time = datetime.now()
 
-        # Run the inversion with the provided run config or the default run config
-        # If only one process is used, run the inversion sequentially
-        if self.parallel == 1:
-            print("Running inversion sequentially.")
-            for multi_stage_search in multi_stage_searches:
-                self.run_config.main(multi_stage_search)
-        # If more than one process is used, run the inversion in parallel
-        else:
-            print(f"Running inversion in parallel with {self.parallel} processes.")
-            with ProcessPoolExecutor(max_workers=self.parallel) as executor:
-                executor.map(
-                    self.run_config.main,
-                    multi_stage_searches,
+        # Run the inversions sequentially
+        print("Running inversion sequentially.")
+        for i, multi_stage_search in enumerate(multi_stage_searches):
+            try:
+                self.run_config.main(
+                    multi_stage_search, additional_notes_list[i]
                 )
+            except TypeError:
+                multi_stage_search.logger.error(
+                    "DeprecationWarning: The run_config.main method should take "
+                    "two arguments: main(multi_stage_search, additional_notes). "
+                    "The additional_notes argument is optional tho."
+                )
+                self.run_config.main(multi_stage_search)
+            except Exception as e:
+                multi_stage_search.logger.error(
+                    f"An error occurred during the inversion: {e}"
+                )
+                raise e
 
         # Save the end time of the run
         end_time = datetime.now()
@@ -278,7 +284,6 @@ class Runner:
         self.__add_info_file_to_multi_run(
             self.save_dir, start_time, end_time
         )
-
 
     def run(self):
         """Run the inversion."""
