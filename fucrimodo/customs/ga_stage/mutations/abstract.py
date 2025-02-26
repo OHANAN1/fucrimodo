@@ -92,24 +92,6 @@ class Mutation(ABC):
         """
         pass
 
-    def __make_cell_positive(self, individual: Individual) -> None:
-        cell = individual.get_cell()
-        scaled_positions = individual.get_scaled_positions()
-        new_cell = cell.copy()
-
-        # Check for each element of the cell if it is negative
-        for i in range(3):
-            for j in range(3):
-                if cell[i, j] < 0: # type: ignore
-                    # Invertiere the component if it is negative
-                    new_cell[i, j] *= -1 # type: ignore
-                    scaled_positions[:, i] *= -1
-
-        # Set the new cell and scaled positions
-        individual.set_cell(new_cell, scale_atoms=False)
-        individual.set_scaled_positions(scaled_positions)
-        individual.wrap()
-
     def mutate(self, crystal: Individual) -> tuple[Individual, bool]:
         """
         Should calculate the offspring from parent, depending on mutation type.
@@ -134,10 +116,6 @@ class Mutation(ABC):
                 offspring.constraints = constraints
                 try:
                     offspring = self.perform_mutation(offspring)
-
-                    if offspring is not None:
-                        # Make sure the cell is positive
-                        self.__make_cell_positive(offspring)
 
                 except Exception as e:
                     self.logger.warning(
