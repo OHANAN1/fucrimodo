@@ -1,5 +1,6 @@
 import logging
 
+
 def setup_stage_logger(
     log_file_path: str,
     run_name: str,
@@ -8,7 +9,7 @@ def setup_stage_logger(
 ) -> tuple[logging.Logger, str]:
     """Set up a logger for each stage of the run.
 
-    :param log_file_path: Path to the log file. Normally the directory of the 
+    :param log_file_path: Path to the log file. Normally the directory of the
             stage.
     :param run_name: Name of the run.
     :param stage_name: Name of the stage.
@@ -19,7 +20,7 @@ def setup_stage_logger(
         a underscore {run_name}_{stage_name}_logger.
     """
     # Create logger name
-    logger_name = f'{run_name}_{stage_name}_logger'
+    logger_name = f"{run_name}_{stage_name}_logger"
 
     # Create a logger
     logger = logging.getLogger(logger_name)
@@ -30,9 +31,7 @@ def setup_stage_logger(
     file_handler.setLevel(log_level)
 
     # Define how the log messages should look like
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
-    )
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(formatter)
 
     # Add the file handler to the logger
@@ -51,7 +50,7 @@ def setup_run_logger(
 ) -> logging.Logger:
     """Set up a logger for the run.
 
-    :param log_file_path: Path to the log file. Normally the directory of the 
+    :param log_file_path: Path to the log file. Normally the directory of the
             run.
     :param run_name: Name of the run.
     :param log_level: Level of the log messages.
@@ -63,7 +62,7 @@ def setup_run_logger(
         {run_name}_logger.
     """
     # Create logger name
-    logger_name = f'{run_name}_logger'
+    logger_name = f"{run_name}_logger"
 
     # Create a logger
     logger = logging.getLogger(logger_name)
@@ -74,9 +73,7 @@ def setup_run_logger(
     file_handler.setLevel(log_level)
 
     # Define how the log messages should look like
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
-    )
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(formatter)
 
     # Add the file handler to the logger
@@ -86,6 +83,8 @@ def setup_run_logger(
 
     # Add a StreamHandler if verbose is True to print to console
     if verbose:
-        logger.addHandler(logging.StreamHandler())
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
 
     return logger
