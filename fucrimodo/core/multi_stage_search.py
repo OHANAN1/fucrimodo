@@ -279,8 +279,8 @@ class MultiStageSearch:
         # This is done to avoid the error that happens sometimes on slurm
         # TODO: Replace this with the option to restart run from old data
         if os.path.isdir(run_dir):
-            self.logger.warning(
-                "Default path to run dir already exists, using fallback path."
+            print(
+                "Warning: Default path to run dir already exists, using fallback path."
             )
             run_dir = os.path.join(
                 os.getcwd(),
