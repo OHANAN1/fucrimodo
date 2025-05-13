@@ -274,6 +274,20 @@ class MultiStageSearch:
         :param save_dir: Directory where the run directory should be created.
         """
         run_dir = os.path.join(os.getcwd(), save_dir, self.name)
+
+        # Check if dir already exists and create fallback if thats the chase
+        # This is done to avoid the error that happens sometimes on slurm
+        # TODO: Replace this with the option to restart run from old data
+        if os.path.isdir(run_dir):
+            self.logger.warning(
+                "Default path to run dir already exists, using fallback path."
+            )
+            run_dir = os.path.join(
+                os.getcwd(),
+                save_dir,
+                f"{self.name}_fallback",
+            )
+
         os.mkdir(run_dir)
 
         return run_dir
