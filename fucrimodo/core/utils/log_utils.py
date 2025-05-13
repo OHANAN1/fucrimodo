@@ -84,7 +84,6 @@ def setup_run_logger(
     # Add a StreamHandler if verbose is True to print to console
     if verbose:
         stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(formatter)
         logger.addHandler(stream_handler)
 
     return logger
