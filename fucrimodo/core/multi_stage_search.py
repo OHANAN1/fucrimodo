@@ -1,15 +1,18 @@
-from typing import Callable
-from ase import db
-from ase.db.core import Database
-from deap import tools
-import numpy as np
-from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.log_utils import setup_stage_logger, setup_run_logger
-from .modules import Stage, Population
-import os
 import datetime
 import json
 import logging
+import os
+from typing import Callable
+
+import numpy as np
+from ase import db
+from ase.db.core import Database
+from deap import tools
+
+from fucrimodo.core.modules.individual import Individual
+from fucrimodo.core.utils.log_utils import setup_run_logger, setup_stage_logger
+
+from .modules import Population, Stage
 
 
 class MultiStageSearch:
@@ -20,7 +23,7 @@ class MultiStageSearch:
 
     :param save_dir: Directory where a dictionary should be created to store
         the data of the run.
-    :param target_features: Array with the target features that the 
+    :param target_features: Array with the target features that the
         optimization algorithm should invert.
     :param descriptor_object: Object of the descriptor that is used to
         calculate the features of the individuals.
@@ -37,12 +40,13 @@ class MultiStageSearch:
     :param verbose: If set to True, the global logger also logs to the console
         in addition to the log file.
     """
+
     def __init__(
         self,
         save_dir: str,
         target_features: np.ndarray,
         descriptor_object,
-        descriptive_name: str|None = None,
+        descriptive_name: str | None = None,
         description: str = "",
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
         log_level: int = logging.INFO,
@@ -140,7 +144,9 @@ class MultiStageSearch:
         return self._global_statistics_dict
 
     @global_statistics_dict.setter
-    def global_statistics_dict(self, value: dict[str, Callable[[Individual], float]] | None):
+    def global_statistics_dict(
+        self, value: dict[str, Callable[[Individual], float]] | None
+    ):
         """Setter for the global statistics dictionary.
 
         The setter also creates the global statistics and the logbook for the
@@ -203,7 +209,7 @@ class MultiStageSearch:
             if self.global_statistics is not None:
                 global_stats_fields = self.global_statistics.fields
 
-            self._global_log.header = ['stage_id', 'gen'] + global_stats_fields # type: ignore
+            self._global_log.header = ["stage_id", "gen"] + global_stats_fields  # type: ignore
 
         return self._global_log
 
@@ -212,7 +218,7 @@ class MultiStageSearch:
         """Dictionary to store the history of the stages.
 
         The dictionary stores ordered lists of the stage IDs and
-        paths to the directories of the stages relative to the directory the 
+        paths to the directories of the stages relative to the directory the
         run was saved in. Each index in the lists corresponds to one stage.
 
         :returns: History dict of the stages. Keys are: "ID", "relative_save_path"
@@ -225,21 +231,19 @@ class MultiStageSearch:
         return self._stage_history
 
     def __update_stage_history(self, stage_id: int, relative_save_path: str):
-        """Adds new entry to the :attr:`stage_history`.
-        """
+        """Adds new entry to the :attr:`stage_history`."""
         self.stage_history["ID"].append(stage_id)
         self.stage_history["relative_save_path"].append(relative_save_path)
 
     def __create_global_statistics(
-        self, 
-        global_stats_dict: dict[str, Callable[[Individual], float]] | None
+        self, global_stats_dict: dict[str, Callable[[Individual], float]] | None
     ) -> tools.MultiStatistics | None:
         """Method to create a MultiStatistics object from a dictionary of
         global statistics functions.
 
         The global statistics functions are used to calculate the mean, max,
-        min and standard deviation for each iteration that modifies the 
-        population (e.g. in Genetic Algorithms they are calculated for each 
+        min and standard deviation for each iteration that modifies the
+        population (e.g. in Genetic Algorithms they are calculated for each
         generation) of all stages of the optimization algorithm.
 
         :param global_stats_dict: Dictionary where the keys are the names of the
@@ -284,22 +288,24 @@ class MultiStageSearch:
 
         The info of the stage is saved in a JSON file in the stage directory.
         The info is the :attr:`Stage.info_dict` of the stage with the added
-        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and 
+        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and
         :attr:`Stage.description`.
 
         :param stage: Stage that should be saved.
         :param stage_dir: Directory where the info of the stage should be saved.
         """
         stage_info_dict = stage.info_dict.copy()
-        stage_info_dict.update({
-            "id": stage.id,
-            "type": stage.type(),
-            "name": stage.name,
-            "description": stage.description,
-            "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "total_runtime": str(stage.end_time - stage.start_time),
-        })
+        stage_info_dict.update(
+            {
+                "id": stage.id,
+                "type": stage.type(),
+                "name": stage.name,
+                "description": stage.description,
+                "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "total_runtime": str(stage.end_time - stage.start_time),
+            }
+        )
 
         file_path = os.path.join(stage_dir, "info.json")
         with open(file_path, "w") as f:
@@ -311,11 +317,11 @@ class MultiStageSearch:
         """Method to set up the stage for a run.
 
         Adds the stage ID to the stage and creates a directory for the stage.
-        For this a new directory is created in the run directory with the name 
+        For this a new directory is created in the run directory with the name
         "stage_{:data:`stage_id`}".
-        Takes the :attr:`Stage.info_dict` of the stage and adds the 
-        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and 
-        :attr:`Stage.description` to the dictionary. 
+        Takes the :attr:`Stage.info_dict` of the stage and adds the
+        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and
+        :attr:`Stage.description` to the dictionary.
         Then saves the dictionary as a JSON file in the stage directory.
 
         :param stage: Stage that should be set up.
@@ -354,8 +360,7 @@ class MultiStageSearch:
 
         # Update the stage history with the currently run stage
         self.__update_stage_history(
-            stage_id=self.current_stage_id,
-            relative_save_path=relative_stage_dir
+            stage_id=self.current_stage_id, relative_save_path=relative_stage_dir
         )
 
         return stage_dir
@@ -377,8 +382,7 @@ class MultiStageSearch:
                 name for name in self._global_statistics_dict.keys()
             ]
             global_stats_dict["functions"] = [
-                func.__name__ 
-                for func in self._global_statistics_dict.values()
+                func.__name__ for func in self._global_statistics_dict.values()
             ]
 
             # Loop over the chapters of the logbook and save the statistics
@@ -408,7 +412,7 @@ class MultiStageSearch:
             "start_time": self.start_time.strftime("%Y-%m-%d %H:%M:%S"),
             "end_time": self.end_time.strftime("%Y-%m-%d %H:%M:%S"),
             "total_runtime": str(self.end_time - self.start_time),
-            "stage_history": self.stage_history
+            "stage_history": self.stage_history,
         }
         with open(file_path, "w") as f:
             json.dump(info_dict, f, indent=4)
@@ -436,20 +440,24 @@ class MultiStageSearch:
         stage_dir = self.__set_up_stage(stage, self.current_stage_id)
 
         # Run the stage and save the results
-        self.logger.info(f"Run {self.name}: Running stage: {stage.name}, ID: {stage.id}")
+        self.logger.info(
+            f"Run {self.name}: Running stage: {stage.name}, ID: {stage.id}"
+        )
         self.logger.debug(f"Population size: {population.size}")
         population = stage.run(
             population=population,
             global_log=self.global_logbook,
-            global_stats=self.global_statistics, 
+            global_stats=self.global_statistics,
         )
 
-        self.logger.info(f"Run {self.name}: Finished stage: {stage.name}, ID: {stage.id}")
+        self.logger.info(
+            f"Run {self.name}: Finished stage: {stage.name}, ID: {stage.id}"
+        )
         self.logger.debug(f"Saving at directory: {stage_dir}")
         stage.save_results(
-            save_dir = stage_dir,
-            crystals_db = self.crystal_database,
-            global_statistics_dict = self._global_statistics_dict
+            save_dir=stage_dir,
+            crystals_db=self.crystal_database,
+            global_statistics_dict=self._global_statistics_dict,
         )
 
         # Set the end time of the stage to the current time
