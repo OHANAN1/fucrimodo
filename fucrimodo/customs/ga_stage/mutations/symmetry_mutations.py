@@ -47,6 +47,8 @@ class GetConventionalCellMutation(Mutation):
         # Get the original volume
         original_volume = crystal.get_volume()
 
+        crystal.set_pbc([True, True, True])
+
         # Analyze the individual to get the conventional cell
         analyzer = matid.SymmetryAnalyzer(crystal.copy(), self.symmetry_tol)
         conventional_cell = analyzer.get_conventional_system()

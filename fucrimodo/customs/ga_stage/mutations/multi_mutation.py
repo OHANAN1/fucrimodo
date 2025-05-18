@@ -1,7 +1,9 @@
-from .abstract import Mutation
+import random
+
 from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-import random
+
+from .abstract import Mutation
 
 
 class MultipleMutations(Mutation):
@@ -11,7 +13,7 @@ class MultipleMutations(Mutation):
         closest_distances: CustomClosestDistances,
         number_of_mutations: int | str = "all",
         random_order: bool = True,
-        can_occure_multiple_times: bool = False
+        can_occure_multiple_times: bool = False,
     ) -> None:
         self.random_order = random_order
         self.mutations = mutations
@@ -19,10 +21,7 @@ class MultipleMutations(Mutation):
         self.can_occure_multiple_times = can_occure_multiple_times
         self.max_steps = 1
 
-        if (
-            isinstance(number_of_mutations, str)
-                and number_of_mutations == "all"
-        ):
+        if isinstance(number_of_mutations, str) and number_of_mutations == "all":
             self.number_of_mutations: int = len(self.mutations)
         elif isinstance(number_of_mutations, int):
             self.number_of_mutations: int = int(number_of_mutations)
@@ -48,7 +47,7 @@ class MultipleMutations(Mutation):
             random.shuffle(self.mutations)
 
         if not self.can_occure_multiple_times:
-            selected_mutations = self.mutations[:self.number_of_mutations]
+            selected_mutations = self.mutations[: self.number_of_mutations]
         else:
             selected_mutations = random.choices(
                 self.mutations, k=self.number_of_mutations
@@ -61,9 +60,7 @@ class MultipleMutations(Mutation):
 
         selected_mutations = self.__select_mutations()
 
-        self.max_steps = self.__get_max_steps_from_mutations(
-            selected_mutations
-        )
+        self.max_steps = self.__get_max_steps_from_mutations(selected_mutations)
 
         for i in range(self.number_of_mutations):
             mutation = selected_mutations[i]

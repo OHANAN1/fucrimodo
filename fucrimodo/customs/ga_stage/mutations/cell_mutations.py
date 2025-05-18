@@ -1,12 +1,16 @@
-from fucrimodo.core.modules.individual import Individual
-from .abstract import Mutation
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-import numpy as np
-from ase.cell import Cell
-import ase.ga.standardmutations as ase_standard_mut
-from ase import build
 import random
+
+import ase.ga.standardmutations as ase_standard_mut
+import numpy as np
+from ase import build
+from ase.cell import Cell
+
+from fucrimodo.core.modules.individual import Individual
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
+from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+
+from .abstract import Mutation
+
 
 class ScaleUnitCellMutation(Mutation):
     """
@@ -21,7 +25,7 @@ class ScaleUnitCellMutation(Mutation):
         min_scale: float = 0.5,
         scale_atoms: bool = True,
         max_steps: int = 100,
-        n_variable_cell_vectors: int = 3
+        n_variable_cell_vectors: int = 3,
     ):
         self.max_scale = max_scale
         self.min_scale = min_scale
@@ -67,7 +71,7 @@ class StrainMutation(Mutation):
         closest_distances: CustomClosestDistances,
         n_variable_cell_vectors: int = 3,
         cell_bounds: CustomCellBounds | None = None,
-        stddev: float = 0.7
+        stddev: float = 0.7,
     ) -> None:
         self.closest_distances = closest_distances
         self.n_variable_cell_vectors = n_variable_cell_vectors
@@ -77,16 +81,16 @@ class StrainMutation(Mutation):
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
         if self.cell_bounds is None:
-            len_ang = crystal.get_cell_lengths_and_angles()
+            len_ang = crystal.cell.cellpar()
             a = len_ang[0]
             b = len_ang[1]
             c = len_ang[2]
 
             cell_bounds = CustomCellBounds(
                 {
-                    "a": [a-1., a+1.],
-                    "b": [b-1., b+1.],
-                    "c": [c-1., c+1.],
+                    "a": [a - 1.0, a + 1.0],
+                    "b": [b - 1.0, b + 1.0],
+                    "c": [c - 1.0, c + 1.0],
                 }
             )
         else:
@@ -97,7 +101,7 @@ class StrainMutation(Mutation):
             number_of_variable_cell_vectors=self.n_variable_cell_vectors,
             cellbounds=cell_bounds,
             stddev=self.stddev,
-            verbose=True
+            verbose=True,
         )
         ase_strain.update_scaling_volume([crystal])
 
@@ -111,15 +115,14 @@ class EnlargeMutation(Mutation):
         self,
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
-        max_steps: int = 1
+        max_steps: int = 1,
     ) -> None:
         self.closest_distances = closest_distances
         self.max_steps = max_steps
         self.cell_bounds = cell_bounds
 
     def __get_possible_new_cell(
-        self,
-        cell_vectors: np.ndarray
+        self, cell_vectors: np.ndarray
     ) -> tuple[Cell, list[int]] | tuple[None, None]:
         possible_sides = []
         possible_cell_vectors = []
@@ -145,9 +148,7 @@ class EnlargeMutation(Mutation):
         cell = offspring.get_cell()
         cell_vectors = cell[:]  # type: ignore
 
-        possible_cell, possible_sides = self.__get_possible_new_cell(
-            cell_vectors
-        )
+        possible_cell, possible_sides = self.__get_possible_new_cell(cell_vectors)
 
         if possible_cell is None:
             return None
@@ -159,18 +160,14 @@ class EnlargeMutation(Mutation):
                 repeat_sequence[i] += 1
 
             offspring = offspring.repeat(repeat_sequence)
-            offspring.set_cell(
-                new_cell, scale_atoms=False, apply_constraint=False
-            )
+            offspring.set_cell(new_cell, scale_atoms=False, apply_constraint=False)
 
             return offspring
 
 
 class NiggliReduceMutation(Mutation):
     def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        max_steps: int = 1
+        self, closest_distances: CustomClosestDistances, max_steps: int = 1
     ) -> None:
         self.closest_distances = closest_distances
         self.max_steps = max_steps
@@ -182,9 +179,7 @@ class NiggliReduceMutation(Mutation):
 
 class MinimizeTiltMutation(Mutation):
     def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        max_steps: int = 1
+        self, closest_distances: CustomClosestDistances, max_steps: int = 1
     ) -> None:
         self.closest_distances = closest_distances
         self.max_steps = max_steps
@@ -211,26 +206,15 @@ class CutoutMutation(Mutation):
         if not self.cell_bounds.is_within_bounds(crystal.cell):
             return None
 
-        a_vec = (
-            np.random.uniform(0.0, 0.8), 0, 0
-        )
-        b_vec = (
-            0, np.random.uniform(0.0, 0.8), 0
-        )
+        a_vec = (np.random.uniform(0.0, 0.8), 0, 0)
+        b_vec = (0, np.random.uniform(0.0, 0.8), 0)
         if random.choice([True, False]):
-            c_vec = (
-                0, 0, np.random.uniform(0.0, 0.8)
-            )
+            c_vec = (0, 0, np.random.uniform(0.0, 0.8))
         else:
             c_vec = None
 
         cutout_crystal = build.cut(
-            crystal,
-            a=a_vec,
-            b=b_vec,
-            c=c_vec,
-            clength=None,
-            tolerance=self.tolerance
+            crystal, a=a_vec, b=b_vec, c=c_vec, clength=None, tolerance=self.tolerance
         )
 
         if self.cell_bounds.is_within_bounds(cutout_crystal.cell):
@@ -244,15 +228,13 @@ class CutoutMutation(Mutation):
 
 class RotationMutation(Mutation):
     def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        max_steps: int = 30
+        self, closest_distances: CustomClosestDistances, max_steps: int = 30
     ) -> None:
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
-        v_rand = np.random.choice(['x', 'y', 'z'])
+        v_rand = np.random.choice(["x", "y", "z"])
         a_rand = np.random.uniform(0, 90)
         crystal.rotate(a=a_rand, v=v_rand, rotate_cell=False)
         return crystal

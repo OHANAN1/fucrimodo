@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "ase>=3.23.0",
-    "matid>=2.1.2",
+    "matid>=2.1.5",
     "numpy>=1.26.4",
     "matplotlib>=3.9.1",
     "nbformat>=5.10.1",
