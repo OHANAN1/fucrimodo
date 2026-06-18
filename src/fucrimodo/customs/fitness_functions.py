@@ -12,7 +12,7 @@ class PhysicalityFitness(FitnessFunction):
     def __init__(
         self,
         closest_distances: dict[tuple[int, int], float],
-        db_title: str | None = "PhysicalityFitness"
+        db_title: str | None = "PhysicalityFitness",
     ):
         super().__init__(db_title=db_title)
         self.closest_distances = closest_distances
@@ -37,11 +37,7 @@ class PhysicalityFitness(FitnessFunction):
         atomic_numbers = crystal.get_atomic_numbers()
         cell = crystal.get_cell()
 
-        d_matrix, distances = get_distances(
-            p1=positions,
-            cell=cell,
-            pbc=True
-        )
+        d_matrix, distances = get_distances(p1=positions, cell=cell, pbc=True)
 
         fitness = 0
         for i in range(len(positions)):
@@ -54,7 +50,7 @@ class PhysicalityFitness(FitnessFunction):
                     fitness += 1
 
         if len(atomic_numbers) > 1:
-            norm_factor = 2/(len(atomic_numbers) * (len(atomic_numbers) - 1))
+            norm_factor = 2 / (len(atomic_numbers) * (len(atomic_numbers) - 1))
         else:
             norm_factor = 1
 
@@ -100,15 +96,14 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
 
         if len(individuals_without_features) > 0:
             feature_vectors = self.soap_obj.create(
-                individuals_without_features,
-                n_jobs=self.n_jobs
+                individuals_without_features, n_jobs=self.n_jobs
             )
 
             # If only one individual is without features don't loop
             if len(individuals_without_features) == 1:
                 individuals_without_features[0].features = feature_vectors
             else:
-                # Else loop through the feature vectors and assign them to the 
+                # Else loop through the feature vectors and assign them to the
                 # individuals
                 for i, feature_vector in enumerate(feature_vectors):
                     individuals_without_features[i].features = feature_vector
@@ -119,8 +114,9 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
             self.__assign_features_to_individuals([individual])
 
             # Check again if the features are set
-            assert individual.features is not None, \
-                "Features are not set. This should not happen."
+            assert (
+                individual.features is not None
+            ), "Features are not set. This should not happen."
 
         except Exception as e:
             warnings.warn(
@@ -153,7 +149,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         """Evaluate a similarity fitness for a list of individuals.
 
         Uses the :attr:`Individual.features` attribute to calculate the fitness.
-        If not set calculates the features with the :attr:`CustomSOAP` object 
+        If not set calculates the features with the :attr:`CustomSOAP` object
         for all individuals without features in parallel.
 
         :param individuals: List of individuals to evaluate.
@@ -183,8 +179,9 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
             features = []
             for ind in individuals:
                 # Check again if the features are set
-                assert ind.features is not None, \
-                    "Features are not set. This should not happen."
+                assert (
+                    ind.features is not None
+                ), "Features are not set. This should not happen."
                 features.append(ind.features)
 
             # Use the feature vector to calculate the fitnesses/similarities
@@ -221,11 +218,9 @@ class VolumeFitness(FitnessFunction):
     :param round_volume: Round the volume to this number of decimals to
         avoid prefering only slightly smaller volumes.
     """
+
     def __init__(
-        self,
-        db_title: str | None = None,
-        gamma: float = 0.01,
-        round_volume: int = 1
+        self, db_title: str | None = None, gamma: float = 0.01, round_volume: int = 1
     ):
         super().__init__(db_title=db_title)
         self.gamma = gamma
@@ -253,18 +248,14 @@ class NumberOfAtomsFitness(FitnessFunction):
     fitness = (np.arctan(-n_atoms + self.n_max + 3)+(np.pi / 2)) / np.pi
     """
 
-    def __init__(
-        self,
-        n_max: int = 10,
-        db_title: str | None = None
-    ):
+    def __init__(self, n_max: int = 10, db_title: str | None = None):
         super().__init__(db_title=db_title)
         self.n_max = n_max
 
     def evaluate_individual(self, individual: ase.Atoms) -> float:
         try:
             n_atoms = len(individual)
-            fitness = (np.arctan(-n_atoms + self.n_max + 3)+(np.pi / 2)) / np.pi
+            fitness = (np.arctan(-n_atoms + self.n_max + 3) + (np.pi / 2)) / np.pi
             return fitness
         except Exception as e:
             warnings.warn(
@@ -286,11 +277,11 @@ class AgeFitness(FitnessFunction):
     Where the relative age is the time between the creation time of the individual
     and the init time of the fitness function.
 
-    Does not calculate the age of an individual directly, since the fitness 
+    Does not calculate the age of an individual directly, since the fitness
     values are only calculated during the creation of an individual.
     With this approach the age of different individuals can be compared
     relative to the init time of the fitness function.
-    Please avoid creation times smaller than the init time of the fitness 
+    Please avoid creation times smaller than the init time of the fitness
     function.
 
     Very different from, but inspired by:
@@ -304,11 +295,12 @@ class AgeFitness(FitnessFunction):
         to avoid prefering structures that where created only slightly
         earlier due to unrelated timing of structure creation.
     """
+
     def __init__(
         self,
         gamma: float = 0.001,
         db_title: str = "AgeFitness",
-        round_fitness: int = 15
+        round_fitness: int = 15,
     ):
         super().__init__(db_title=db_title)
         self.gamma = gamma
@@ -326,11 +318,11 @@ class AgeFitness(FitnessFunction):
             # Avoid division by zero
             # Avoid negative values that would drastically increase the fitness
             if relative_age_seconds <= 0:
-                return 0.
+                return 0.0
 
             else:
                 # Add + 0.0 to make sure the fitness is a float
-                fitness = (1 - np.exp(- self.gamma * relative_age_seconds)) + 0.0
+                fitness = (1 - np.exp(-self.gamma * relative_age_seconds)) + 0.0
                 return round(fitness, self.round_fitness)
 
         except Exception as e:
@@ -347,7 +339,7 @@ class DummyFitness(FitnessFunction):
         pass
 
     def evaluate_individual(self, individual: ase.Atoms) -> float:
-        return 999.
+        return 999.0
 
     def __repr__(self):
         return "DummyFitness"
