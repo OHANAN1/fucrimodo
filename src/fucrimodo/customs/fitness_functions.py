@@ -37,24 +37,22 @@ class PhysicalityFitness(FitnessFunction):
         atomic_numbers = crystal.get_atomic_numbers()
         cell = crystal.get_cell()
 
-        d_matrix, distances = get_distances(p1=positions, cell=cell, pbc=True)
+        _, distances = get_distances(p1=positions, cell=cell, pbc=True)
 
-        fitness = 0
+        exponent = 0
         for i in range(len(positions)):
             for j in range(i + 1, len(positions)):
                 distance = distances[i, j]
                 min_allowed_dist = self.closest_distances[
                     (atomic_numbers[i], atomic_numbers[j])
                 ]
-                if distance >= min_allowed_dist:
-                    fitness += 1
+                exponent += np.max(
+                    [(min_allowed_dist - distance) / min_allowed_dist, 0],
+                )
 
-        if len(atomic_numbers) > 1:
-            norm_factor = 2 / (len(atomic_numbers) * (len(atomic_numbers) - 1))
-        else:
-            norm_factor = 1
+        fitness = np.exp(-exponent)
 
-        return fitness * norm_factor
+        return fitness
 
     def evaluate_individual(self, individual: Individual) -> float:
         return self.__calculate_normalized_atom_distance_fitness(
