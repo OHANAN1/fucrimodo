@@ -16,7 +16,6 @@ from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.utils.custom_soap import CustomSOAP
 from fucrimodo.customs import global_soap_target
-from fucrimodo.customs import population_generator as pop_gen
 from fucrimodo.customs import population_selections
 from pyxtal import pyxtal
 from pyxtal.symmetry import Group
@@ -341,7 +340,7 @@ class RandomSampleCrystalPopulation(PopulationGenerator):
         # Convert the crystals to individuals
         individuals = []
         for crystal in random_crystals:
-            ind = pop_gen.convert_ase_atoms_to_individual(crystal)
+            ind = convert_ase_atoms_to_individual(crystal)
             individuals.append(ind)
 
         if self.logger:

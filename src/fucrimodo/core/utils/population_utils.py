@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from fucrimodo.core.modules import Population, Individual, FitnessFunction
 
+
 def evaluate_individuals(
     individuals: list[Individual],
     fitness_functions: Sequence[FitnessFunction | tuple[FitnessFunction, float]],
@@ -25,7 +26,7 @@ def evaluate_individuals(
         # If only function is given assign weight as 1.
         else:
             fitness_func_list.append(fit_weight_tuple)
-            weights += (1.,)
+            weights += (1.0,)
 
     # Resets the and deletes the info attribute of each individual.
     # Also assigns the weights to the individuals.
@@ -35,9 +36,7 @@ def evaluate_individuals(
         ind.info = {}
 
     # Create a list of empty tuples for each individual
-    fitness_tuples_list: list[tuple[float, ...]] = [
-        () for _ in range(len(individuals))
-    ]
+    fitness_tuples_list: list[tuple[float, ...]] = [() for _ in range(len(individuals))]
 
     # Evaluate the fitnesses of the individuals for each fitness function
     for fitness_func in fitness_func_list:
@@ -53,13 +52,19 @@ def evaluate_individuals(
 
 def assign_fitness_to_all_individuals(
     population: Population,
-    fitness_functions: Sequence[FitnessFunction | tuple[FitnessFunction, float]],
+    fitness_functions: (
+        Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
+    ),
 ) -> None:
-    """Assigns fitness with fitness function to all individuals in the population.
-    """
+    """Assigns fitness with fitness function to all individuals in the population."""
+    # if type(fitness_functions) is not Sequence:
+    if isinstance(fitness_functions, FitnessFunction):
+        fitness_functions = [fitness_functions]
+
     # Evaluate the fitnesses of the invalid individuals
-    fitness_tuples_list = evaluate_individuals(population.individuals,
-                                               fitness_functions)
+    fitness_tuples_list = evaluate_individuals(
+        population.individuals, fitness_functions
+    )
 
     # Assign the fitnesses to the individuals
     for ind, fitness_tuple in zip(population.individuals, fitness_tuples_list):

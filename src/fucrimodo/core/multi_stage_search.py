@@ -29,12 +29,12 @@ class MultiStageSearch:
         calculate the features of the individuals.
     :param descriptive_name: Optional name of the run. If no name is given,
         the current time and date is used. Saved to :attr:`name`.
-    :param global_statistics_dict: Optional dictionary, where the keys are the
+    :param global_statistics_dict: Dictionary, where the keys are the
         names of the statistics and the values are functions that calculate the
         statistics for an individual. The statistics are calculated for each
         iteration that modifies the population (e.g. in Genetic Algorithms they
         are calculated for each generation) of all stages of the optimization
-        algorithm.
+        algorithm. If not initialized at start must be set later.
     :param log_level: Log level of the global logger. Set to logging.INFO to
         see the progress of the run.
     :param verbose: If set to True, the global logger also logs to the console
@@ -443,6 +443,13 @@ class MultiStageSearch:
         :param population: Population that should be optimized.
         :param stage: Stage that should be run.
         """
+
+        # TODO: Make global statistics optional
+        if not self.global_statistics_dict:
+            raise ValueError(
+                "Please set a global_statistics_dict, so stats on the run can be tracked."
+            )
+
         # Update the current stage ID, to ensure the stages have unique IDs
         self.current_stage_id += 1
 

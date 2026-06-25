@@ -1,19 +1,19 @@
 import random
-from typing import Callable, Optional, Sequence
-from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.modules.population_generator import PopulationGenerator
-from fucrimodo.customs.population_generator import OneAtomicCrystalGenerator
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-import numpy as np
-from numpy.typing import NDArray
-from sklearn.metrics.pairwise import rbf_kernel
 import warnings
-from fucrimodo.core.modules import PopulationSelection
+from typing import Callable, Optional
+
 from deap import tools
+from fucrimodo.core.modules import (
+    Individual,
+    PopulationGenerator,
+    PopulationSelection,
+)
+from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 
 # ╒══════════════════════════════════════════════════════════╕
 #                    StartPopulation Class
 # ╘══════════════════════════════════════════════════════════╛
+
 
 class RandomSelectionPopulation(PopulationSelection):
     """
@@ -23,11 +23,7 @@ class RandomSelectionPopulation(PopulationSelection):
     Call the object after initialization to get the list of crystals.
     """
 
-    def __init__(
-        self,
-        n: int,
-        database_name: Optional[str] = None
-    ):
+    def __init__(self, n: int, database_name: Optional[str] = None):
         self.n = n
         self.database_name = database_name
 
@@ -70,10 +66,11 @@ class TournamentSelection(PopulationSelection):
     about the algorithm can be found in the DEAP documentation:
     `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selTournament`
 
-    :param k: The number of individuals to select. Either integer for total 
+    :param k: The number of individuals to select. Either integer for total
         number or float for percentage of the population.
     :param tournsize: The number of individuals participating in each tournament.
     """
+
     def __init__(
         self,
         tournament_size: int,
@@ -86,8 +83,8 @@ class TournamentSelection(PopulationSelection):
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Selects a population using the tournament selection.
 
-        :param individuals: A list of individuals to select from. The 
-            individual must have the :class:`FitnessStorage` class at 
+        :param individuals: A list of individuals to select from. The
+            individual must have the :class:`FitnessStorage` class at
             :attr:`Individual.fitness` to be used in the tounament selection.
         :param n: The number of individuals to select.
 
@@ -112,6 +109,7 @@ class NSGA2Selection(PopulationSelection):
         Options are 'standard' and 'log'. See DEAP documentation for more
         information.
     """
+
     def __init__(
         self,
         nondominated_sorting: str = "standard",
@@ -124,8 +122,8 @@ class NSGA2Selection(PopulationSelection):
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Selects a population using the NSGA-II algorithm.
 
-        :param individuals: A list of individuals to select from. The 
-            individual must have the :class:`FitnessStorage` class at 
+        :param individuals: A list of individuals to select from. The
+            individual must have the :class:`FitnessStorage` class at
             :attr:`Individual.fitness` to be used in the NSGA-II algorithm.
         :param n: The number of individuals to select.
 
@@ -133,9 +131,7 @@ class NSGA2Selection(PopulationSelection):
             Sorted by the NSGA-II algorithm from best to worst.
         """
         # Perform NSGA-II selection.
-        individuals = tools.selNSGA2(
-            individuals, k=n, nd=self._nondominated_sorting
-        )
+        individuals = tools.selNSGA2(individuals, k=n, nd=self._nondominated_sorting)
 
         return individuals
 
@@ -153,7 +149,7 @@ class BestCrystalsPopulation(PopulationSelection):
         n: int,
         evaluation_function: Callable[[Individual], float],
         database_name: Optional[str] = None,
-        verbose: int = 1
+        verbose: int = 1,
     ):
         self.n = n
         self.evaluation_function = evaluation_function
@@ -161,24 +157,19 @@ class BestCrystalsPopulation(PopulationSelection):
         self.verbose = verbose
 
     def __get_n_best_individuals(
-        self,
-        individuals: list[Individual],
-        verbose: int = 1
+        self, individuals: list[Individual], verbose: int = 1
     ) -> list[Individual]:
-        fitness_list = [self.evaluation_function(
-            individual) for individual in individuals]
+        fitness_list = [
+            self.evaluation_function(individual) for individual in individuals
+        ]
         sorted_list = sorted(
-            zip(individuals, fitness_list),
-            key=lambda x: x[1],
-            reverse=True
+            zip(individuals, fitness_list), key=lambda x: x[1], reverse=True
         )
-        best_individuals = [crystal for crystal, _ in sorted_list[:self.n]]
+        best_individuals = [crystal for crystal, _ in sorted_list[: self.n]]
 
         return best_individuals
 
-    def select_start_pop(
-            self, individuals: list[Individual]
-    ) -> list[Individual]:
+    def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
         """
         Returns n crystals with the highest fitness.
         """
@@ -186,17 +177,14 @@ class BestCrystalsPopulation(PopulationSelection):
         if self.n > len(individuals):
             n = len(individuals)
             warnings.warn(
-                "BestCrystalsPopulation: " +
-                "n is larger than the number of individuals. " +
-                "Returning {} instead of {} individuals.".format(
-                    n, self.n
-                )
+                "BestCrystalsPopulation: "
+                + "n is larger than the number of individuals. "
+                + "Returning {} instead of {} individuals.".format(n, self.n)
             )
             return individuals
 
         chosen_individuals = self.__get_n_best_individuals(
-            individuals=individuals,
-            verbose=self.verbose
+            individuals=individuals, verbose=self.verbose
         )
         return chosen_individuals
 
@@ -222,7 +210,7 @@ class WorstCrystalsPopulation(PopulationSelection):
         n: int,
         evaluation_function: Callable[[Individual], float],
         database_name: Optional[str] = None,
-        verbose: int = 1
+        verbose: int = 1,
     ):
         self.n = n
         self.evaluation_function = evaluation_function
@@ -230,34 +218,25 @@ class WorstCrystalsPopulation(PopulationSelection):
         self.verbose = verbose
 
     def __get_n_worst_individuals(
-        self,
-        individuals: list[Individual],
-        verbose: int = 1
+        self, individuals: list[Individual], verbose: int = 1
     ) -> list[Individual]:
         fitness_list = []
         for i, crystal in enumerate(individuals):
-            fitness_list.append(
-                self.evaluation_function(crystal)
-            )
+            fitness_list.append(self.evaluation_function(crystal))
 
         sorted_list = sorted(
-            zip(individuals, fitness_list),
-            key=lambda x: x[1],
-            reverse=False
+            zip(individuals, fitness_list), key=lambda x: x[1], reverse=False
         )
         sorted_crystals = [crystal for crystal, _ in sorted_list]
 
-        return sorted_crystals[:self.n]
+        return sorted_crystals[: self.n]
 
-    def select_start_pop(
-        self, individuals: list[Individual]
-    ) -> list[Individual]:
+    def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
         """
         Returns n crystals with the highest fitness.
         """
         chosen_individuals = self.__get_n_worst_individuals(
-            individuals=individuals,
-            verbose=self.verbose
+            individuals=individuals, verbose=self.verbose
         )
         return chosen_individuals
 
@@ -267,9 +246,7 @@ class WorstCrystalsPopulation(PopulationSelection):
                 self.n, self.database_name
             )
         else:
-            return "WorstCrystalsPopulation(n={}, ".format(
-                self.n
-            )
+            return "WorstCrystalsPopulation(n={}, ".format(self.n)
 
 
 class SelectAllPopulation(PopulationSelection):
@@ -280,25 +257,16 @@ class SelectAllPopulation(PopulationSelection):
     Call the object after initialization to get the list of crystals.
     """
 
-    def __init__(
-        self,
-        database_name: Optional[str] = None
-    ):
+    def __init__(self, database_name: Optional[str] = None):
         self.database_name = database_name
 
-    def select(
-        self,
-        individuals: list[Individual],
-        n: int
-    ) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Returns all crystals. Parameter n is ignored."""
         return individuals
 
     def __repr__(self) -> str:
         if self.database_name is not None:
-            return "SelectAllPopulation(database_name={})".format(
-                self.database_name
-            )
+            return "SelectAllPopulation(database_name={})".format(self.database_name)
         else:
             return "SelectAllPopulation()"
 
@@ -314,6 +282,7 @@ class TournamentDCDSelection(PopulationSelection):
         function should take an individual as input and return a value to
         sort by. If None, the selected individuals are not sorted.
     """
+
     def __init__(
         self,
         sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values[0],
@@ -321,9 +290,7 @@ class TournamentDCDSelection(PopulationSelection):
         super().__init__()
         self.sort_by = sort_by
 
-    def select(
-        self, individuals: list[Individual], n: int
-    ) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         # Assign crowding distance to each individual, as expected by the
         # selTournamentDCD function
         tools.emo.assignCrowdingDist(individuals)
@@ -358,9 +325,7 @@ class DopePopulationSelection(PopulationSelection):
         self.cell_bounds = cell_bounds
         self.generator = generator
 
-    def select(
-        self, individuals: list[Individual], n: int
-    ) -> list[Individual]:
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Add randomly generated crystals to the population.
 
         :param individuals: A list of individuals to add to.
