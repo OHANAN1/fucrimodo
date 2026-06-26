@@ -19,6 +19,17 @@ np.random.seed(42)
 
 #+RESULTS:
 
+To store and analyse results a temporary dir is used. You can also change this to any other dir.
+#+begin_src jupyter-python
+import tempfile
+import os
+tmp_dir = tempfile.mkdtemp(prefix="fucrimodo_example_")
+print(tmp_dir)
+#+end_src
+
+#+RESULTS:
+: /tmp/fucrimodo_example_9m7jnevc
+
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
 
@@ -59,7 +70,7 @@ kwargs = {
 soap = CustomSOAP(**kwargs)
 target_features = soap.create(target_structure)
 
-target_file_path = "/tmp/42_test_target_file.json"
+target_file_path = os.path.join(tmp_dir, "target_file.json")
 
 target_file_parser.save_to_target_file(
     features = list(target_features),
@@ -171,7 +182,7 @@ view(population.individuals)
 
 ** Set up the Multi-Stage Genetic Algorithm
 #+begin_src jupyter-python
-save_dir = "./"
+save_dir = tmp_dir
 
 # Define a global statistic that should be tracked during all runs.
 # Here the SOAP similarity of the candidate to the target is used.
@@ -203,6 +214,8 @@ multi_stage_search = MultiStageSearch(
 
 #+RESULTS:
 : Initialized run notebook_example_run
+
+
 Set a global break condition that should be used during and after each stage.
 In this case the first fitness function (set to S$_{0.1}$) should not excede 0.99.
 #+begin_src jupyter-python
@@ -408,10 +421,10 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: explore_ga, ID: 1
-: Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7f4332a9fc80>
+: Run notebook_example_run: Running stage: explore_ga, ID: 1Run notebook_example_run: Finished stage: explore_ga, ID: 1
+: <fucrimodo.core.modules.population.Population at 0x7f4547092f60>
 :END:
+
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
 view(population.individuals)
@@ -423,6 +436,7 @@ print("Max fitness:", max(all_fitness_values))
 #+RESULTS:
 : Max fitness: 0.9563468880045508
 
+
 Now the optimization stage can be run:
 #+begin_src jupyter-python
 multi_stage_search.run(population=population, stage=optimize_ga_stage)
@@ -432,7 +446,7 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7f4332a9fc80>
+: <fucrimodo.core.modules.population.Population at 0x7f4547092f60>
 :END:
 
 ** Analyse Run
@@ -443,4 +457,76 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /home/loois/Documents/research/soap-inversion-project/fucrimodo/tutorials/./notebook_example_run
+: /tmp/fucrimodo_example_9m7jnevc/notebook_example_run
+
+*** Retrieving Structures
+
+All generated structures are stored in the run directory inside of a `ASE` database called `crystals.db`.
+Structures can be analysed here or with the cli/web interface provided by `ASE` ((more info in their docs)[https://docs.ase-lib.org/ase/db/db.html])
+#+begin_src jupyter-python
+from ase.db import connect
+
+db_path = os.path.join(multi_stage_search.run_dir, "crystals.db")
+structure_db = connect(db_path)
+
+# e.g. get first structure of db
+first_structure = structure_db.get_atoms(1)
+print(first_structure)
+view(first_structure)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Atoms(symbols='Fe', pbc=True, cell=[[2.9907642031908765, 0.0, 0.0], [-0.040566512199669384, 3.0541750743203795, 0.0], [0.18225302706787572, -0.11957858675359524, 2.9568626066641928]])
+: <Popen: returncode: None args: ['/home/loois/Programs/miniconda3/envs/fucrim...>
+:END:
+*** Analyse Run Metrics
+
+To make analysis of metrics simple, `fucrimodo` comes with some helper classes to organize the results.
+The run directory of a finished run can be loaded into the `RunData` class.
+
+#+begin_src jupyter-python
+from fucrimodo.analysis.run_analysis import RunData, get_global_statistics_overview
+run_data = RunData(multi_stage_search.run_dir)
+#+end_src
+
+#+RESULTS:
+
+From this you can get some information.
+#+begin_src jupyter-python
+print("Total number of generations:", run_data.total_generations)
+print("Number of stages performed:", run_data.n_stages)
+print()
+
+# You can also get the structures
+structure_list = run_data.crystals
+
+# Or use a helper to get an overview of all global metrics (Here only one metric was used)
+print("Global Metric Statistics:")
+print(get_global_statistics_overview(run_data))
+#+end_src
+
+#+RESULTS:
+: Total number of generations: 226
+: Number of stages performed: 2
+:
+: Global Metric Statistics:
+:             names            functions       max            min
+: 0  RBF_Similarity  evaluate_individual  0.994237  7.853240e-190
+
+
+Finally you can also plot the statistics.
+#+begin_src jupyter-python
+results_df = run_data.global_statistics.loc[0, "results"]
+results_df.plot(
+    x="gen",
+    y=["min", "max", "avg"],
+    linewidth=2.0,
+)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: <Axes: xlabel='gen'>
+[[file:./.ob-jupyter/950cd3e32a559de94764d831a29280d740b02abd.png]]
+:END:
