@@ -212,7 +212,12 @@ global_break_condition = break_conditions.MaxFitnessBreak(0, 0.99)
 
 #+RESULTS:
 
-*** Define GA Stages
+*** Define Exploration GA Stage
+
+This stage explores the search space for structure.
+
+First import all necessary libraries:
+
 #+begin_src jupyter-python
 from fucrimodo.customs import fitness_functions as ff
 from fucrimodo.customs.ga_stage import (
@@ -228,10 +233,6 @@ from fucrimodo.customs import population_selections
 #+end_src
 
 #+RESULTS:
-
-**** Exploration GA Stage
-
-This stage explores the search space for structure.
 
 #+begin_src jupyter-python
 name = "explore_ga"
@@ -312,7 +313,7 @@ explore_ga_stage = GAStage(
 #+end_src
 
 #+RESULTS:
-**** Optimization GA Stage
+*** Define Optimization GA Stage
 This stage optimizes the found structures.
 
 #+begin_src jupyter-python
@@ -433,6 +434,7 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
 : <fucrimodo.core.modules.population.Population at 0x7f4332a9fc80>
 :END:
+
 ** Analyse Run
 
 The directory of the run can be found at the location
