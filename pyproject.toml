@@ -45,7 +45,7 @@ Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
 
 # Adds fucrimodo.__main__() in the executables path
 [project.scripts]
-fucrimodo = "src.fucrimodo.__main__:main"
+fucrimodo = "fucrimodo.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
