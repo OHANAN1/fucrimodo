@@ -199,14 +199,10 @@ multi_stage_search = MultiStageSearch(
     descriptive_name="notebook_example_run",
     global_statistics_dict=global_statistics_dict,
 )
-
-multi_stage_search.log_level = logging.INFO
 #+end_src
 
 #+RESULTS:
 : Initialized run notebook_example_run
-
-
 Set a global break condition that should be used during and after each stage.
 In this case the first fitness function (set to S$_{0.1}$) should not excede 0.99.
 #+begin_src jupyter-python
@@ -403,7 +399,7 @@ optimize_ga_stage = GAStage(
 
 #+RESULTS:
 
-*** Run GA Stages
+** Run GA Stages
 Run to exploration stage on the initial population:
 #+begin_src jupyter-python
 multi_stage_search.run(population=population, stage=explore_ga_stage)
@@ -413,7 +409,7 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: explore_ga, ID: 1
 : Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7fd215e6de20>
+: <fucrimodo.core.modules.population.Population at 0x7f4332a9fc80>
 :END:
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
@@ -435,5 +431,14 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7fd215e6de20>
+: <fucrimodo.core.modules.population.Population at 0x7f4332a9fc80>
 :END:
+** Analyse Run
+
+The directory of the run can be found at the location
+#+begin_src jupyter-python
+multi_stage_search.run_dir
+#+end_src
+
+#+RESULTS:
+: /home/loois/Documents/research/soap-inversion-project/fucrimodo/tutorials/./notebook_example_run

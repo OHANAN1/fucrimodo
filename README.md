@@ -2,7 +2,7 @@
 
 # FUCrIMODo
 
-![Image Source](./res/Fujimoto.jpg "Fujimoto from the movie Ponyo"){width=200 height=200px}
+<img src="./res/Fujimoto.jpg" width="200" height="200" alt="Fujimoto from the movie Ponyo">
 
 **F**ind **U**nknown **C**rystals by **I**nversion of **M**L **O**ptimized **D**escriptors
 
@@ -36,16 +36,20 @@ conda activate fucrimodo-env
 ```
 In this environment fucrimodo can now be used as described below.
 
-### Quick start
+### Tutorials
 
-To retrieve the desired cartesian coordinates of a given SOAP descriptor
-replace `target_crystal` or `target_soap_features` in fucrimodo/__main__.py
-Then in the commanline run
+If you want to use `fucrimodo` as a library, simply look at [this](tutorials/fucrimodo_as_library.ipynb) jupyter notebook.
 
-```bash
-python fucrimodo
+### Use fucrimodo_lab
+
+The `fucrimodo_lab` allows for simple management of configurations, data, analysis, ...
+To set it up simply go to a desired dir (ideally outside the lib dir, so git-dirs do not interfere) and run:
+
+``` bash
+fucrimodo lab init
 ```
 
+This sets up a default dir with
 
 ### Documentation
 
