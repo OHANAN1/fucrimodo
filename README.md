@@ -38,18 +38,25 @@ In this environment fucrimodo can now be used as described below.
 
 ### Tutorials
 
-If you want to use `fucrimodo` as a library, simply look at [this](tutorials/fucrimodo_as_library.ipynb) jupyter notebook.
+#### Use fucrimodo as a library
 
-### Use fucrimodo_lab
+If you want to use `fucrimodo` as a library, please refer to [this](tutorials/fucrimodo_as_library.ipynb) jupyter notebook. Even if you want to use fucrimodo exclusively as a cli tool it is recommended to do this tutorial to understand the api.
 
+#### Use fucrimodo as standalone program
+
+To use fucrimodo as a standalone program it is recommended to work with the `fucrimodo_lab`.
 The `fucrimodo_lab` allows for simple management of configurations, data, analysis, ...
-To set it up simply go to a desired dir (ideally outside the lib dir, so git-dirs do not interfere) and run:
+To set it up simply go to a desired directory (ideally outside the libraries git structure) and run:
 
 ``` bash
 fucrimodo lab init
 ```
 
-This sets up a default dir with
+This sets up a directory called 'fucrimodo_lab' and sets up the required directory structure.
+Exemplary raw data is provided to perform test runs.
+
+....
+
 
 ### Documentation
 

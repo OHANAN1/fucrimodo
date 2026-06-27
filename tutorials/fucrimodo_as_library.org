@@ -3,7 +3,7 @@
 
 * Fucrimodo As Library
 
-Fucrimodo can be used as an indipendent program, or it can be integrated in form of a python library.
+Fucrimodo can be used as an independent program, or it can be integrated in form of a python library.
 This notebook shows how a basic Multi-Stage GA can be defined.
 
 Since multiple aspects of the algorithm depend on pseudo random numbers, a seed is set to make everything reproducable.
@@ -28,7 +28,7 @@ print(tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_9m7jnevc
+: /tmp/fucrimodo_example_8vwk_pl5
 
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
@@ -421,10 +421,10 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: explore_ga, ID: 1Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7f4547092f60>
+: Run notebook_example_run: Running stage: explore_ga, ID: 1
+: Run notebook_example_run: Finished stage: explore_ga, ID: 1
+: <fucrimodo.core.modules.population.Population at 0x7efeaaa502f0>
 :END:
-
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
 view(population.individuals)
@@ -446,7 +446,7 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7f4547092f60>
+: <fucrimodo.core.modules.population.Population at 0x7efeaaa502f0>
 :END:
 
 ** Analyse Run
@@ -457,7 +457,7 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_9m7jnevc/notebook_example_run
+: /tmp/fucrimodo_example_8vwk_pl5/notebook_example_run
 
 *** Retrieving Structures
 
@@ -517,16 +517,31 @@ print(get_global_statistics_overview(run_data))
 
 Finally you can also plot the statistics.
 #+begin_src jupyter-python
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots()
+
 results_df = run_data.global_statistics.loc[0, "results"]
 results_df.plot(
+    ax=ax,
     x="gen",
     y=["min", "max", "avg"],
     linewidth=2.0,
 )
+ax.set_xlabel("Generation")
+ax.set_ylabel("Similarity")
+
+# Plot a line where the stages change
+stage_ids = results_df["stage_id"].to_numpy()
+change_idx = np.flatnonzero(stage_ids[1:] != stage_ids[:-1])
+ax.vlines(change_idx, -0, 1, "black", zorder=0)
+
+ax.set_ylim([0, 1])
+ax.set_xlim([0, len(stage_ids)])
+
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: <Axes: xlabel='gen'>
-[[file:./.ob-jupyter/950cd3e32a559de94764d831a29280d740b02abd.png]]
+| 0.0 | 227.0 |
+[[file:./.ob-jupyter/d9d8470d10c255b4fdaac0319b6a39eb673029c7.png]]
 :END:
