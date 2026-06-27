@@ -4,6 +4,7 @@ from .population_selection import PopulationSelection
 from .stage import Stage
 from .individual import Individual
 from .population import Population
+from .break_condition import BreakCondition
 
 __all__ = [
     "FitnessFunction",
@@ -11,5 +12,6 @@ __all__ = [
     "PopulationSelection",
     "Stage",
     "Individual",
-    "Population"
+    "Population",
+    "BreakCondition",
 ]

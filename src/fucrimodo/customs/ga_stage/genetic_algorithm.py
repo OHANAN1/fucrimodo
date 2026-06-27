@@ -58,8 +58,8 @@ class GeneticAlgorithm:
         """
         The :class:`deap.tools.MultiStatistics` objects to track fitness statistics.
 
-        Uses the :attr:`FitnessFunction.db_titles` of each fitness of the 
-        stage to set the chapter of the :class:`deap.tools.MultiStatistics` 
+        Uses the :attr:`FitnessFunction.db_titles` of each fitness of the
+        stage to set the chapter of the :class:`deap.tools.MultiStatistics`
         object.
         If a name is set multiple times, a letter is appended to the name.
         For the fitness functions and global statistics the mean, max, min
@@ -75,8 +75,7 @@ class GeneticAlgorithm:
                 return ind.fitness.values[index]
 
             fitness_names = [
-                fitness_function.db_title
-                for fitness_function in self.fitness_functions
+                fitness_function.db_title for fitness_function in self.fitness_functions
             ]
             if len(fitness_names) != len(set(fitness_names)):
                 raise ValueError(
@@ -87,14 +86,10 @@ class GeneticAlgorithm:
                 # use partial to prevent lambda usage in loop,
                 # because lamda in loop is not good
                 key_func = functools.partial(get_specific_fit_val, index=i)
-                fitness_stats_dict[name] = tools.Statistics(
-                    key=key_func
-                )
+                fitness_stats_dict[name] = tools.Statistics(key=key_func)
                 capter_keys.append(name)
 
-            mstats = tools.MultiStatistics(
-                **fitness_stats_dict
-            )
+            mstats = tools.MultiStatistics(**fitness_stats_dict)
             mstats.register("avg", np.mean)
             mstats.register("max", np.max)
             mstats.register("min", np.min)
@@ -111,7 +106,7 @@ class GeneticAlgorithm:
 
             stats_fields = []
             stats_fields = self.fitness_stats.fields
-            self._fitness_log.header = ['nevals', 'gen'] + stats_fields # type: ignore
+            self._fitness_log.header = ["nevals", "gen"] + stats_fields  # type: ignore
 
         return self._fitness_log
 
@@ -129,14 +124,14 @@ class GeneticAlgorithm:
         if not hasattr(self, "_mutation_log"):
             self._mutation_log = tools.Logbook()
 
-            stats_header = [
-                str(mut.__hash__()) for mut in self.mutation_list
-            ]
-            self._mutation_log.header = ['gen'] + stats_header # type: ignore
+            stats_header = [str(mut.__hash__()) for mut in self.mutation_list]
+            self._mutation_log.header = ["gen"] + stats_header  # type: ignore
 
             for stat in stats_header:
-                self._mutation_log.chapters[stat].header = [ # type: ignore
-                    'called', 'failed', 'survivor'
+                self._mutation_log.chapters[stat].header = [  # type: ignore
+                    "called",
+                    "failed",
+                    "survivor",
                 ]
 
         return self._mutation_log
@@ -155,14 +150,14 @@ class GeneticAlgorithm:
         if not hasattr(self, "_crossover_log"):
             self._crossover_log = tools.Logbook()
 
-            stats_header = [
-                str(cross.__hash__()) for cross in self.crossover_list
-            ]
-            self._crossover_log.header = ['gen'] + stats_header # type: ignore
+            stats_header = [str(cross.__hash__()) for cross in self.crossover_list]
+            self._crossover_log.header = ["gen"] + stats_header  # type: ignore
 
             for stat in stats_header:
-                self._crossover_log.chapters[stat].header = [ # type: ignore
-                    'called', 'failed', 'survivor'
+                self._crossover_log.chapters[stat].header = [  # type: ignore
+                    "called",
+                    "failed",
+                    "survivor",
                 ]
 
         return self._crossover_log
@@ -189,12 +184,12 @@ class GeneticAlgorithm:
             used.
         """
         selected_crossover = random.choices(
-            self.crossover_list,
-            weights=self.crossover_weights
+            self.crossover_list, weights=self.crossover_weights
         )[0]
 
-        return selected_crossover.crossover(parent1, parent2) + \
-            (selected_crossover.__hash__(),)
+        return selected_crossover.crossover(parent1, parent2) + (
+            selected_crossover.__hash__(),
+        )
 
     def __perform_mutation(
         self, individual: Individual
@@ -210,17 +205,12 @@ class GeneticAlgorithm:
             self.mutation_list, weights=self.mutation_weights
         )[0]
 
-        return selected_mutation.mutate(individual) + \
-            (selected_mutation.__hash__(),)
-    
-    def __evaluate_individual(
-        self, individual: Individual
-    ) -> tuple[float, ...]:
+        return selected_mutation.mutate(individual) + (selected_mutation.__hash__(),)
+
+    def __evaluate_individual(self, individual: Individual) -> tuple[float, ...]:
         fitness_tuple = ()
         for fitness_function in self.fitness_functions:
-            fitness_tuple += (
-                fitness_function.evaluate_individual(individual),
-            )
+            fitness_tuple += (fitness_function.evaluate_individual(individual),)
         return fitness_tuple
 
     def __evaluate_individuals(
@@ -247,7 +237,7 @@ class GeneticAlgorithm:
 
         return fitness_tuples_list
 
-    def __update_fitnesses(self,individuals: list[Individual]) -> int:
+    def __update_fitnesses(self, individuals: list[Individual]) -> int:
         """
         Checks which individuals in the population have invalid fitnesses.
         That means that the fitnesses have not been evaluated yet.
@@ -261,7 +251,7 @@ class GeneticAlgorithm:
             return 0
 
         for ind in invalid_ind:
-            ind.reset() # Ensures that all features are reset
+            ind.reset()  # Ensures that all features are reset
 
         # Evaluate the fitnesses of the invalid individuals
         fitness_tuples_list = self.__evaluate_individuals(invalid_ind)
@@ -280,9 +270,12 @@ class GeneticAlgorithm:
         stage_id: int,
         global_stats: tools.MultiStatistics | None,
         global_log: tools.Logbook,
-    ) -> tuple[dict[str, dict[str, dict[str, int]]], dict[str, dict[str, dict[str, int]]] | None]:
+    ) -> tuple[
+        dict[str, dict[str, dict[str, int]]],
+        dict[str, dict[str, dict[str, int]]] | None,
+    ]:
         """
-        Calculates the statistics of the population for the fitness and global 
+        Calculates the statistics of the population for the fitness and global
         stats and stores them in the logbooks.
         Also updates the hall of fame with the best individuals of the population.
 
@@ -306,16 +299,13 @@ class GeneticAlgorithm:
 
         return fitness_record, global_record
 
-    def __create_offspring(
-        self, 
-        individuals: list[Individual]
-    ) -> list[Individual]:
+    def __create_offspring(self, individuals: list[Individual]) -> list[Individual]:
         """
         Creates offspring from the population by applying crossover and mutation.
 
         :return: The created offspring. Only the modified individuals are returned.
             These individuals have a .info attribute that stores the hash
-            of the mutation and crossover that was used and a boolean 
+            of the mutation and crossover that was used and a boolean
             indicating if the mutation or crossover failed.
 
         """
@@ -323,16 +313,15 @@ class GeneticAlgorithm:
 
         # Apply crossover and mutation on the offspring
         for i in range(1, len(offspring), 2):
-            # Reset info about crossover, use None and True to have a consistent 
+            # Reset info about crossover, use None and True to have a consistent
             # data type, so it can be checked if the crossover was used
             offspring[i - 1].info["cross_info"] = [None, True]
             offspring[i].info["cross_info"] = [None, True]
 
             # Perform crossover with given probability
             if random.random() < self.crossover_probability:
-                offspring[i - 1], offspring[i], success_bool, crossover_hash = self.__perform_crossover(
-                    offspring[i - 1],
-                    offspring[i]
+                offspring[i - 1], offspring[i], success_bool, crossover_hash = (
+                    self.__perform_crossover(offspring[i - 1], offspring[i])
                 )
 
                 # Reset fitness, features of the offsprings so they are recalculated
@@ -343,14 +332,14 @@ class GeneticAlgorithm:
                 failed = not success_bool
                 offspring[i - 1].info["cross_info"] = [crossover_hash, failed]
                 offspring[i].info["cross_info"] = [crossover_hash, failed]
-        
+
         # For uneven populations, the last individual is not crossed
         # Assign the .info['cross_info'] attribute to the last individual
         if len(offspring) % 2 == 1:
             offspring[-1].info["cross_info"] = [None, True]
 
         for i in range(len(offspring)):
-            # Reset info about mutation, use None and False to have a consistent 
+            # Reset info about mutation, use None and False to have a consistent
             # data type, so it can be checked if the mutation was used
             offspring[i].info["mut_info"] = [None, True]
 
@@ -390,8 +379,8 @@ class GeneticAlgorithm:
         """Checks which of the offspring where selected as survivors.
         Adds entries to the 'cross_info' and 'mut_info' of the .info attribute
         of the offspring.
-        The entries is a list with the hash of the mutation or crossover that 
-        was used and a boolean indicating if the mutation or crossover failed 
+        The entries is a list with the hash of the mutation or crossover that
+        was used and a boolean indicating if the mutation or crossover failed
         and finally if the individual was selected as a survivor.
         """
         for ind in offspring:
@@ -406,21 +395,18 @@ class GeneticAlgorithm:
             ind.info["mut_info"].append(survivor)
 
     def __record_modification_log(
-        self, 
-        offspring: list[Individual], 
-        gen: int, 
+        self,
+        offspring: list[Individual],
+        gen: int,
         modification_list: Sequence[Mutation] | Sequence[Crossover],
         info_key: str,
         modification_logbook: tools.Logbook,
     ) -> None:
         # Create the data structure to store the modification data
         # Use the hashes of all possible modifications as keys
-        mod_data = { 
-            str(modification.__hash__()): {
-                "called": 0,
-                "failed": 0,
-                "survivor": 0
-            } for modification in modification_list
+        mod_data = {
+            str(modification.__hash__()): {"called": 0, "failed": 0, "survivor": 0}
+            for modification in modification_list
         }
         for ind in offspring:
 
@@ -497,7 +483,7 @@ class GeneticAlgorithm:
             gen=0,
             stage_id=stage_id,
             global_stats=global_stats,
-            global_log=global_log
+            global_log=global_log,
         )
 
     def __attach_logger_to_mut_and_cross(self, logger: logging.Logger) -> None:
@@ -530,21 +516,23 @@ class GeneticAlgorithm:
 
         # Initialize the evolution process
         self.__initialize_evolution(
-            population=population, 
+            population=population,
             global_stats=global_stats,
             global_log=global_log,
-            stage_id=stage_id
+            stage_id=stage_id,
         )
 
-        # Start logging the stream. Avoid that the stream is printed to 
+        # Start logging the stream. Avoid that the stream is printed to
         # multiple lines and breaks the formatting.
         initial_stream = str(global_log.stream).split("\n")
         for line in initial_stream:
             self.logger.info(line)
 
         self._generation = 0
-        while not self.break_condition.check(population.individuals, 
-                                             self.generation):
+        while not self.break_condition.check(
+            population,
+            {"generation_index": self.generation},
+        ):
             self._generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
@@ -562,7 +550,7 @@ class GeneticAlgorithm:
             nevals = self.__update_fitnesses(offspring)
 
             # Combine the offspring with the population to select the survivors
-            population_pool = population.individuals 
+            population_pool = population.individuals
 
             # Only add the offspring that are not already in the population
             for ind in offspring:
@@ -578,7 +566,8 @@ class GeneticAlgorithm:
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(
-                offspring=offspring, new_population=new_population,
+                offspring=offspring,
+                new_population=new_population,
             )
 
             # Replace the old population with the new population
