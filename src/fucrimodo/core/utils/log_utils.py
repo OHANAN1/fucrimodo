@@ -1,6 +1,12 @@
 import logging
 
 
+def clear_existing_handlers(logger: logging.Logger):
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
+
+
 def setup_stage_logger(
     log_file_path: str,
     run_name: str,
@@ -25,6 +31,9 @@ def setup_stage_logger(
     # Create a logger
     logger = logging.getLogger(logger_name)
     logger.setLevel(log_level)
+
+    # Clear all existing handlers to avoid duplicates
+    clear_existing_handlers(logger)
 
     # Create a file for the log output
     file_handler = logging.FileHandler(log_file_path)
@@ -67,6 +76,9 @@ def setup_run_logger(
     # Create a logger
     logger = logging.getLogger(logger_name)
     logger.setLevel(log_level)
+
+    # Clear all existing handlers to avoid duplicates
+    clear_existing_handlers(logger)
 
     # Create a file for the log output
     file_handler = logging.FileHandler(log_file_path)
