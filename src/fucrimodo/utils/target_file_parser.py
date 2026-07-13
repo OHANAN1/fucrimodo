@@ -1,9 +1,10 @@
 import json
 from fucrimodo.core.utils.custom_soap import CustomSOAP
+import numpy as np
 
 
 def save_to_target_file(
-    features: list,
+    features: list | np.ndarray,
     descriptor_name: str,
     descriptor_parameters: dict,
     save_path: str,
@@ -28,6 +29,12 @@ def save_to_target_file(
     if additional_notes is None:
         additional_notes = ""
 
+    # Make sure features can be stored in json format
+    if type(features) is np.ndarray:
+        features = features.tolist()
+
+    assert type(features) is list, "Please provide features in form of list or ndarray!"
+
     soap_features_input = {
         "additional_notes": additional_notes,
         "descriptor_name": descriptor_name,
@@ -35,7 +42,7 @@ def save_to_target_file(
         "features": features,
     }
     with open(save_path, "w") as f:
-        json.dump(soap_features_input, f, indent=4)
+        json.dump(soap_features_input, f)
 
 
 def load_target_file(save_path: str) -> tuple[CustomSOAP, list, str]:
