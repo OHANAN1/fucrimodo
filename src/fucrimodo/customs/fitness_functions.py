@@ -2,9 +2,8 @@ import numpy as np
 import ase
 from ase.geometry import get_distances
 import warnings
-from fucrimodo.customs.global_soap_target import GlobalSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP, SOAPSimilarity
 from fucrimodo.core.modules import FitnessFunction, Individual
-from fucrimodo.utils.soap_similarity import SOAPSimilarity
 import datetime
 
 

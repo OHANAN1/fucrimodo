@@ -130,7 +130,7 @@ cell_bound = core_utils.CustomCellBounds(
 
 # The RBF similarity is the most important metric to analyse how close
 # each candidate resembles the target descriptor.
-from fucrimodo.utils.soap_similarity import SOAPSimilarity, RBFSimilarity
+from fucrimodo.customs.global_soap_target import SOAPSimilarity, RBFSimilarity
 soap_sim = RBFSimilarity(
     target_features,
     descriptor_object = soap_obj,

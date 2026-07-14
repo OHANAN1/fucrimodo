@@ -5,3 +5,4 @@ from .target_file import (
 )
 from . import utils
 from .global_soap import GlobalSOAP
+from .soap_similarity import *

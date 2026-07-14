@@ -2,8 +2,7 @@ from copy import deepcopy
 from .abstract import Mutation
 from fucrimodo.core.modules import Individual, FitnessFunction
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.customs.global_soap_target import GlobalSOAP
-from fucrimodo.utils.soap_similarity import RBFSimilarity
+from fucrimodo.customs.global_soap_target import GlobalSOAP, RBFSimilarity
 import ase.ga.standardmutations as ase_standard_mut
 import numpy as np
 
