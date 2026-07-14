@@ -1,17 +1,26 @@
 import json
-from fucrimodo.core.modules import Stage, Population, FitnessFunction, PopulationSelection, Individual
-from .mutations import Mutation
-from .crossovers import Crossover
-from .break_conditions import BreakCondition
-from ase.db.core import Database
-from typing import Any, Callable, Sequence
-from deap import tools
 import os
+from typing import Any, Callable, Sequence
+
+from ase.db.core import Database
+from deap import tools
+from fucrimodo.core.modules import (
+    FitnessFunction,
+    Individual,
+    Population,
+    PopulationSelection,
+    Stage,
+)
+
+from .break_conditions import BreakCondition
+from .crossovers import Crossover
 from .genetic_algorithm import GeneticAlgorithm
+from .mutations import Mutation
+
 
 class GAStage(Stage):
     def __init__(
-        self, 
+        self,
         name: str,
         fitness_functions: Sequence[FitnessFunction | tuple[FitnessFunction, float]],
         crossover_list: Sequence[Crossover | tuple[Crossover, float]],
@@ -27,15 +36,29 @@ class GAStage(Stage):
     ):
         super().__init__(name, description)
 
+        # Store initial config, so that copy of class can constructed
+        self._cfg = dict(
+            name=name,
+            fitness_functions=fitness_functions,
+            crossover_list=crossover_list,
+            mutation_list=mutation_list,
+            mutation_probability=mutation_probability,
+            crossover_probability=crossover_probability,
+            break_condition=break_condition,
+            parent_selection=parent_selection,
+            survivor_selection=survivor_selection,
+            parent_ratio=parent_ratio,
+            description=description,
+            save_n_crystals=save_n_crystals,
+        )
+
         fitness_funcs, fitness_weights = self.__seperate_object_weight_tuples(
             fitness_functions
         )
         cross_list, crossover_weights = self.__seperate_object_weight_tuples(
             crossover_list
         )
-        mut_list, mutation_weights = self.__seperate_object_weight_tuples(
-            mutation_list
-        )
+        mut_list, mutation_weights = self.__seperate_object_weight_tuples(mutation_list)
 
         self.ga_runner = GeneticAlgorithm(
             fitness_functions=fitness_funcs,
@@ -84,7 +107,7 @@ class GAStage(Stage):
                 weights += (val[1],)
             else:
                 objects.append(val)
-                weights += (1.,)
+                weights += (1.0,)
 
         return objects, weights
 
@@ -123,7 +146,7 @@ class GAStage(Stage):
         - 'reprs': The representations of the crossovers
         - 'hashes': The hashes of the crossovers
         - 'results': A list of dictionaries containing the following information:
-            
+
             - 'gen': The generation number
             - 'called': The number of times the crossover was called
             - 'failed': The number of times the crossover failed
@@ -133,11 +156,13 @@ class GAStage(Stage):
         """
         # Set up a dictionary to store crossover information and results
         crossover_dict = {
-            "names": [cross.__class__.__name__ for cross in self.ga_runner.crossover_list],
+            "names": [
+                cross.__class__.__name__ for cross in self.ga_runner.crossover_list
+            ],
             "weights": list(self.ga_runner.crossover_weights),
             "reprs": [cross.__repr__() for cross in self.ga_runner.crossover_list],
             "hashes": [cross.__hash__() for cross in self.ga_runner.crossover_list],
-            "results": []
+            "results": [],
         }
         # Loop over all chapters in the crossover logbook
         for cross_hash in self.crossover_logbook.chapters.keys():
@@ -169,7 +194,7 @@ class GAStage(Stage):
         - 'reprs': The representations of the mutations
         - 'hashes': The hashes of the mutations
         - 'results': A list of dictionaries containing the following information:
-            
+
             - 'gen': The generation number
             - 'called': The number of times the mutation was called
             - 'failed': The number of times the mutation failed
@@ -183,7 +208,7 @@ class GAStage(Stage):
             "weights": list(self.ga_runner.mutation_weights),
             "reprs": [mut.__repr__() for mut in self.ga_runner.mutation_list],
             "hashes": [mut.__hash__() for mut in self.ga_runner.mutation_list],
-            "results": []
+            "results": [],
         }
         # Loop over all chapters in the mutation logbook
         for mut_hash in self.mutation_logbook.chapters.keys():
@@ -216,7 +241,7 @@ class GAStage(Stage):
         - 'titles': The `db_title` of the fitness functions
         - 'hashes': The hashes of the fitness functions
         - 'results': A list of dictionaries containing the following information:
-            
+
             - 'gen': The generation number
             - 'min': The minimum fitness value
             - 'max': The maximum fitness value
@@ -227,12 +252,14 @@ class GAStage(Stage):
         """
         # Set up a dictionary to store fitness information and results
         fitnesses_dict = {
-            "names": [func.__class__.__name__ for func in self.ga_runner.fitness_functions],
+            "names": [
+                func.__class__.__name__ for func in self.ga_runner.fitness_functions
+            ],
             "weights": list(self.ga_runner.fitness_weights),
             "reprs": [func.__repr__() for func in self.ga_runner.fitness_functions],
             "titles": [func.db_title for func in self.ga_runner.fitness_functions],
             "hashes": [func.__hash__() for func in self.ga_runner.fitness_functions],
-            "results": []
+            "results": [],
         }
         # Loop over all chapters in the fitness logbook
         for func_hash in self.fitness_logbook.chapters.keys():
@@ -259,7 +286,7 @@ class GAStage(Stage):
     def info_dict(self) -> dict:
         info_dict = {}
         info_dict["break_condition"] = self.ga_runner.break_condition.__repr__()
-        # Get the current number of generations. Needs to be called after the 
+        # Get the current number of generations. Needs to be called after the
         # run method.
         info_dict["n_generations"] = self.ga_runner.generation
         info_dict["parent_selection"] = self.ga_runner.parent_selection.__repr__()
@@ -269,7 +296,7 @@ class GAStage(Stage):
         return info_dict
 
     def run(
-        self, 
+        self,
         population: Population,
         global_log: tools.Logbook,
         global_stats: tools.MultiStatistics | None,
@@ -284,7 +311,7 @@ class GAStage(Stage):
             global_log=global_log,
             global_stats=global_stats,
             stage_id=self.id,
-            stop_event=self.stop_event
+            stop_event=self.stop_event,
         )
 
         self.crossover_logbook = self.ga_runner.crossover_logbook
@@ -295,10 +322,10 @@ class GAStage(Stage):
         return population
 
     def save_results(
-        self, 
-        save_dir: str, 
-        crystals_db: Database, 
-        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None
+        self,
+        save_dir: str,
+        crystals_db: Database,
+        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ):
         self.__save_mutations(save_dir)
         self.__save_crossovers(save_dir)
@@ -307,5 +334,14 @@ class GAStage(Stage):
             crystals_db,
             self.hall_of_fame,
             self.ga_runner.fitness_functions,
-            global_statistics_dict
+            global_statistics_dict,
         )
+
+    def with_same_config(self) -> Stage:
+        """New GAStage with identical configuration and no accumulated run state.
+
+        Note: References to initial objects stay the same and no deep copy is performed.
+        If any of the objects cannot handle this, please manually create copy.
+        """
+        new = GAStage(**self._cfg)  # type: ignore
+        return new
