@@ -13,7 +13,7 @@ from fucrimodo.customs.global_soap_target import GlobalSOAP
 from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.customs.ga_stage.ga_stage import GAStage
 from fucrimodo.customs.ga_stage.parallel_ga_stage import GAParallelStage
-from fucrimodo.utils import soap_similarity as soap_sim
+from fucrimodo.customs.global_soap_target import soap_similarity as soap_sim
 from fucrimodo.customs.ga_stage.break_conditions import BreakCondition
 from fucrimodo.customs.population_selections import PopulationSelection
 from fucrimodo.customs.fitness_functions import FitnessFunction

@@ -29,7 +29,7 @@ print(tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_as69l8gc
+: /tmp/fucrimodo_example_21o7v8n7
 
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
@@ -424,7 +424,7 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: explore_ga, ID: 1
 : Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7fa6b8cc2ed0>
+: <fucrimodo.core.modules.population.Population at 0x7fa5f7d817c0>
 :END:
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
@@ -435,7 +435,7 @@ print("Max fitness:", max(all_fitness_values))
 #+end_src
 
 #+RESULTS:
-: Max fitness: 0.9870242236900458
+: Max fitness: 0.9563468880045508
 
 
 Now the optimization stage can be run:
@@ -446,10 +446,8 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 #+RESULTS:
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2
-: Run notebook_example_run: Running stage: optimize_ga, ID: 2
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7efec5616d20>
+: <fucrimodo.core.modules.population.Population at 0x7fa5f7d817c0>
 :END:
 ** Analyse Run
 
@@ -459,7 +457,7 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_as69l8gc/notebook_example_run
+: /tmp/fucrimodo_example_21o7v8n7/notebook_example_run
 
 *** Retrieving Structures
 
