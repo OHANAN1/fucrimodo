@@ -2,8 +2,8 @@ from copy import deepcopy
 from .abstract import Mutation
 from fucrimodo.core.modules import Individual, FitnessFunction
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.custom_soap import CustomSOAP
-from fucrimodo.utils.soap_similarity import RBFSimilarity 
+from fucrimodo.customs.global_soap_target import GlobalSOAP
+from fucrimodo.utils.soap_similarity import RBFSimilarity
 import ase.ga.standardmutations as ase_standard_mut
 import numpy as np
 
@@ -28,7 +28,7 @@ class RattleMutation(Mutation):
         rattle_strength: float = 0.8,
         rattle_prop: float = 0.5,
         max_steps: int = 500,
-        **kwargs # Only for backwards compatibility when params are changed
+        **kwargs,  # Only for backwards compatibility when params are changed
     ) -> None:
         self.n_top = n_top
         self.rattle_strength = rattle_strength
@@ -37,9 +37,7 @@ class RattleMutation(Mutation):
         self.closest_distances = closest_distances
 
         if not isinstance(n_top, int) and not n_top == "all":
-            raise ValueError(
-                "n_top has to be an integer or the string 'all'"
-            )
+            raise ValueError("n_top has to be an integer or the string 'all'")
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
         # Set n_top to the desired value
@@ -52,13 +50,10 @@ class RattleMutation(Mutation):
         n_top = min(n_top, len(crystal))
 
         positions = crystal.get_positions().copy()
-        indicees_to_rattle = np.random.choice(
-            len(crystal), n_top, replace = False
-        )
+        indicees_to_rattle = np.random.choice(len(crystal), n_top, replace=False)
         for i in indicees_to_rattle:
             positions[i] = positions[i] + np.random.normal(
-                scale=self.rattle_strength, 
-                size=positions[i].shape
+                scale=self.rattle_strength, size=positions[i].shape
             )
 
         # Set the positions of the crystal
@@ -78,24 +73,25 @@ class SmartRattleMutation(Mutation):
     that results in the highest fitness.
 
     :param closest_distances: ClosestDistances object
-    :param fitness_function: Fitness function that evaluates what is the best 
+    :param fitness_function: Fitness function that evaluates what is the best
         crystal
     :param descriptor_object: Descriptor to calculate the feature vectors
         of all possible atom movements in parallel. This can safe computation
-        time. If None, the fitness function takes care of the descriptor if 
+        time. If None, the fitness function takes care of the descriptor if
         needed.
     :param directions_to_test: Number of random directions to test
     :param movement_step: Maximum movement step in Angstrom
     :param max_steps: Maximum number of steps to take
     """
+
     def __init__(
-        self, 
+        self,
         closest_distances: CustomClosestDistances,
         fitness_function: FitnessFunction,
-        descriptor_object: CustomSOAP | None = None,
+        descriptor_object: GlobalSOAP | None = None,
         directions_to_test: int = 3,
         max_movement: float = 0.1,
-        max_steps: int = 10
+        max_steps: int = 10,
     ):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
@@ -120,7 +116,7 @@ class SmartRattleMutation(Mutation):
             # Set new positions (constraints apply)
             candidate.set_positions(positions)
 
-            # If the candidate did not change due to constraints chance is 
+            # If the candidate did not change due to constraints chance is
             # that the constraints apply for the selected atom_index
             # Return None since no change can be done with this atom_index
             if np.any(candidate.set_positions != positions):
@@ -169,6 +165,7 @@ class GradientRattleMutation(Mutation):
     :raises AssertionError: If the descriptor object of the rbf_similarity_obj
         is not set.
     """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -177,7 +174,7 @@ class GradientRattleMutation(Mutation):
         n_atoms_to_move: int = 1,
         max_movement: float = 0.1,
         normalize_gradient: bool = True,
-        n_jobs: int = 1
+        n_jobs: int = 1,
     ):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
@@ -189,8 +186,9 @@ class GradientRattleMutation(Mutation):
 
         # Check if the rbf_similarity_obj has a descriptor
         # If it is not set, the derivative cannot be calculated
-        assert rbf_similarity_obj.descriptor_object is not None, \
-            "The descriptor object of the rbf_similarity_obj must be set."
+        assert (
+            rbf_similarity_obj.descriptor_object is not None
+        ), "The descriptor object of the rbf_similarity_obj must be set."
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
         # adjust n_atoms_to_move if it is larger than the number of atoms
@@ -206,9 +204,7 @@ class GradientRattleMutation(Mutation):
 
         # Calculate the gradient
         _, gradient = self.rbf_similarity_obj.derivative(
-            crystal,
-            include=atomic_indices.tolist(),
-            kwargs={"n_jobs": self.n_jobs}
+            crystal, include=atomic_indices.tolist(), kwargs={"n_jobs": self.n_jobs}
         )
 
         positions = crystal.positions.copy()
@@ -229,8 +225,7 @@ class GradientRattleMutation(Mutation):
             # Move the atomic positions with a random factor in the direction
             # of the gradient
             positions[atomic_indices[i]] += [
-                x * np.random.uniform(0, self.max_movement)
-                for x in gradient[i]
+                x * np.random.uniform(0, self.max_movement) for x in gradient[i]
             ]
 
         # Set the new positions (constraints apply)
@@ -259,9 +254,7 @@ class MirrorMutation(Mutation):
         self.n_top = n_top
 
         if not isinstance(n_top, int) and not n_top == "all":
-            raise ValueError(
-                "n_top has to be an integer or the string 'all'"
-            )
+            raise ValueError("n_top has to be an integer or the string 'all'")
 
     def perform_mutation(self, crystal: Individual) -> Individual | None:
 
@@ -271,9 +264,7 @@ class MirrorMutation(Mutation):
             n_top = self.n_top
 
         ase_mirror = ase_standard_mut.MirrorMutation(
-            blmin=self.closest_distances,
-            n_top=n_top,
-            verbose=False
+            blmin=self.closest_distances, n_top=n_top, verbose=False
         )
 
         offspring = crystal

@@ -20,6 +20,7 @@ np.random.seed(42)
 #+RESULTS:
 
 To store and analyse results a temporary dir is used. You can also change this to any other dir.
+(NOTE: Please delete the temp_dir yourself, after you do not need it anymore. Or it will just be deleted after you restart the computer.)
 #+begin_src jupyter-python
 import tempfile
 import os
@@ -28,7 +29,7 @@ print(tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_8vwk_pl5
+: /tmp/fucrimodo_example_as69l8gc
 
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
@@ -55,7 +56,7 @@ target_structure = ase.Atoms(
 
 To get the target file we set parameters for the descriptor and calculate the target descriptor features.
 #+begin_src jupyter-python
-from fucrimodo.core.utils import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 from fucrimodo.utils import target_file_parser
 
 kwargs = {
@@ -67,14 +68,14 @@ kwargs = {
     "periodic": True,
     "average": "inner"
 }
-soap = CustomSOAP(**kwargs)
+soap = GlobalSOAP(**kwargs)
 target_features = soap.create(target_structure)
 
 target_file_path = os.path.join(tmp_dir, "target_file.json")
 
 target_file_parser.save_to_target_file(
     features = list(target_features),
-    descriptor_name = "CustomSOAP",
+    descriptor_name = "GlobalSOAP",
     descriptor_parameters = kwargs,
     save_path = target_file_path,
     additional_notes = "",
@@ -423,7 +424,7 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: explore_ga, ID: 1
 : Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7efeaaa502f0>
+: <fucrimodo.core.modules.population.Population at 0x7fa6b8cc2ed0>
 :END:
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
@@ -434,7 +435,7 @@ print("Max fitness:", max(all_fitness_values))
 #+end_src
 
 #+RESULTS:
-: Max fitness: 0.9563468880045508
+: Max fitness: 0.9870242236900458
 
 
 Now the optimization stage can be run:
@@ -445,10 +446,11 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 #+RESULTS:
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2
+: Run notebook_example_run: Running stage: optimize_ga, ID: 2
 : Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7efeaaa502f0>
+: Run notebook_example_run: Finished stage: optimize_ga, ID: 2
+: <fucrimodo.core.modules.population.Population at 0x7efec5616d20>
 :END:
-
 ** Analyse Run
 
 The directory of the run can be found at the location
@@ -457,7 +459,7 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_8vwk_pl5/notebook_example_run
+: /tmp/fucrimodo_example_as69l8gc/notebook_example_run
 
 *** Retrieving Structures
 

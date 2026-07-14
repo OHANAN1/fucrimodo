@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity, rbf_kernel
 from numpy.typing import NDArray
 import numpy as np
 from fucrimodo.core.modules import Individual
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 from dscribe.kernels import AverageKernel
 import matplotlib.pyplot as plt
 
@@ -24,8 +24,7 @@ class SOAPSimilarity(ABC):
 
     @abstractmethod
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
         pass
 
@@ -45,9 +44,7 @@ class SOAPSimilarity(ABC):
         ase database. Therefore no space, no numbers and no special
         characters are allowed. '_' is allowed.
         """
-        forbidden_chars = [
-            " ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
-        ]
+        forbidden_chars = [" ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         if any([char in title for char in forbidden_chars]):
             raise ValueError(
                 "The title of the database must not contain any spaces, "
@@ -69,6 +66,7 @@ class SOAPSimilarity(ABC):
     def __repr__(self) -> str:
         pass
 
+
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Utility functions                     ║
 # ╚══════════════════════════════════════════════════════════╝
@@ -77,12 +75,10 @@ class SOAPSimilarity(ABC):
 def calculate_variance_for_gamma(
     soap_feature_vectors: Sequence[NDArray[np.float64]],
     target_soap_feature_vector: NDArray[np.float64],
-    gamma: float
+    gamma: float,
 ) -> float:
     similarities = rbf_kernel(
-        soap_feature_vectors,
-        [target_soap_feature_vector],
-        gamma=gamma
+        soap_feature_vectors, [target_soap_feature_vector], gamma=gamma
     )
     variance = np.var(similarities, axis=0).mean()
     return variance
@@ -100,9 +96,7 @@ def find_best_gamma_for_target_comparison(
 
     for gamma in gamma_values:
         variance = calculate_variance_for_gamma(
-            soap_feature_vectors,
-            target_soap_feature_vector,
-            gamma
+            soap_feature_vectors, target_soap_feature_vector, gamma
         )
         variances.append(variance)
         if variance > highest_variance:
@@ -121,7 +115,7 @@ def find_best_gamma_for_target_comparison(
 def find_best_gamma_for_rbf_kernel(
     soap_feature_vectors: Sequence[NDArray[np.float64]],
     gamma_values: NDArray[np.float64],
-    plot: bool = False
+    plot: bool = False,
 ) -> float:
     print()
     print("Finding best gamma...")
@@ -131,9 +125,7 @@ def find_best_gamma_for_rbf_kernel(
     for gamma in gamma_values:
         print(f"Calculating variance for gamma {gamma:.3f}", end="\r")
         similarities = rbf_kernel(
-            soap_feature_vectors,
-            soap_feature_vectors,
-            gamma=gamma
+            soap_feature_vectors, soap_feature_vectors, gamma=gamma
         )
         variance = np.var(similarities, axis=0).mean()
         variances.append(variance)
@@ -163,6 +155,7 @@ def find_best_gamma_for_rbf_kernel(
 # ║                   Similarity Classes                     ║
 # ╚══════════════════════════════════════════════════════════╝
 
+
 class CosineSimilarity(SOAPSimilarity):
     def __init__(self, target_feature_vector: NDArray[np.float64]) -> None:
         self.target_feature_vector = target_feature_vector
@@ -172,21 +165,18 @@ class CosineSimilarity(SOAPSimilarity):
         feature_vector_list: Sequence[NDArray[np.float64]],
     ) -> NDArray[np.float64]:
         similarity_matrix = cosine_similarity(
-            feature_vector_list,
-            [self.target_feature_vector]
+            feature_vector_list, [self.target_feature_vector]
         )
         return similarity_matrix.flatten()
 
     def get_similarity_of_feature_vector(
-        self,
-        feature_vector: NDArray[np.float64]
+        self, feature_vector: NDArray[np.float64]
     ) -> float:
         similarity = self.__get_cosine_similarity_to_target([feature_vector])
         return similarity.tolist()[0]
 
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
         similarities = self.__get_cosine_similarity_to_target(feature_vectors)
         return similarities
@@ -200,11 +190,11 @@ class RBFSimilarity(SOAPSimilarity):
     def __init__(
         self,
         target_feature_vector: NDArray[np.float64],
-        descriptor_object: CustomSOAP | None = None,
+        descriptor_object: GlobalSOAP | None = None,
         rbf_gamma: float = 0.1,
         adjust_gamma: bool = False,
         gamma_values: NDArray[np.float64] = np.logspace(-5, 1, 100),
-        db_title: str = "RBFSimilarity"
+        db_title: str = "RBFSimilarity",
     ):
         self.rbf_gamma = rbf_gamma
         self.target_feature_vector = target_feature_vector
@@ -216,8 +206,9 @@ class RBFSimilarity(SOAPSimilarity):
         #     self.rbf_gamma = 1 / len(self.target_feature_vector)
 
         if self.adjust_gamma is True:
-            assert self.gamma_values is not None, \
-                "If adjust_gamma is True, gamma_values must be given"
+            assert (
+                self.gamma_values is not None
+            ), "If adjust_gamma is True, gamma_values must be given"
 
         self.n_calls = 0
 
@@ -231,22 +222,18 @@ class RBFSimilarity(SOAPSimilarity):
     ) -> NDArray[np.float64]:
 
         similarity_matrix = rbf_kernel(
-            feature_vector_list,
-            [self.target_feature_vector],
-            gamma=self.rbf_gamma
+            feature_vector_list, [self.target_feature_vector], gamma=self.rbf_gamma
         )
         return similarity_matrix.flatten()
 
     def get_similarity_of_feature_vector(
-        self,
-        feature_vector: NDArray[np.float64]
+        self, feature_vector: NDArray[np.float64]
     ) -> float:
         similarity = self.__get_rbf_similarity_to_target([feature_vector])
         return similarity.tolist()[0]
 
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
         similarities = self.__get_rbf_similarity_to_target(feature_vectors)
         return similarities
@@ -308,41 +295,50 @@ class RBFSimilarity(SOAPSimilarity):
 
         :return: The similarity and the derivative of the similarity with
             respect to the atomic positions for the specified atoms in the
-            individual. See derivative method of the Dscribe SOAP descriptor 
+            individual. See derivative method of the Dscribe SOAP descriptor
             for more information. (Outputshape is the same)
         """
-        assert self.descriptor_object is not None, \
-            "Descriptor object must be set for the derivative method to work."
+        assert (
+            self.descriptor_object is not None
+        ), "Descriptor object must be set for the derivative method to work."
 
         # Check if individual is smaller than include and exclude
         if include is not None:
-            assert len(individual) >= len(include), \
-                "Include list is longer than the number of atoms in the individual."
+            assert len(individual) >= len(
+                include
+            ), "Include list is longer than the number of atoms in the individual."
         if exclude is not None:
-            assert len(individual) >= len(exclude), \
-                "Exclude list is longer than the number of atoms in the individual."
+            assert len(individual) >= len(
+                exclude
+            ), "Exclude list is longer than the number of atoms in the individual."
 
         target_feature_vector = self.target_feature_vector
 
         # Check if the include and exclude arguments are not used
-        assert "include" not in kwargs, \
-            "Do not use the 'include' argument in the kwargs."
-        assert "exclude" not in kwargs, \
-            "Do not use the 'exclude' argument in the kwargs."
+        assert (
+            "include" not in kwargs
+        ), "Do not use the 'include' argument in the kwargs."
+        assert (
+            "exclude" not in kwargs
+        ), "Do not use the 'exclude' argument in the kwargs."
 
         # Check that only include or exclude is set and not both
         # Would lead to an error in the derivative calculation
-        assert include is None or exclude is None, \
-            "Do not set both include and exclude."
+        assert (
+            include is None or exclude is None
+        ), "Do not set both include and exclude."
 
-        derivatives_data, feature_vector = self.descriptor_object._dscribe_soap.derivatives(
-            individual, include=include, exclude=exclude, **kwargs
+        derivatives_data, feature_vector = (
+            self.descriptor_object._dscribe_soap.derivatives(
+                individual, include=include, exclude=exclude, **kwargs
+            )
         )
 
         # Unpack the feature vector, since it is a list of one element
         feature_vector = feature_vector[0]
-        assert type(feature_vector) is np.ndarray, \
-            "Feature vector is not a numpy array, adjust descriptor so output is a list of arrays."
+        assert (
+            type(feature_vector) is np.ndarray
+        ), "Feature vector is not a numpy array, adjust descriptor so output is a list of arrays."
 
         # Unpack the derivatives data, since it is a list of one element
         derivatives_data = derivatives_data[0]
@@ -354,7 +350,7 @@ class RBFSimilarity(SOAPSimilarity):
 
         # Calculate the difference between the target feature vector and the
         # current feature vector
-        feature_vector_diff = target_feature_vector - feature_vector 
+        feature_vector_diff = target_feature_vector - feature_vector
 
         # Calculate the derivative for all returned derivatives
         similarity_derivatives = []
@@ -363,10 +359,7 @@ class RBFSimilarity(SOAPSimilarity):
             direction_similarity_derivatives = []
             for direction in range(3):
                 direction_similarity_derivatives.append(
-                     prefactor * np.dot(
-                        feature_vector_diff,
-                        deriv_data[direction]
-                    )
+                    prefactor * np.dot(feature_vector_diff, deriv_data[direction])
                 )
 
             similarity_derivatives.append(direction_similarity_derivatives)
@@ -381,9 +374,7 @@ class RBFSimilarity(SOAPSimilarity):
 
 class AverageKernelSimilarity(SOAPSimilarity):
     def __init__(
-        self,
-        target_feature_vector: NDArray[np.float64],
-        soap_object: CustomSOAP
+        self, target_feature_vector: NDArray[np.float64], soap_object: GlobalSOAP
     ):
         self.target_feature_vector = target_feature_vector
         self.soap_object = soap_object
@@ -394,25 +385,21 @@ class AverageKernelSimilarity(SOAPSimilarity):
         feature_vector_list: Sequence[NDArray[np.float64]],
     ) -> NDArray[np.float64]:
         similarity_matrix = self.kernel.create(
-            feature_vector_list, [self.target_feature_vector])
+            feature_vector_list, [self.target_feature_vector]
+        )
 
         return similarity_matrix.flatten()
 
     def get_similarity_of_feature_vector(
-        self,
-        feature_vector: NDArray[np.float64]
+        self, feature_vector: NDArray[np.float64]
     ) -> float:
-        similarity = self.__get_average_kernel_similarity_to_target(
-            [feature_vector]
-        )
+        similarity = self.__get_average_kernel_similarity_to_target([feature_vector])
         return similarity.tolist()[0]
 
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
-        similarities = self.__get_average_kernel_similarity_to_target(
-            feature_vectors)
+        similarities = self.__get_average_kernel_similarity_to_target(feature_vectors)
         return similarities
 
     def __repr__(self) -> str:
@@ -425,7 +412,7 @@ class NumberOfSameEntriesSimilarity(SOAPSimilarity):
         self,
         target_feature_vector: NDArray[np.float64],
         relative_tolerance: float = 0.01,
-        normalization: bool = False
+        normalization: bool = False,
     ) -> None:
         self.target_feature_vector = target_feature_vector
         self.relative_tolerance = relative_tolerance
@@ -439,9 +426,9 @@ class NumberOfSameEntriesSimilarity(SOAPSimilarity):
             np.isclose(
                 feature_vector_list,
                 self.target_feature_vector,
-                rtol=self.relative_tolerance
+                rtol=self.relative_tolerance,
             ),
-            axis=1
+            axis=1,
         )
 
         if self.normalization:
@@ -450,20 +437,15 @@ class NumberOfSameEntriesSimilarity(SOAPSimilarity):
         return similarities
 
     def get_similarity_of_feature_vector(
-        self,
-        feature_vector: NDArray[np.float64]
+        self, feature_vector: NDArray[np.float64]
     ) -> float:
-        similarity = self.__get_number_of_same_entries_to_target([
-            feature_vector
-        ])
+        similarity = self.__get_number_of_same_entries_to_target([feature_vector])
         return similarity.tolist()[0]
 
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
-        similarities = self.__get_number_of_same_entries_to_target(
-            feature_vectors)
+        similarities = self.__get_number_of_same_entries_to_target(feature_vectors)
         return similarities
 
     def __repr__(self) -> str:
@@ -477,13 +459,13 @@ class SpeciesSpecificRBFSim(SOAPSimilarity):
     def __init__(
         self,
         target_feature_vector: NDArray[np.float64],
-        soap_object: CustomSOAP,
+        soap_object: GlobalSOAP,
         species: str,
         species_to_compare: list[str],
         rbf_gamma: float | None = None,
         adjust_gamma: bool = False,
         gamma_values: NDArray[np.float64] = np.logspace(-1, 4, 100),
-        db_title: str = "SpeciesSpecificRBFSim"
+        db_title: str = "SpeciesSpecificRBFSim",
     ):
         self.rbf_gamma = rbf_gamma
         self.soap_object = soap_object
@@ -499,10 +481,11 @@ class SpeciesSpecificRBFSim(SOAPSimilarity):
             self.rbf_gamma = 1 / len(self.target_feature_vector)
 
         if self.adjust_gamma is True:
-            assert self.gamma_values is not None, \
-                "If adjust_gamma is True, gamma_values must be given"
+            assert (
+                self.gamma_values is not None
+            ), "If adjust_gamma is True, gamma_values must be given"
 
-        db_title = db_title+"_"+species
+        db_title = db_title + "_" + species
         for species in species_to_compare:
             db_title += f"_{species}"
         self.set_db_title(db_title)
@@ -523,7 +506,7 @@ class SpeciesSpecificRBFSim(SOAPSimilarity):
     def __get_rbf_sim_for_species(
         self,
         feature_vector_list: Sequence[NDArray[np.float64]],
-        species_to_compare: str
+        species_to_compare: str,
     ) -> NDArray[np.float64]:
         species_slice = self.soap_object.get_location(
             (self.species, species_to_compare)
@@ -532,43 +515,38 @@ class SpeciesSpecificRBFSim(SOAPSimilarity):
         species_reduced_feature_vectors = []
         for feature_vector in feature_vector_list:
             feature_vector_copy = feature_vector.copy()
-            species_reduced_feature_vectors.append(
-                feature_vector_copy[species_slice]
-            )
+            species_reduced_feature_vectors.append(feature_vector_copy[species_slice])
 
         similarity_matrix = rbf_kernel(
             species_reduced_feature_vectors,
             [self.target_feature_vector[species_slice]],
-            gamma=self.rbf_gamma
+            gamma=self.rbf_gamma,
         )
 
         return similarity_matrix.flatten()
 
     def __get_rbf_sim_for_all_species(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
         species_similarities = np.zeros(len(feature_vectors))
         for species in self.species_to_compare:
-            species_similarity = self.__get_rbf_sim_for_species(
-                feature_vectors,
-                species
-            )/self.n_species_to_compare
+            species_similarity = (
+                self.__get_rbf_sim_for_species(feature_vectors, species)
+                / self.n_species_to_compare
+            )
 
             species_similarities += species_similarity
 
         return species_similarities
 
     def get_similarity_of_feature_vector(
-        self,
-        feature_vector: NDArray[np.float64]
+        self, feature_vector: NDArray[np.float64]
     ) -> float:
         similarity = self.__get_rbf_sim_for_all_species([feature_vector])
         return similarity.tolist()[0]
 
     def get_similarity_of_feature_vectors(
-        self,
-        feature_vectors: Sequence[NDArray[np.float64]]
+        self, feature_vectors: Sequence[NDArray[np.float64]]
     ) -> NDArray[np.float64]:
         similarities = self.__get_rbf_sim_for_all_species(feature_vectors)
         return similarities

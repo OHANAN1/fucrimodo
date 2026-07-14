@@ -1,5 +1,5 @@
 import json
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 import numpy as np
 
 
@@ -45,7 +45,7 @@ def save_to_target_file(
         json.dump(soap_features_input, f)
 
 
-def load_target_file(save_path: str) -> tuple[CustomSOAP, list, str]:
+def load_target_file(save_path: str) -> tuple[GlobalSOAP, list, str]:
     """Load the information saved in a target file.
 
     The target file should be a json file with the following fields:
@@ -99,8 +99,8 @@ def load_target_file(save_path: str) -> tuple[CustomSOAP, list, str]:
         print("No additional notes found in the target file.")
         target_dict["additional_notes"] = ""
 
-    if target_dict["descriptor_name"] == "CustomSOAP":
-        descriptor_object = CustomSOAP(**target_dict["parameters"])
+    if target_dict["descriptor_name"] == "GlobalSOAP":
+        descriptor_object = GlobalSOAP(**target_dict["parameters"])
     else:
         raise NotImplementedError(
             f"Descriptor {target_dict['descriptor_name']} is not implemented"

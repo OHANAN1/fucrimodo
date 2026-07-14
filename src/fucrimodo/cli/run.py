@@ -1,10 +1,11 @@
+import json
 import os
 import sys
-import numpy as np
-import json
 from datetime import datetime
+from typing import Any
 
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+import numpy as np
+
 
 class CLICommand:
     """Perform descriptor inversion on provided input file."""
@@ -13,45 +14,54 @@ class CLICommand:
     def add_arguments(parser):
         add = parser.add_argument
         add(
-            'input_file',
+            "input_file",
             help=(
-                'Give the path to the input file with the features that should '
-                'be inverted and the parameters that define the descriptor. '
-                'Can be created with scripts. Docs will be added soon.'
-                'Or give the path to a directory where multiple input files ' 
-                'are stored. These files will then be processed in parallel.'
-            )
+                "Give the path to the input file with the features that should "
+                "be inverted and the parameters that define the descriptor. "
+                "Can be created with scripts. Docs will be added soon."
+                "Or give the path to a directory where multiple input files "
+                "are stored. These files will then be processed in parallel."
+            ),
         )
-        add('-v', '--verbose', action='store_true', help='More output.')
+        add("-v", "--verbose", action="store_true", help="More output.")
         add(
-            '-c', '--config', 
-            help=('Path to the config file. Must be a python file that '
+            "-c",
+            "--config",
+            help=(
+                "Path to the config file. Must be a python file that "
                 'contains a method "main" that takes the following arguments: '
-                'main(fucrimodo.core.multi_stage_search.MultiStageSearch). '
-                'If not provided, the default config will be used.')
+                "main(fucrimodo.core.multi_stage_search.MultiStageSearch). "
+                "If not provided, the default config will be used."
+            ),
         )
         add(
-            '-s', '--save_dir',
-            help=('Directory where the dir should be created in which the '
-                'results of the inversion will be saved. '
-                'If not provided, the results will be saved in a dir created'
-                'in the current working directory. ')
+            "-s",
+            "--save_dir",
+            help=(
+                "Directory where the dir should be created in which the "
+                "results of the inversion will be saved. "
+                "If not provided, the results will be saved in a dir created"
+                "in the current working directory. "
+            ),
         )
         add(
-            '-n', '--name',
-            help=('Name of the run. This will be used as the name of the '
-                'directory in which the results will be saved. '
-                'If not provided, the name will be set to the current time '
-                'and date.')
+            "-n",
+            "--name",
+            help=(
+                "Name of the run. This will be used as the name of the "
+                "directory in which the results will be saved. "
+                "If not provided, the name will be set to the current time "
+                "and date."
+            ),
         )
         add(
-            '-p', '--parallel',
-            help=('Only used if multiple input files are provided. '
-                'Define the number of parallel processes to use. '
-            )
+            "-p",
+            "--parallel",
+            help=(
+                "Only used if multiple input files are provided. "
+                "Define the number of parallel processes to use. "
+            ),
         )
-
-
 
     @staticmethod
     def run(args):
@@ -88,10 +98,11 @@ class Runner:
         else:
             self.save_dir = os.getcwd()
 
-        # Get either the standard run config or the custom run config provided 
+        # Get either the standard run config or the custom run config provided
         # by the user
         if args.config is not None:
             from fucrimodo.utils.import_helper import import_from_path
+
             run_config = import_from_path(args.config, "custom_run_config")
             if not hasattr(run_config, "main"):
                 print("The config file must contain a method called 'main'.")
@@ -105,22 +116,25 @@ class Runner:
         else:
             # Import the default run config from the lab_template
             from importlib import import_module
-            self.run_config = import_module("fucrimodo.lab_template.configs.run.benchmark_run")
 
+            self.run_config = import_module(
+                "fucrimodo.lab_template.configs.run.benchmark_run"
+            )
 
     def __copy_input_file(self, run_dir: str, input_file: str):
-        """Copy the input file to the provided run directory. 
+        """Copy the input file to the provided run directory.
 
         The file will be renamed to 'input_file.json'.
         """
         import shutil
+
         save_path = os.path.join(run_dir, "input_file.json")
         shutil.copy(input_file, save_path)
 
     def __get_input_files_from_dir(self, input_dir: str) -> list[str]:
         """Get all files in the provided directory."""
 
-        # Sort the files lexicographically to ensure that the order is always 
+        # Sort the files lexicographically to ensure that the order is always
         # the same on every system and for every run
         sorted_file_names = sorted(os.listdir(input_dir))
 
@@ -131,10 +145,9 @@ class Runner:
 
         return input_files
 
-    def __get_features_and_soap_obj(
-        self
-    ) -> list[tuple[CustomSOAP, list, str]] | tuple[CustomSOAP, list, str]:
+    def __get_features_and_soap_obj(self) -> list[Any] | Any:
         from fucrimodo.utils import target_file_parser
+
         # If the input file is a directory, get all files in the directory
         if os.path.isdir(self.input_file):
             print("Processing multiple input files.")
@@ -142,9 +155,7 @@ class Runner:
             feature_soap_tuples = []
             input_files = self.__get_input_files_from_dir(self.input_file)
             for input_file in input_files:
-                target_tuples = target_file_parser.load_target_file(
-                    input_file
-                )
+                target_tuples = target_file_parser.load_target_file(input_file)
                 feature_soap_tuples.append(target_tuples)
 
             # Check if any files were found in the directory
@@ -155,9 +166,7 @@ class Runner:
         # If the input file is a single file, load the features from the file
         else:
             print("Processing a single input file.")
-            target_tuple = target_file_parser.load_target_file(
-                self.input_file
-            )
+            target_tuple = target_file_parser.load_target_file(self.input_file)
             return target_tuple
 
     def __add_info_file_to_multi_run(
@@ -170,20 +179,20 @@ class Runner:
             "end_time": end_time.strftime("%Y-%m-%d %H:%M:%S"),
             "total_runtime": str(end_time - start_time),
             "run_name": self.name,
-
         }
         with open(info_file_path, "w") as f:
             f.write(json.dumps(info_dict, indent=4))
 
-    def __run_single_file(self, features_soap_tuple: tuple[CustomSOAP, list, str]):
+    def __run_single_file(self, features_descriptor_tuple: tuple[Any, list, str]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
+
         multi_stage_search = MultiStageSearch(
             save_dir=self.save_dir,
-            target_features=np.array(features_soap_tuple[1]),
-            descriptor_object=features_soap_tuple[0],
+            target_features=np.array(features_descriptor_tuple[1]),
+            descriptor_object=features_descriptor_tuple[0],
             descriptive_name=self.name,
         )
-        additional_notes = features_soap_tuple[2]
+        additional_notes = features_descriptor_tuple[2]
 
         # Copy the input file to the created run directory
         self.__copy_input_file(multi_stage_search.run_dir, self.input_file)
@@ -206,19 +215,17 @@ class Runner:
             )
             raise e
 
-    def __run_multiple_files(
-        self,
-        target_tuples: list[tuple[CustomSOAP, list, str]]
-    ):
+    def __run_multiple_files(self, target_tuples: list[tuple[Any, list, str]]):
         from fucrimodo.core.multi_stage_search import MultiStageSearch
 
         # Calculate the maximum number of tasks per child process
         # This depends on the number of available CPU cores and the number of
         # parallel processes defined by the user
         cpu_count = os.cpu_count()
-        assert cpu_count is not None, \
-            "Could not determine the number of CPU cores with os.cpu_count."
-        max_tasks_per_child =  cpu_count // self.parallel
+        assert (
+            cpu_count is not None
+        ), "Could not determine the number of CPU cores with os.cpu_count."
+        max_tasks_per_child = cpu_count // self.parallel
 
         # Make sure that at least one task is run per child process
         if max_tasks_per_child == 0:
@@ -240,7 +247,6 @@ class Runner:
             additional_notes_list.append(additional_notes)
             run_id += 1
 
-
         # Get the input files for each MultiStageSearch object
         input_files = self.__get_input_files_from_dir(self.input_file)
         for i, multi_stage_search in enumerate(multi_stage_searches):
@@ -249,9 +255,9 @@ class Runner:
 
         print(
             f"Starting multi target run:\n"
-                f"\tNumber of targets: {len(multi_stage_searches)}\n" 
-                f"\tNumber of processes run in parallel: {self.parallel}\n"
-                f"\tMax tasks per child process: {max_tasks_per_child}\n\n"
+            f"\tNumber of targets: {len(multi_stage_searches)}\n"
+            f"\tNumber of processes run in parallel: {self.parallel}\n"
+            f"\tMax tasks per child process: {max_tasks_per_child}\n\n"
         )
 
         # Save the start time of the run
@@ -261,9 +267,7 @@ class Runner:
         print("Running inversion sequentially.")
         for i, multi_stage_search in enumerate(multi_stage_searches):
             try:
-                self.run_config.main(
-                    multi_stage_search, additional_notes_list[i]
-                )
+                self.run_config.main(multi_stage_search, additional_notes_list[i])
             except TypeError:
                 multi_stage_search.logger.error(
                     "DeprecationWarning: The run_config.main method should take "
@@ -281,9 +285,7 @@ class Runner:
         end_time = datetime.now()
 
         # Add an info file to the multi run directory
-        self.__add_info_file_to_multi_run(
-            self.save_dir, start_time, end_time
-        )
+        self.__add_info_file_to_multi_run(self.save_dir, start_time, end_time)
 
     def run(self):
         """Run the inversion."""

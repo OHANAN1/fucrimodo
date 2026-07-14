@@ -9,7 +9,7 @@ from fucrimodo.customs.ga_stage import mutations as mut
 from fucrimodo.customs.ga_stage import crossovers as cross
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.customs.ga_stage.ga_stage import GAStage
 from fucrimodo.customs.ga_stage.parallel_ga_stage import GAParallelStage
@@ -19,21 +19,24 @@ from fucrimodo.customs.population_selections import PopulationSelection
 from fucrimodo.customs.fitness_functions import FitnessFunction
 
 
-# Define function globally so it can be pickled, which is necessary for 
+# Define function globally so it can be pickled, which is necessary for
 # multiprocessing
 def get_first_fitness_val(individual: Individual) -> float:
     return individual.fitness.values[0]
 
+
 def get_volume(individual: Individual) -> float:
     return individual.get_volume()
+
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    ABC for GA presets                    ║
 # ╚══════════════════════════════════════════════════════════╝
 # The presets need to be unpacked into the GAStage class initialization with
-# e.g. 
-# ga_preset=GAPreset 
+# e.g.
+# ga_preset=GAPreset
 # GAStage(**ga_preset)
+
 
 class GAPreset(ABC):
     """Abstract base class for GAStage
@@ -44,13 +47,14 @@ class GAPreset(ABC):
     Use `del` to reset the properties of the class to its default values.
     If species is not set, the species of the SOAP object is used.
     """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
-        soap_object: CustomSOAP,
+        soap_object: GlobalSOAP,
         soap_features: np.ndarray,
-        species: list[str] | None = None
+        species: list[str] | None = None,
     ):
         self._closest_distances = closest_distances
         self._cell_bounds = cell_bounds
@@ -73,29 +77,33 @@ class GAPreset(ABC):
         self._name = str(value)
 
     @property
-    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+    def fitness_functions(
+        self,
+    ) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         # Prompt the user to implement the property
         # Normally this would be done with an abstract property,
         # but this is not possible with the setter
-        raise NotImplementedError(
-            "Please implement the fitness_functions property."
-        )
+        raise NotImplementedError("Please implement the fitness_functions property.")
 
     @fitness_functions.setter
-    def fitness_functions(self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]):
+    def fitness_functions(
+        self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]
+    ):
         self._fitness_functions = value
 
     @property
-    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
+    def crossover_list(
+        self,
+    ) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
         # Prompt the user to implement the property
-        # Normally this would be done with an abstract property, 
+        # Normally this would be done with an abstract property,
         # but this is not possible with the setter
-        raise NotImplementedError(
-            "Please implement the crossover_list property."
-        )
+        raise NotImplementedError("Please implement the crossover_list property.")
 
     @crossover_list.setter
-    def crossover_list(self, value: Sequence[cross.Crossover | tuple[cross.Crossover, float]]):
+    def crossover_list(
+        self, value: Sequence[cross.Crossover | tuple[cross.Crossover, float]]
+    ):
         self._crossover_list = value
 
     @property
@@ -103,9 +111,7 @@ class GAPreset(ABC):
         # Prompt the user to implement the property
         # Normally this would be done with an abstract property,
         # but this is not possible with the setter
-        raise NotImplementedError(
-            "Please implement the mutation_list property."
-        )
+        raise NotImplementedError("Please implement the mutation_list property.")
 
     @mutation_list.setter
     def mutation_list(self, value: Sequence[mut.Mutation | tuple[mut.Mutation, float]]):
@@ -144,9 +150,7 @@ class GAPreset(ABC):
     @property
     def parent_selection(self) -> PopulationSelection:
         if not hasattr(self, "_parent_selection"):
-            self._parent_selection = pop_sel.TournamentDCDSelection(
-                sort_by=get_volume
-            )
+            self._parent_selection = pop_sel.TournamentDCDSelection(sort_by=get_volume)
         return self._parent_selection
 
     @parent_selection.setter
@@ -207,7 +211,7 @@ class GAPreset(ABC):
             survivor_selection=self.survivor_selection,
             parent_ratio=self.parent_ratio,
             description=self.description,
-            save_n_crystals=self.save_n_crystals
+            save_n_crystals=self.save_n_crystals,
         )
 
     @property
@@ -245,7 +249,7 @@ class GAPreset(ABC):
         Appart from the name and description.
 
         The properties are recalculated and set when called.
-        Usefull, when the cell bounds or the closest distances are changed, 
+        Usefull, when the cell bounds or the closest distances are changed,
         so the properties are recalculated with the new values.
         """
         if hasattr(self, "_fitness_functions"):
@@ -259,7 +263,7 @@ class GAPreset(ABC):
 
         if hasattr(self, "_break_condition"):
             del self._break_condition
-            
+
         if hasattr(self, "_parent_selection"):
             del self._parent_selection
 
@@ -271,20 +275,23 @@ class GAPreset(ABC):
 # ║                     Utility methods                      ║
 # ╚══════════════════════════════════════════════════════════╝
 
+
 def get_soap_similarity_fitness_list(
     target_soap_features,
-    soap_object: CustomSOAP,
-    rbf_gammas: Sequence[float | int] = [1., 0.1, 0.01],
+    soap_object: GlobalSOAP,
+    rbf_gammas: Sequence[float | int] = [1.0, 0.1, 0.01],
     function_titles: list[str] = [
         "soap_similarity_strong",
         "soap_similarity_mid",
-        "soap_similarity_weak"
+        "soap_similarity_weak",
     ],
     round_result: None | int = None,
-    n_jobs: int = 1
+    n_jobs: int = 1,
 ) -> list[FitnessFunction]:
 
-    assert len(function_titles) == len(rbf_gammas), "Define same number of titles as rbf gammas."
+    assert len(function_titles) == len(
+        rbf_gammas
+    ), "Define same number of titles as rbf gammas."
 
     soap_fitnesses = []
     for i in range(len(rbf_gammas)):
@@ -299,7 +306,7 @@ def get_soap_similarity_fitness_list(
                 ),
                 db_title=function_titles[i],
                 round_result=round_result,
-                n_jobs=n_jobs
+                n_jobs=n_jobs,
             )
         )
 
@@ -309,13 +316,13 @@ def get_soap_similarity_fitness_list(
 def get_species_specific_soap_fitness_list(
     target_soap_features,
     soap_species: Sequence[str | int],
-    soap_object: CustomSOAP,
+    soap_object: GlobalSOAP,
     rbf_gamma: int | float = 0.1,
     function_name: str = "species_specific_fit",
     round_result: None | int = None,
-    n_jobs: int = 1
-    ) -> list[FitnessFunction] :
-    species_specific_fitnesses= []
+    n_jobs: int = 1,
+) -> list[FitnessFunction]:
+    species_specific_fitnesses = []
     for i in range(len(soap_species)):
         for j in range(i, len(soap_species)):
             soap_fit_spec = ff.SimilarityToTargetSOAPFitness(
@@ -333,7 +340,7 @@ def get_species_specific_soap_fitness_list(
                     function_name, soap_species[i], soap_species[j]
                 ),
                 round_result=round_result,
-                n_jobs=n_jobs
+                n_jobs=n_jobs,
             )
             species_specific_fitnesses.append(soap_fit_spec)
 
@@ -344,8 +351,9 @@ def get_species_specific_soap_fitness_list(
 # ║                         Presets                          ║
 # ╚══════════════════════════════════════════════════════════╝
 
+
 class ExlorationGAPreset(GAPreset):
-    # Only adjust the getters, so the properties of the GAPreset are not 
+    # Only adjust the getters, so the properties of the GAPreset are not
     # overwritten completely.
     @GAPreset.name.getter
     def name(self) -> str:
@@ -358,7 +366,9 @@ class ExlorationGAPreset(GAPreset):
         return "Apply strong modifications to the population to explore the search space. (Preset: Exploration)"
 
     @GAPreset.fitness_functions.getter
-    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+    def fitness_functions(
+        self,
+    ) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         if not hasattr(self, "_fitness_functions"):
             # Order the fitness functions in a way that the reference similarity
             # (gamma = 0.1) is the first fitness function.
@@ -370,33 +380,32 @@ class ExlorationGAPreset(GAPreset):
                 function_titles=[
                     "soap_similarity_mid",
                     "soap_similarity_strong",
-                    "soap_similarity_weak"
-                ]
+                    "soap_similarity_weak",
+                ],
             )
             species_specific_fitnesses = get_species_specific_soap_fitness_list(
                 target_soap_features=self._soap_features,
                 soap_species=self._soap_object.species,
                 soap_object=self._soap_object,
-                rbf_gamma=0.01
+                rbf_gamma=0.01,
             )
             self._fitness_functions = soap_fitness_list + species_specific_fitnesses
 
         return self._fitness_functions
 
     @GAPreset.crossover_list.getter
-    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
+    def crossover_list(
+        self,
+    ) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
         if not hasattr(self, "_crossover_list"):
-            self._crossover_list =[
+            self._crossover_list = [
                 cross.OnePointElementCrossover(self._closest_distances),
                 cross.OnePointPositionCrossover(self._closest_distances),
                 cross.UnitCellCrossover(self._closest_distances),
-                cross.CutAndSpliceCrossover(
-                    self._closest_distances,
-                    self._cell_bounds
-                ),
+                cross.CutAndSpliceCrossover(self._closest_distances, self._cell_bounds),
             ]
         return self._crossover_list
-    
+
     @GAPreset.mutation_list.getter
     def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
@@ -405,35 +414,34 @@ class ExlorationGAPreset(GAPreset):
                     closest_distances=self._closest_distances,
                 ),
                 mut.pos_mut.RattleMutation(
-                    closest_distances=self._closest_distances, n_top=1, rattle_strength=0.1
+                    closest_distances=self._closest_distances,
+                    n_top=1,
+                    rattle_strength=0.1,
                 ),
                 mut.elem_mut.AddAtomsMutation(
                     possible_elements=self.species,
-                    closest_distances=self._closest_distances
+                    closest_distances=self._closest_distances,
                 ),
                 mut.elem_mut.DeleteRandomAtomsMutation(
                     closest_distances=self._closest_distances
                 ),
                 mut.elem_mut.ReplaceAtomsMutation(
                     possible_elements=self.species,
-                    closest_distances=self._closest_distances
+                    closest_distances=self._closest_distances,
                 ),
-                mut.energy_mut.SoftMutation(
-                    closest_distances=self._closest_distances
-                ),
+                mut.energy_mut.SoftMutation(closest_distances=self._closest_distances),
                 mut.cell_mut.MinimizeTiltMutation(
                     closest_distances=self._closest_distances
                 ),
                 mut.sym_mut.GetConventionalCellMutation(
-                    closest_distances=self._closest_distances,
-                    symmetry_tol=0.3
+                    closest_distances=self._closest_distances, symmetry_tol=0.3
                 ),
                 mut.cell_mut.RotationMutation(
                     closest_distances=self._closest_distances
                 ),
                 mut.cell_mut.EnlargeMutation(
                     closest_distances=self._closest_distances,
-                    cell_bounds=self._cell_bounds
+                    cell_bounds=self._cell_bounds,
                 ),
                 mut.cell_mut.StrainMutation(
                     closest_distances=self._closest_distances,
@@ -443,14 +451,14 @@ class ExlorationGAPreset(GAPreset):
                 mut.cell_mut.CutoutMutation(
                     closest_distances=self._closest_distances,
                     cell_bounds=self._cell_bounds,
-                    tolerance=1.
-                )
+                    tolerance=1.0,
+                ),
             ]
             multi_mut = mut.multi_mut.MultipleMutations(
                 mutations=all_muts,
                 number_of_mutations=2,
                 random_order=True,
-                closest_distances=self._closest_distances
+                closest_distances=self._closest_distances,
             )
             self._mutation_list = all_muts + [multi_mut]
         return self._mutation_list
@@ -458,19 +466,23 @@ class ExlorationGAPreset(GAPreset):
     @GAPreset.break_condition.getter
     def break_condition(self) -> BreakCondition:
         if not hasattr(self, "_break_condition"):
-            self._break_condition = break_cond.MultipleOrBreak([
-                break_cond.GenerationBreak(200),
-                break_cond.MaxFitnessBreak(0, 0.85),
-                break_cond.MultipleAndBreak([
-                    break_cond.GenerationBreak(100),
-                    break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80))
-                ])
-            ])
+            self._break_condition = break_cond.MultipleOrBreak(
+                [
+                    break_cond.GenerationBreak(200),
+                    break_cond.MaxFitnessBreak(0, 0.85),
+                    break_cond.MultipleAndBreak(
+                        [
+                            break_cond.GenerationBreak(100),
+                            break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80)),
+                        ]
+                    ),
+                ]
+            )
         return self._break_condition
 
 
 class OptimizationGAPreset(GAPreset):
-    # Only adjust the getters, so the properties of the GAPreset are not 
+    # Only adjust the getters, so the properties of the GAPreset are not
     # overwritten completely.
     @GAPreset.name.getter
     def name(self) -> str:
@@ -482,12 +494,14 @@ class OptimizationGAPreset(GAPreset):
     def description(self) -> str:
         return (
             "Apply weak modifications to the population that do not create "
-                "entirely new individuals but slightly modify the ones "
-                "existing. (Preset: Optimization)"
+            "entirely new individuals but slightly modify the ones "
+            "existing. (Preset: Optimization)"
         )
 
     @GAPreset.fitness_functions.getter
-    def fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+    def fitness_functions(
+        self,
+    ) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         if not hasattr(self, "_fitness_functions"):
             # Order the fitness functions in a way that the reference similarity
             # (gamma = 0.1) is the first fitness function.
@@ -499,24 +513,23 @@ class OptimizationGAPreset(GAPreset):
                 function_titles=[
                     "soap_similarity_mid",
                     "soap_similarity_strong",
-                    "soap_similarity_weak"
-                ]
+                    "soap_similarity_weak",
+                ],
             )
         return self._fitness_functions
 
     @GAPreset.crossover_list.getter
-    def crossover_list(self) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
+    def crossover_list(
+        self,
+    ) -> Sequence[cross.Crossover | tuple[cross.Crossover, float]]:
         if not hasattr(self, "_crossover_list"):
-            self._crossover_list =[
+            self._crossover_list = [
                 cross.OnePointElementCrossover(self._closest_distances),
                 cross.OnePointPositionCrossover(self._closest_distances),
-                cross.CutAndSpliceCrossover(
-                    self._closest_distances,
-                    self._cell_bounds
-                ),
+                cross.CutAndSpliceCrossover(self._closest_distances, self._cell_bounds),
             ]
         return self._crossover_list
-    
+
     @GAPreset.mutation_list.getter
     def mutation_list(self) -> Sequence[mut.Mutation | tuple[mut.Mutation, float]]:
         if not hasattr(self, "_mutation_list"):
@@ -533,29 +546,26 @@ class OptimizationGAPreset(GAPreset):
                     closest_distances=self._closest_distances,
                 ),
                 mut.pos_mut.RattleMutation(
-                    closest_distances=self._closest_distances, 
-                    n_top=1, 
-                    rattle_strength=0.1
-                ),
-                mut.pos_mut.RattleMutation(
-                    closest_distances=self._closest_distances, 
-                    n_top=1, 
-                    rattle_strength=0.5
-                ),
-                mut.pos_mut.RattleMutation(
-                    closest_distances=self._closest_distances, 
+                    closest_distances=self._closest_distances,
                     n_top=1,
-                    rattle_strength=0.01
+                    rattle_strength=0.1,
                 ),
-                mut.energy_mut.SoftMutation(
-                    closest_distances=self._closest_distances
+                mut.pos_mut.RattleMutation(
+                    closest_distances=self._closest_distances,
+                    n_top=1,
+                    rattle_strength=0.5,
                 ),
+                mut.pos_mut.RattleMutation(
+                    closest_distances=self._closest_distances,
+                    n_top=1,
+                    rattle_strength=0.01,
+                ),
+                mut.energy_mut.SoftMutation(closest_distances=self._closest_distances),
                 mut.cell_mut.MinimizeTiltMutation(
                     closest_distances=self._closest_distances
                 ),
                 mut.sym_mut.GetConventionalCellMutation(
-                    closest_distances=self._closest_distances,
-                    symmetry_tol=0.3
+                    closest_distances=self._closest_distances, symmetry_tol=0.3
                 ),
                 mut.cell_mut.RotationMutation(
                     closest_distances=self._closest_distances
@@ -579,7 +589,7 @@ class OptimizationGAPreset(GAPreset):
                 mutations=all_muts,
                 number_of_mutations=2,
                 random_order=True,
-                closest_distances=self._closest_distances
+                closest_distances=self._closest_distances,
             )
             self._mutation_list = all_muts + [multi_mut]
         return self._mutation_list
@@ -587,26 +597,31 @@ class OptimizationGAPreset(GAPreset):
     @GAPreset.break_condition.getter
     def break_condition(self) -> BreakCondition:
         if not hasattr(self, "_break_condition"):
-            self._break_condition = break_cond.MultipleOrBreak([
-                break_cond.GenerationBreak(200),
-                break_cond.MaxFitnessBreak(0, 0.99),
-                break_cond.MultipleAndBreak([
-                    break_cond.GenerationBreak(100),
-                    break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80))
-                ])
-            ])
+            self._break_condition = break_cond.MultipleOrBreak(
+                [
+                    break_cond.GenerationBreak(200),
+                    break_cond.MaxFitnessBreak(0, 0.99),
+                    break_cond.MultipleAndBreak(
+                        [
+                            break_cond.GenerationBreak(100),
+                            break_cond.NotBreak(break_cond.MaxFitnessBreak(0, 0.80)),
+                        ]
+                    ),
+                ]
+            )
         return self._break_condition
 
 
-class BuildUpParallelGA():
+class BuildUpParallelGA:
     """Creates a GAParallelStage object where each GAStage is created with
     the ExplorationGAPreset but each GAStage has a different species_specific
     species_specific fitness function and a soap similarity fitness function
     with gamma = 0.01.
     """
+
     def __init__(
         self,
-        soap_object: CustomSOAP,
+        soap_object: GlobalSOAP,
         soap_features: np.ndarray,
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
@@ -640,7 +655,7 @@ class BuildUpParallelGA():
 
     @property
     def mutation_probability(self) -> float:
-        """Is set for all stages. 
+        """Is set for all stages.
 
         Default: 0.5
         """
@@ -679,9 +694,9 @@ class BuildUpParallelGA():
                     break_cond.MultipleAndBreak(
                         [
                             break_cond.MinFitnessBreak(0, 1e-30),
-                            break_cond.GenerationBreak(50)
+                            break_cond.GenerationBreak(50),
                         ]
-                    )
+                    ),
                 ]
             )
 
@@ -692,7 +707,9 @@ class BuildUpParallelGA():
         self._break_condition = value
 
     @property
-    def additional_fitness_functions(self) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
+    def additional_fitness_functions(
+        self,
+    ) -> Sequence[FitnessFunction | tuple[FitnessFunction, float]]:
         """Additional fitness functions that are added to the ExplorationGAPreset.
 
         Default: []
@@ -702,7 +719,9 @@ class BuildUpParallelGA():
         return self._additional_fitness_functions
 
     @additional_fitness_functions.setter
-    def additional_fitness_functions(self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]):
+    def additional_fitness_functions(
+        self, value: Sequence[FitnessFunction | tuple[FitnessFunction, float]]
+    ):
         self._additional_fitness_functions = value
 
     def create(self) -> GAParallelStage:
@@ -712,7 +731,7 @@ class BuildUpParallelGA():
             target_soap_features=self._soap_features,
             soap_species=self._soap_object.species,
             soap_object=self._soap_object,
-            rbf_gamma=self._rbf_gamma
+            rbf_gamma=self._rbf_gamma,
         )
 
         soap_species = self._soap_object.species
@@ -735,7 +754,7 @@ class BuildUpParallelGA():
             closest_distances=self._closest_distances,
             cell_bounds=self._cell_bounds,
             soap_object=self._soap_object,
-            soap_features=self._soap_features
+            soap_features=self._soap_features,
         )
 
         stages = []
@@ -749,12 +768,12 @@ class BuildUpParallelGA():
 
             # Set the correct fitness functions
             if len(self.additional_fitness_functions) == 0:
-                explore_ga.fitness_functions = [
-                    (sim_fit_0_01, 0.5), fitness_function
-                ]
+                explore_ga.fitness_functions = [(sim_fit_0_01, 0.5), fitness_function]
             else:
                 explore_ga.fitness_functions = [
-                    (sim_fit_0_01, 0.5), fitness_function, *self.additional_fitness_functions
+                    (sim_fit_0_01, 0.5),
+                    fitness_function,
+                    *self.additional_fitness_functions,
                 ]
 
             # Adjust the break condition to less generations if nothing is found

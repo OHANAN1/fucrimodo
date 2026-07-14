@@ -1,9 +1,9 @@
 import numpy as np
-from fucrimodo.core.utils import CustomSOAP
+from .global_soap import GlobalSOAP
 
 
 def get_present_species(
-    soap_obj: CustomSOAP,
+    soap_obj: GlobalSOAP,
     feature_vector: np.ndarray,
     sort_by_appearance: bool = True,
 ) -> list[str]:

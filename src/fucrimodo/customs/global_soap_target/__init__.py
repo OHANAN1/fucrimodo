@@ -4,3 +4,4 @@ from .target_file import (
     get_n_atoms_from_additional_notes,
 )
 from . import utils
+from .global_soap import GlobalSOAP

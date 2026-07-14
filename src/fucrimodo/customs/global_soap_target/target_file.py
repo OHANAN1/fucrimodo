@@ -4,7 +4,7 @@ from io import StringIO
 import re
 import ase
 import ase
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from .global_soap import GlobalSOAP
 
 
 def create_target_file_data(
@@ -20,8 +20,8 @@ def create_target_file_data(
         "periodic": True,
         "average": "inner",
     }
-    descriptor_name = "CustomSOAP"
-    soap = CustomSOAP(**kwargs)
+    descriptor_name = "GlobalSOAP"
+    soap = GlobalSOAP(**kwargs)
 
     # Calculate the feature vector
     target_features = soap.create(atoms)

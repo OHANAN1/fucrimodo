@@ -2,7 +2,7 @@ import numpy as np
 import ase
 from ase.geometry import get_distances
 import warnings
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 from fucrimodo.core.modules import FitnessFunction, Individual
 from fucrimodo.utils.soap_similarity import SOAPSimilarity
 import datetime
@@ -68,7 +68,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
     def __init__(
         self,
         target_soap_features,
-        soap_object: CustomSOAP,
+        soap_object: GlobalSOAP,
         soap_similarity: SOAPSimilarity,
         adjust: bool = False,
         db_title: str | None = None,
@@ -147,7 +147,7 @@ class SimilarityToTargetSOAPFitness(FitnessFunction):
         """Evaluate a similarity fitness for a list of individuals.
 
         Uses the :attr:`Individual.features` attribute to calculate the fitness.
-        If not set calculates the features with the :attr:`CustomSOAP` object
+        If not set calculates the features with the :attr:`GlobalSOAP` object
         for all individuals without features in parallel.
 
         :param individuals: List of individuals to evaluate.

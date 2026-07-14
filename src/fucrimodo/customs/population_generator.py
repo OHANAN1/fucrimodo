@@ -14,7 +14,7 @@ from fucrimodo.core.modules import Individual, Population, PopulationGenerator
 from fucrimodo.core.modules.fitness_function import FitnessFunction
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.custom_soap import CustomSOAP
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 from fucrimodo.customs import global_soap_target
 from fucrimodo.customs import population_selections
 from pyxtal import pyxtal
@@ -226,7 +226,7 @@ def create_random_structure(
 class RandomSampleCrystalPopulation(PopulationGenerator):
     def __init__(
         self,
-        soap_obj: CustomSOAP,
+        soap_obj: GlobalSOAP,
         target_features: np.ndarray,
         closest_distances: CustomClosestDistances,
         n_atoms,
