@@ -1,5 +1,6 @@
 from .individual import Individual
 
+
 class Population:
     def __init__(self, individuals: list[Individual]):
         """Stores the list of individuals in the population that is used
@@ -15,6 +16,9 @@ class Population:
         If new individuals are set, the generation number is incremented.
         """
         return self._individuals
+
+    def __len__(self) -> int:
+        return len(self._individuals)
 
     @individuals.setter
     def individuals(self, value: list[Individual]):
