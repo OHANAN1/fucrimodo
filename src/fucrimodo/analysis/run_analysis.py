@@ -1,6 +1,6 @@
 import os
 import ase
-from fucrimodo.core.utils import ase_database_tools as db_tools
+from fucrimodo.utils import ase_tools
 import json
 from typing import Any
 import numpy as np
@@ -199,8 +199,8 @@ class RunData:
             db_path
         ), f"File structures.db does not exist in {self.dir_path}."
 
-        structures_db = db_tools.connect_to_existing_database(db_path)
-        db_data = db_tools.get_structures_and_key_value_pairs_from_database(
+        structures_db = ase_tools.connect_to_existing_database(db_path)
+        db_data = ase_tools.get_structures_and_key_value_pairs_from_database(
             structures_db
         )
         return db_data
