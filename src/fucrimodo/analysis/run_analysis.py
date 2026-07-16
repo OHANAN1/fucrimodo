@@ -2,7 +2,7 @@ import os
 import ase
 from fucrimodo.core.utils import ase_database_tools as db_tools
 import json
-from typing import Any, Callable
+from typing import Any
 import numpy as np
 from ase.visualize.plot import plot_atoms
 from matplotlib.axes import Axes
@@ -10,19 +10,21 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from fucrimodo.analysis.stage_analysis import StageData
 
-class RunData():
+
+class RunData:
     """Collects and structures the data that was collected during a given run.
 
     :param run_dir: Path to the directory where the run was saved
         and where the results are stored. Must contain a 'info.json'
-        and a 'crystals.db' file.
+        and a 'structures.db' file.
 
     :raises FileNotFoundError: One of the expected files was not found at
         path :data:`dir_path`. Expected files are 'info.json' and
-        'crystals.db'.
+        'structures.db'.
     """
+
     def __init__(
-        self, 
+        self,
         dir_path: str,
     ) -> None:
         self._dir_path = dir_path
@@ -31,8 +33,8 @@ class RunData():
         # run name, description, type and other data
         self._info_dict = self.__load_dict_from_file("info.json")
 
-        # Load the crystals and key value pairs from the crystals database
-        self._crystals, self._key_value_pairs = self.__get_crystal_data()
+        # Load the structures and key value pairs from the structures database
+        self._structures, self._key_value_pairs = self.__get_structures_data()
 
     @property
     def dir_path(self) -> str:
@@ -81,17 +83,17 @@ class RunData():
         return self._total_runtime
 
     @property
-    def crystals(self) -> list[ase.Atoms]:
+    def structures(self) -> list[ase.Atoms]:
         """
-        List of all atoms of all stages, ordered with the stage ids.
+        List of all structures of all stages, ordered with the stage ids.
         """
-        return self._crystals
+        return self._structures
 
     @property
     def key_value_pairs(self) -> list[dict[str, Any]]:
         """
-        List of all key value pairs of all stages, ordered the same way as 
-        :attr:`RunResults.crystals`.
+        List of all key value pairs of all stages, ordered the same way as
+        :attr:`RunResults.structures`.
         """
         return self._key_value_pairs
 
@@ -110,8 +112,9 @@ class RunData():
             # Load the global statistics dict from global_statistics.json
             glob_stats_dict = self.__load_dict_from_file("global_statistics.json")
 
-            assert type(glob_stats_dict["results"]) == list, \
-                "The results entry in the global_statistics.json file is not a list."
+            assert (
+                type(glob_stats_dict["results"]) == list
+            ), "The results entry in the global_statistics.json file is not a list."
 
             # Load each of the results entries in a seperate Dataframe
             for i in range(len(glob_stats_dict["results"])):
@@ -134,8 +137,7 @@ class RunData():
 
     @property
     def stages(self) -> dict[int, StageData]:
-        """Dictionary with the stage ids as keys and the StageResults as values.
-        """
+        """Dictionary with the stage ids as keys and the StageResults as values."""
         if not hasattr(self, "_stages"):
             # Checks if stages where performed
             stage_hist = self._info_dict["stage_history"]
@@ -162,46 +164,44 @@ class RunData():
         """Number of stages that where performed."""
         return len(self.stages)
 
-    def __load_dict_from_file(
-        self, file_name: str
-    ) -> dict[str, list | str | int]:
+    def __load_dict_from_file(self, file_name: str) -> dict[str, list | str | int]:
         """Load a dictionary from a json file with name :data:`file_name` from
         the stage directory :attr:`RunResults.dir_path`
 
         :param file_name: Name of the file that should be loaded.
 
-        :raises AssertionError: If the file does not exist in the stage 
+        :raises AssertionError: If the file does not exist in the stage
             directory.
 
         :return: The loaded dictionary.
         """
         file_path = os.path.join(self.dir_path, file_name)
-        assert os.path.exists(file_path), \
-            f"File {file_name} does not exist in {self.dir_path}."
+        assert os.path.exists(
+            file_path
+        ), f"File {file_name} does not exist in {self.dir_path}."
 
         with open(file_path, "r") as f:
             stage_dict = json.load(f)
         return stage_dict
 
-    def __get_crystal_data(
-            self
-        ) -> tuple[list[ase.Atoms], list[dict[str, Any]]]:
-        """Collects the crystals and key value pairs from the crystals database.
+    def __get_structures_data(self) -> tuple[list[ase.Atoms], list[dict[str, Any]]]:
+        """Collects the structures and key value pairs from the structures database.
 
-        The data is located at :data:`crystals_db_path`.
+        The data is located at :data:`structures_db_path`.
 
-        :raises ValueError: If the crystals.db file does not exist in the
+        :raises ValueError: If the structures.db file does not exist in the
             directory of the run.
 
-        :return: A tuple with the crystals and key value pairs dictionaries.
+        :return: A tuple with the structures and key value pairs dictionaries.
         """
-        db_path = os.path.join(self.dir_path, "crystals.db")
-        assert os.path.exists(db_path), \
-            f"File crystals.db does not exist in {self.dir_path}."
+        db_path = os.path.join(self.dir_path, "structures.db")
+        assert os.path.exists(
+            db_path
+        ), f"File structures.db does not exist in {self.dir_path}."
 
-        crystals_db = db_tools.connect_to_existing_database(db_path)
-        db_data = db_tools.get_crystals_and_key_value_pairs_from_database(
-            crystals_db
+        structures_db = db_tools.connect_to_existing_database(db_path)
+        db_data = db_tools.get_structures_and_key_value_pairs_from_database(
+            structures_db
         )
         return db_data
 
@@ -215,8 +215,7 @@ def get_global_statistics_overview(run_data: RunData) -> pd.DataFrame:
     :return: The overview table.
     """
     info_df = pd.DataFrame(
-        run_data.global_statistics, 
-        columns=["names", "functions"] # type: ignore
+        run_data.global_statistics, columns=["names", "functions"]  # type: ignore
     )
     result_dfs = run_data.global_statistics["results"]
 
@@ -233,7 +232,7 @@ def plot_global_statistics(
     row: int,
     ax: Axes | None = None,
     y_label: str = "Value",
-    y_keys: list[str] = ["min", "max", "avg"]
+    y_keys: list[str] = ["min", "max", "avg"],
 ) -> None:
     """Performs the desired analysis.
 
@@ -254,12 +253,7 @@ def plot_global_statistics(
         fig, ax = plt.subplots(1, 1)
 
     # Plot the selected results data
-    results_df.plot(
-        ax=ax,
-        x="gen",
-        y=y_keys,
-        title=f"Global Statistic: {name}"
-    )
+    results_df.plot(ax=ax, x="gen", y=y_keys, title=f"Global Statistic: {name}")
 
     # Set labels of the plot
     ax.set_xlabel("Generation")
@@ -286,37 +280,32 @@ def plot_global_statistics(
     ax.legend()
 
 
-def get_best_crystal_tuple(
-    run_data: RunData,
-    global_statistics_row: int,
-    invert: bool = False
+def get_best_structure_tuple(
+    run_data: RunData, global_statistics_row: int, invert: bool = False
 ) -> tuple[ase.Atoms, float, dict[str, Any]]:
-    """Returns the crystal with the highest value for a specific global
-    statistics at the provided index. To see the available statistic 
+    """Returns the structures with the highest value for a specific global
+    statistics at the provided index. To see the available statistic
     indices and their names use :meth:`get_analysis_selection_table` with
-    the analysis type "crystals".
+    the analysis type "structures".
 
     :param statistics_index: Index of the global statistics that should be
-        used to select the best crystal.
-    :param invert: If False the sorting will be inverted, meaning the 
-        crystal with the lowest value of the desired statistic is returned.
+        used to select the best structures.
+    :param invert: If False the sorting will be inverted, meaning the
+        structures with the lowest value of the desired statistic is returned.
 
     :return:
 
-        - best crystal
-        - statistics value of crystal for the given statistics key
-        - key value pairs of the best crystal
+        - best structure
+        - statistics value of structure for the given statistics key
+        - key value pairs of the best structure
     """
     stat_values = []
-    selected_key = list(run_data.global_statistics["names"])[
-        global_statistics_row
-    ]
-    assert selected_key in run_data.key_value_pairs[0].keys(), (
-        f"Key {selected_key} not in key value pairs of crystal db."
-    )
+    selected_key = list(run_data.global_statistics["names"])[global_statistics_row]
+    assert (
+        selected_key in run_data.key_value_pairs[0].keys()
+    ), f"Key {selected_key} not in key value pairs of structures db."
     stat_values = [
-        key_value_pair[selected_key]
-        for key_value_pair in run_data.key_value_pairs
+        key_value_pair[selected_key] for key_value_pair in run_data.key_value_pairs
     ]
 
     if invert:
@@ -324,35 +313,37 @@ def get_best_crystal_tuple(
     else:
         best_index = np.argmax(stat_values)
 
-    return (run_data.crystals[best_index],
-            stat_values[best_index],
-            run_data.key_value_pairs[best_index])
+    return (
+        run_data.structures[best_index],
+        stat_values[best_index],
+        run_data.key_value_pairs[best_index],
+    )
 
 
-def get_best_crystal_overview(
-    run_data: RunData,
-    global_stats_row: int
-    ) -> pd.DataFrame:
+def get_best_structure_overview(
+    run_data: RunData, global_stats_row: int
+) -> pd.DataFrame:
     """Creates a pd.Dataframe that can be printed as a table for the
-    overview of the best crystal of the run.
+    overview of the best structures of the run.
 
     :param run_data: The RunData object that contains the data of the run.
     :param global_stats_row: The row index of the global statistics that
-        should be used to select the best crystal.
+        should be used to select the best structures.
 
     :return: The overview table.
     """
-    best_crystal = get_best_crystal_tuple(run_data, 0)
-    crystal, best_value, key_val_pair = best_crystal
+    best_structure = get_best_structure_tuple(run_data, global_stats_row)
+    structure, best_value, key_val_pair = best_structure
 
-    overview = pd.DataFrame({
-        "formula": [crystal.get_chemical_formula()],
-        "best_value": best_value,
-        "volume": [crystal.get_volume()],
-        "n_atoms": [len(crystal)],
-        "atomic_density": [crystal.get_volume() / len(crystal)],
-    },
-    index=[0] # type: ignore
+    overview = pd.DataFrame(
+        {
+            "formula": [structure.get_chemical_formula()],
+            "best_value": best_value,
+            "volume": [structure.get_volume()],
+            "n_atoms": [len(structure)],
+            "atomic_density": [structure.get_volume() / len(structure)],
+        },
+        index=[0],  # type: ignore
     )
 
     for key, value in key_val_pair.items():
@@ -361,48 +352,48 @@ def get_best_crystal_overview(
     return overview
 
 
-def visualize_best_crystal(
+def visualize_best_structure(
     run_data: RunData,
     global_statistics_row: int,
     ax: Axes | None = None,
-    notebook_mode: bool = False
+    notebook_mode: bool = False,
 ) -> None:
     from ase.visualize import view
 
-    # Get the best crystal tuple
-    best_crystal_tuple = get_best_crystal_tuple(
-        run_data=run_data,
-        global_statistics_row=global_statistics_row
+    # Get the best structure tuple
+    best_structure_tuple = get_best_structure_tuple(
+        run_data=run_data, global_statistics_row=global_statistics_row
     )
-    crystal, best_value, key_val_pair = best_crystal_tuple
+    structure, best_value, key_val_pair = best_structure_tuple
 
-    # If ax is provided plot the crystal, else view it
+    # If ax is provided plot the structure, else view it
     if ax is not None:
-        plot_atoms(crystal, ax=ax)
-        ax.set_title(f"Best Crystal: {best_value}")
+        plot_atoms(structure, ax=ax)
+        ax.set_title(f"Best structure: {best_value}")
     else:
-        # Embed the crystal in notebook or in a new window
+        # Embed the structure in notebook or in a new window
         if notebook_mode:
             print("Plotting in notebook mode.")
-            view(crystal, viewer="x3d")
+            view(structure, viewer="x3d")
         else:
-            view(crystal)
+            view(structure)
 
 
 def get_run_overview(run_data: RunData) -> pd.DataFrame:
-    """Creates a pd.Dataframe that can be printed as a table for the 
-    overview of the run with an index and further information to enable 
+    """Creates a pd.Dataframe that can be printed as a table for the
+    overview of the run with an index and further information to enable
     the selection of the desired stage.
 
     :return: The overview table.
     """
-    overview = pd.DataFrame({
-        "name": run_data.name,
-        "description": run_data.description,
-        "n_stages": run_data.n_stages,
-        "total_generations": run_data.total_generations,
-        "total_runtime": run_data.total_runtime,
-    },
-    index=[0] # type: ignore
+    overview = pd.DataFrame(
+        {
+            "name": run_data.name,
+            "description": run_data.description,
+            "n_stages": run_data.n_stages,
+            "total_generations": run_data.total_generations,
+            "total_runtime": run_data.total_runtime,
+        },
+        index=[0],  # type: ignore
     )
     return overview

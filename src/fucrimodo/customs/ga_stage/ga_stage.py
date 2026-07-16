@@ -32,7 +32,7 @@ class GAStage(Stage):
         survivor_selection: PopulationSelection,
         parent_ratio: float = 0.5,
         description: str = "",
-        save_n_crystals: int = 10,
+        save_n_structures: int = 10,
     ):
         super().__init__(name, description)
 
@@ -49,7 +49,7 @@ class GAStage(Stage):
             survivor_selection=survivor_selection,
             parent_ratio=parent_ratio,
             description=description,
-            save_n_crystals=save_n_crystals,
+            save_n_structures=save_n_structures,
         )
 
         fitness_funcs, fitness_weights = self.__seperate_object_weight_tuples(
@@ -324,14 +324,14 @@ class GAStage(Stage):
     def save_results(
         self,
         save_dir: str,
-        crystals_db: Database,
+        structures_db: Database,
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ):
         self.__save_mutations(save_dir)
         self.__save_crossovers(save_dir)
         self.__save_fitnesses(save_dir)
         self.__save_hall_of_fame(
-            crystals_db,
+            structures_db,
             self.hall_of_fame,
             self.ga_runner.fitness_functions,
             global_statistics_dict,

@@ -29,7 +29,7 @@ print(tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_jhi3_ila
+: /tmp/fucrimodo_example_khw42las
 
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
@@ -322,7 +322,7 @@ explore_ga_stage = GAStage(
     survivor_selection=survivor_selection,
     parent_ratio=0.5,
     description=description,
-    save_n_crystals=10,
+    save_n_structures=10,
 )
 #+end_src
 
@@ -408,7 +408,7 @@ optimize_ga_stage = GAStage(
     survivor_selection=survivor_selection,
     parent_ratio=0.5,
     description=description,
-    save_n_crystals=10,
+    save_n_structures=10,
 )
 #+end_src
 
@@ -422,8 +422,9 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: explore_ga, ID: 1Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7f19fac72f90>
+: Run notebook_example_run: Running stage: explore_ga, ID: 1
+: Run notebook_example_run: Finished stage: explore_ga, ID: 1
+: <fucrimodo.core.modules.population.Population at 0x7f596001b800>
 :END:
 
 The population after the exploration can now be analysed.
@@ -446,7 +447,7 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 #+RESULTS:
 :RESULTS:
 : Run notebook_example_run: Running stage: optimize_ga, ID: 2Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7f19fac72f90>
+: <fucrimodo.core.modules.population.Population at 0x7f596001b800>
 :END:
 ** Analyse Run
 
@@ -456,16 +457,16 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_jhi3_ila/notebook_example_run
+: /tmp/fucrimodo_example_khw42las/notebook_example_run
 
 *** Retrieving Structures
 
-All generated structures are stored in the run directory inside of a `ASE` database called `crystals.db`.
+All generated structures are stored in the run directory inside of a `ASE` database called `structures.db`.
 Structures can be analysed here or with the cli/web interface provided by `ASE` ((more info in their docs)[https://docs.ase-lib.org/ase/db/db.html])
 #+begin_src jupyter-python
 from ase.db import connect
 
-db_path = os.path.join(multi_stage_search.run_dir, "crystals.db")
+db_path = os.path.join(multi_stage_search.run_dir, "structures.db")
 structure_db = connect(db_path)
 
 # e.g. get first structure of db
@@ -498,7 +499,7 @@ print("Number of stages performed:", run_data.n_stages)
 print()
 
 # You can also get the structures
-structure_list = run_data.crystals
+structure_list = run_data.structures
 
 # Or use a helper to get an overview of all global metrics (Here only one metric was used)
 print("Global Metric Statistics:")

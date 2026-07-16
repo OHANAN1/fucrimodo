@@ -17,14 +17,17 @@ from fucrimodo.customs.population_generator import convert_ase_atoms_to_individu
 
 stop_event = None
 
+
 def init_worker(event):
     """Method to initialize the worker processes."""
     global stop_event
     stop_event = event
 
+
 def error_callback(e):
     """Method to handle errors in the worker processes."""
     print(f"Error in worker process: {e}")
+
 
 # Method that is run in parallel to perform the stages
 # It needs to be defined outside of the class to be pickable
@@ -33,7 +36,7 @@ def perform_stage(
     population: Population,
     global_log: tools.Logbook,
     global_stats: tools.MultiStatistics,
-    crystal_db: Database,
+    structures_db: Database,
     seed: int,
     global_break_condition: BreakCondition | None,
 ) -> tuple[Population, tools.Logbook]:
@@ -45,8 +48,9 @@ def perform_stage(
     Use different seeds for each stage to make sure they are reproducible and
     do not conflict with each other.
     """
-    assert stop_event is not None, ("Stop event is not set. Please set it in "
-                                    "the initializer of the Pool.")
+    assert stop_event is not None, (
+        "Stop event is not set. Please set it in " "the initializer of the Pool."
+    )
 
     stage.logger.info(f"Starting stage {stage.name} with seed: {seed}")
     random.seed(seed)
@@ -65,29 +69,32 @@ def perform_stage(
     stage.set_end_time()
 
     # Save stage results
-    stage.save_results(stage.stage_dir, crystal_db)
+    stage.save_results(stage.stage_dir, structures_db)
 
     # Save stage info
     stage_info_dict = stage.info_dict.copy()
-    stage_info_dict.update({
-        "id": stage.id,
-        "type": stage.type(),
-        "name": stage.name,
-        "description": stage.description,
-        "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
-        "total_runtime": str(stage.end_time - stage.start_time),
-    })
+    stage_info_dict.update(
+        {
+            "id": stage.id,
+            "type": stage.type(),
+            "name": stage.name,
+            "description": stage.description,
+            "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_runtime": str(stage.end_time - stage.start_time),
+        }
+    )
 
     file_path = os.path.join(stage.stage_dir, "info.json")
     with open(file_path, "w") as f:
         json.dump(stage_info_dict, f, indent=4)
 
-    # Check the global break condition here since it should be checked 
+    # Check the global break condition here since it should be checked
     # independently of the other processes
     if global_break_condition is not None:
-        if global_break_condition.check(population.individuals, 
-                                        population.generation):
+        if global_break_condition.check(
+            population, {"generation": population.generation}
+        ):
             # If the global break condition is met, set the stop event
             # to inform the other processes to stop
             stage.logger.info(
@@ -128,6 +135,7 @@ class GAParallelStage(Stage):
         run with a unique seed based on this seed.
     :param verbose: Toggle to print information to the console.
     """
+
     def __init__(
         self,
         name: str,
@@ -139,7 +147,7 @@ class GAParallelStage(Stage):
         parent_ratio: float = 1.0,
         n_processes: int = 4,
         random_seed: int = 42,
-        verbose: bool = True
+        verbose: bool = True,
     ):
         super().__init__(name, description)
         self.stage_list = stage_list
@@ -162,7 +170,7 @@ class GAParallelStage(Stage):
         # Load a stage history for each of the parallel stage
         stage_history = {
             "names": [stage.name for stage in self.stage_list],
-            "info_dicts": [stage.info_dict for stage in self.stage_list]
+            "info_dicts": [stage.info_dict for stage in self.stage_list],
         }
 
         # Try to load the final info dicts that were saved in the info.json
@@ -198,10 +206,12 @@ class GAParallelStage(Stage):
     @property
     def info_dict(self) -> dict:
         stage_history = self.__get_stage_history()
-        n_generations = np.sum([
-            stage_info_dict["n_generations"] 
-            for stage_info_dict in stage_history["info_dicts"]
-        ]).tolist()
+        n_generations = np.sum(
+            [
+                stage_info_dict["n_generations"]
+                for stage_info_dict in stage_history["info_dicts"]
+            ]
+        ).tolist()
 
         info_dict = {
             "type": "GAParallelStage",
@@ -221,27 +231,27 @@ class GAParallelStage(Stage):
         info_dict["break_condition"] = None
         return info_dict
 
-    def __write_local_crystals_db_to_global_crystals_db(
+    def __write_local_structures_db_to_global_structures_db(
         self,
-        global_crystals_db: Database,
+        global_structures_db: Database,
         global_stats_dict: dict[str, Callable[[Individual], float]] | None = None,
     ) -> None:
-        """Method to write the temporary crystals database, that was used to
-        store the results of the stages, to the global crystals database.
+        """Method to write the temporary structures database, that was used to
+        store the results of the stages, to the global structures database.
 
-        Updates the stage IDs of the local crystals database to include the
+        Updates the stage IDs of the local structures database to include the
         stage ID of the parallel stage and calculates the global statistics for
         each individual.
         """
 
-        for row in self.local_crystals_db.select():
+        for row in self.local_structures_db.select():
             local_stage_id = row["stage_id"]
             # Adjust the stage ID to include the stage ID of the parallel stage
             # Use ',' as separator to not make it a float
             row["stage_id"] = f"{self.id},{local_stage_id}"
             atoms = row.toatoms()
             key_value_pairs = row.key_value_pairs
-            
+
             # Calculate global statistics for the individual if they exist
             if global_stats_dict is not None:
                 ind = convert_ase_atoms_to_individual(atoms)
@@ -249,7 +259,7 @@ class GAParallelStage(Stage):
                     for key, func in global_stats_dict.items():
                         key_value_pairs[key] = func(ind)
 
-            global_crystals_db.write(atoms, key_value_pairs)
+            global_structures_db.write(atoms, key_value_pairs)
 
     def __combine_stage_data(self) -> None:
         """Combines the data of all the stages in the parallel stage into shared files
@@ -268,7 +278,7 @@ class GAParallelStage(Stage):
             "reprs": [],
             "hashes": [],
             "results": [],
-            "stage_id": []
+            "stage_id": [],
         }
         crossover_dict_combined = {
             "names": [],
@@ -276,15 +286,15 @@ class GAParallelStage(Stage):
             "reprs": [],
             "hashes": [],
             "results": [],
-            "stage_id": []
+            "stage_id": [],
         }
-        fitnesses_dict_combined  = {
+        fitnesses_dict_combined = {
             "names": [],
             "weights": [],
             "reprs": [],
             "titles": [],
             "hashes": [],
-            "results": []
+            "results": [],
         }
 
         # Define a method to append the data of a stage to the combined
@@ -311,17 +321,17 @@ class GAParallelStage(Stage):
             append_json_to_combined_dict(
                 os.path.join(parallel_stage_dir, "mutations.json"),
                 mutation_dict_combined,
-                stage.id
+                stage.id,
             )
             append_json_to_combined_dict(
                 os.path.join(parallel_stage_dir, "crossovers.json"),
                 crossover_dict_combined,
-                stage.id
+                stage.id,
             )
             append_json_to_combined_dict(
                 os.path.join(parallel_stage_dir, "fitnesses.json"),
                 fitnesses_dict_combined,
-                stage.id
+                stage.id,
             )
 
         # Write the combined data to the parallel stage directory
@@ -335,20 +345,19 @@ class GAParallelStage(Stage):
     def save_results(
         self,
         save_dir: str,
-        crystals_db: Database,
-        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None
+        structures_db: Database,
+        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ) -> None:
         self.logger.info("Saving results of parallel stage")
 
-        self.__write_local_crystals_db_to_global_crystals_db(
-            crystals_db,
-            global_statistics_dict
+        self.__write_local_structures_db_to_global_structures_db(
+            structures_db, global_statistics_dict
         )
-        # Remove the temporary crystals database
+        # Remove the temporary structrues database
         self.logger.debug(
-            f"Removing temporary crystals database at: {self.local_crystals_db_path}"
+            f"Removing temporary structures database at: {self.local_structures_db_path}"
         )
-        os.remove(self.local_crystals_db_path)
+        os.remove(self.local_structures_db_path)
 
         self.__combine_stage_data()
         # Remove the mutations, crossovers and fitnesses files of the stages
@@ -368,7 +377,7 @@ class GAParallelStage(Stage):
         # Assign the stage ID to the stage
         stage.id = stage_id
 
-        # Create a directory for the stage in the stage directory of the 
+        # Create a directory for the stage in the stage directory of the
         # parallel stage
         relative_stage_dir = f"stage_{stage_id}"
         stage_dir = os.path.join(self.stage_dir, relative_stage_dir)
@@ -380,9 +389,10 @@ class GAParallelStage(Stage):
         # Set up a logger for each stage
         stage_logger, _ = setup_stage_logger(
             log_file_path=f"{stage_dir}/stage.log",
-            run_name=self.logger.name, # Use the name of the stage logger, since it includes the run name and is unique
-            stage_name=stage.name + f" (ID: {stage_id})", # Make sure the stage name is unique
-            log_level=self.logger.level
+            run_name=self.logger.name,  # Use the name of the stage logger, since it includes the run name and is unique
+            stage_name=stage.name
+            + f" (ID: {stage_id})",  # Make sure the stage name is unique
+            log_level=self.logger.level,
         )
 
         # Attach logger to the stage
@@ -401,16 +411,14 @@ class GAParallelStage(Stage):
 
         self.logger.info("Set up parallel stage")
 
-        # Create a crystal database where the stages can write their results to.
-        # The structures will be added to the global crystals db when the 
+        # Create a structures database where the stages can write their results to.
+        # The structures will be added to the global structures db when the
         # save_results method is called. The db is then removed.
-        self.local_crystals_db_path = os.path.join(self.stage_dir, "crystals.db")
-        self.local_crystals_db = ase.db.connect(self.local_crystals_db_path)
+        self.local_structures_db_path = os.path.join(self.stage_dir, "structures.db")
+        self.local_structures_db = ase.db.connect(self.local_structures_db_path)
 
     def __write_logs_to_global_log(
-        self,
-        global_log: tools.Logbook,
-        stage_logs: list[tools.Logbook]
+        self, global_log: tools.Logbook, stage_logs: list[tools.Logbook]
     ) -> int:
         # Get the maximum number of generations that have been run in any of
         # the stages
@@ -418,7 +426,7 @@ class GAParallelStage(Stage):
 
         # Get the last generation that has been run in the global log
         # to add it to each new generation
-        try: 
+        try:
             last_gen_global_log = global_log.select("gen")[-1]
         except:
             last_gen_global_log = 0
@@ -433,7 +441,7 @@ class GAParallelStage(Stage):
 
         # loop over the maximum number of generations that was performed in any
         # of the stages
-        for gen in range(1, max_gen+1):
+        for gen in range(1, max_gen + 1):
             # Add the global generation to the stage generation
             global_gen = last_gen_global_log + gen
 
@@ -442,12 +450,10 @@ class GAParallelStage(Stage):
             # Use very highest and lowest values for min and max so they are
             # always replaced
             record_for_gen = {
-                chapter: {
-                    "min": np.inf,
-                    "max": -np.inf,
-                    "mean": 0,
-                    "std": 0
-                } for chapter in stage_logs[0].chapters.keys() # Use the chapters of the first stage log, dont use chapters of the global log since it is potentially empty
+                chapter: {"min": np.inf, "max": -np.inf, "mean": 0, "std": 0}
+                for chapter in stage_logs[
+                    0
+                ].chapters.keys()  # Use the chapters of the first stage log, dont use chapters of the global log since it is potentially empty
             }
 
             # Loop over all the stage logs
@@ -461,7 +467,7 @@ class GAParallelStage(Stage):
                     # Loop over all the chapters in the stage log
                     for chapter in log.chapters.keys():
                         # Get the min value for the chapter in the generation
-                        min_val = log.chapters[chapter].select("min")[gen-1]
+                        min_val = log.chapters[chapter].select("min")[gen - 1]
                         if isinstance(min_val, list):
                             min_val = min(min_val)
 
@@ -471,7 +477,7 @@ class GAParallelStage(Stage):
                             record_for_gen[chapter]["min"] = min_val
 
                         # Get the max value for the chapter in the generation
-                        max_val = log.chapters[chapter].select("max")[gen-1]
+                        max_val = log.chapters[chapter].select("max")[gen - 1]
                         if isinstance(max_val, list):
                             max_val = max(max_val)
 
@@ -481,9 +487,7 @@ class GAParallelStage(Stage):
                             record_for_gen[chapter]["max"] = max_val
 
             # Add the record for the generation to the global log
-            global_log.record(
-                gen=global_gen, stage_id=self.id, **record_for_gen
-            )
+            global_log.record(gen=global_gen, stage_id=self.id, **record_for_gen)
             self.logger.debug(global_log.stream)
 
         return last_gen_global_log + max_gen
@@ -491,7 +495,7 @@ class GAParallelStage(Stage):
     def __create_empty_copy_of_global_log(
         self,
         global_log: tools.Logbook,
-        global_statistics: tools.MultiStatistics | None = None
+        global_statistics: tools.MultiStatistics | None = None,
     ) -> tools.Logbook:
         """Method to create an copy of the global log that is empty."""
         # NOTE: The notebook needs to be created from scratch since copying it
@@ -504,7 +508,7 @@ class GAParallelStage(Stage):
         if global_statistics is not None:
             global_stats_fields = global_statistics.fields
 
-        global_log_copy.header = ['stage_id', 'gen'] + global_stats_fields # type: ignore
+        global_log_copy.header = ["stage_id", "gen"] + global_stats_fields  # type: ignore
 
         return global_log_copy
 
@@ -512,7 +516,7 @@ class GAParallelStage(Stage):
         self,
         population: Population,
         global_log: tools.Logbook,
-        global_stats: tools.MultiStatistics | None
+        global_stats: tools.MultiStatistics | None,
     ) -> Population:
         self.__set_up_self()
 
@@ -524,7 +528,7 @@ class GAParallelStage(Stage):
 
         self.logger.info(f"Running {self.name} with {self.n_processes} processes...")
 
-        # Define an object that can be set to signal the other processes to 
+        # Define an object that can be set to signal the other processes to
         # stop if the global break condition is met
         stop_event = Event()
 
@@ -532,25 +536,30 @@ class GAParallelStage(Stage):
             f"Starting pool to run {len(self.stage_list)} stages in parallel "
             f"with {self.n_processes} processes.."
         )
-        with Pool(self.n_processes, initializer=init_worker, initargs=(stop_event,)) as p:
+        with Pool(
+            self.n_processes, initializer=init_worker, initargs=(stop_event,)
+        ) as p:
             # Run the stages in parallel with a pool of processes
             results = p.starmap_async(
-                perform_stage, [
+                perform_stage,
+                [
                     (
                         stage,
                         population,
-                        self.__create_empty_copy_of_global_log(global_log, global_stats),
+                        self.__create_empty_copy_of_global_log(
+                            global_log, global_stats
+                        ),
                         global_stats,
-                        self.local_crystals_db,
-                        # Set unique seed for each stage so it is reproducible 
-                        # and seeds do not conflict, should be unique even 
+                        self.local_structures_db,
+                        # Set unique seed for each stage so it is reproducible
+                        # and seeds do not conflict, should be unique even
                         # from main seed so it is not reset (therefore I use +1)
                         self.random_seed + i + 1,
                         self.global_break_condition,
                     )
                     for i, stage in enumerate(self.stage_list)
                 ],
-                error_callback=error_callback
+                error_callback=error_callback,
             )
 
             # Wait for the results to be ready with fun little animation
@@ -572,16 +581,11 @@ class GAParallelStage(Stage):
             stage_global_logs.append(glob_log)
 
         # Add the global logs from the stages to the global log
-        global_gen = self.__write_logs_to_global_log(
-            global_log,
-            stage_global_logs
-        )
+        global_gen = self.__write_logs_to_global_log(global_log, stage_global_logs)
 
         # If set, perform survivor selection
         if self.survivor_selection is not None:
-            individuals = self.survivor_selection.select(
-                individuals, population.size
-            )
+            individuals = self.survivor_selection.select(individuals, population.size)
 
         # Update the population with the individuals from the stages
         population.individuals = individuals

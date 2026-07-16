@@ -181,11 +181,11 @@ class MultiStageSearch:
         return self._run_dir
 
     @property
-    def crystal_database(self) -> Database:
-        """ASE Database to store selected crystal structures of the run."""
-        if not hasattr(self, "_crystal_database"):
-            self._crystal_database = db.connect(f"{self.run_dir}/crystals.db")
-        return self._crystal_database
+    def structures_database(self) -> Database:
+        """ASE Database to store selected structures of the run."""
+        if not hasattr(self, "_structures_database"):
+            self._structures_database = db.connect(f"{self.run_dir}/structures.db")
+        return self._structures_database
 
     @property
     def global_statistics(self) -> tools.MultiStatistics | None:
@@ -474,7 +474,7 @@ class MultiStageSearch:
         self.logger.debug(f"Saving at directory: {stage_dir}")
         stage.save_results(
             save_dir=stage_dir,
-            crystals_db=self.crystal_database,
+            structures_db=self.structures_database,
             global_statistics_dict=self._global_statistics_dict,
         )
 

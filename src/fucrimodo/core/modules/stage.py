@@ -8,18 +8,20 @@ from deap import tools
 from typing import Callable
 import logging
 
+
 class Stage(ABC):
     """Abstract base class for stages in the optimization algorithm.
 
     Stages are used to define the different steps in the optimization
     algorithm. Each stage can perform a defined optimization algorithm, for
     example a genetic algorithm or a swarm search algorithm.
-    Stages should not be run directly, but should be used with the 
+    Stages should not be run directly, but should be used with the
     multi-stage optimization algorithm.
 
     :param name: User friendly name of the stage, used for analysis.
     :param description: Optional description of the stage, used for analysis.
     """
+
     def __init__(self, name: str, description: str) -> None:
         self._name = name
         self._description = description
@@ -29,7 +31,7 @@ class Stage(ABC):
         if not hasattr(self, "_start_time"):
             raise AttributeError(
                 f"{self.__class__.__name__}: No start time set. "
-                    "Please set a start time with the set_start_time method."
+                "Please set a start time with the set_start_time method."
             )
         return self._start_time
 
@@ -59,7 +61,9 @@ class Stage(ABC):
     @property
     def logger(self) -> logging.Logger:
         if not hasattr(self, "_logger"):
-            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+            raise AttributeError(
+                f"{self.__class__.__name__}: No logger set. Please set a logger."
+            )
         return self._logger
 
     @logger.setter
@@ -69,7 +73,9 @@ class Stage(ABC):
     @property
     def stage_dir(self) -> str:
         if not hasattr(self, "_stage_dir"):
-            raise AttributeError(f"{self.__class__.__name__}: No stage directory set. Please set a stage directory.")
+            raise AttributeError(
+                f"{self.__class__.__name__}: No stage directory set. Please set a stage directory."
+            )
         return self._stage_dir
 
     @stage_dir.setter
@@ -78,7 +84,7 @@ class Stage(ABC):
 
     @abstractmethod
     def run(
-        self, 
+        self,
         population: Population,
         global_log: tools.Logbook,
         global_stats: tools.MultiStatistics | None,
@@ -87,10 +93,10 @@ class Stage(ABC):
 
     @abstractmethod
     def save_results(
-        self, 
-        save_dir: str, 
-        crystals_db: Database, 
-        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None
+        self,
+        save_dir: str,
+        structures_db: Database,
+        global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ) -> None:
         """Method to save the results of the stage to a given directory and
         ASE database.
