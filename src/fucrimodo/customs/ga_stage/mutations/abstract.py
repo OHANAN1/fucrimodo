@@ -111,6 +111,8 @@ class Mutation(ABC):
             else:
                 constraints = []
 
+            original_pbc = individual.pbc.copy()
+
             keep_offspring = False
             step = 0
             for step in range(self.max_steps):
@@ -184,7 +186,7 @@ class Mutation(ABC):
                 # make sure constraints are set
                 individual.set_constraint(constraints)
                 individual.set_cell(offspring_cell)
-                individual.set_pbc([True, True, True])
+                individual.set_pbc(original_pbc)
 
                 self.logger.debug("Done! After {} steps.".format(step + 1))
                 return individual, True

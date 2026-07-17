@@ -24,6 +24,7 @@ def atoms_in_individual_are_to_close(
     atomic_numbers: np.ndarray,
     cell: Cell,
     closest_distances: dict[tuple[int, int], float],
+    pbc: bool | list[bool] | np.ndarray = True,
     n_neighbours_to_check: int = 10,
 ) -> bool:
     """
@@ -32,7 +33,7 @@ def atoms_in_individual_are_to_close(
     n_atoms = len(atomic_numbers)
 
     for i in range(n_atoms):
-        _, distances = get_distances(positions, positions[i], cell=cell, pbc=True)
+        _, distances = get_distances(positions, positions[i], cell=cell, pbc=pbc)
 
         closest_neighbours = np.argsort(distances, axis=0)[
             1:n_neighbours_to_check
@@ -59,6 +60,7 @@ def adjust_atoms_positions(
     atomic_numbers: NDArray[np.int64],
     cell: Cell,
     closest_distances: dict,
+    pbc: bool | list[bool] | np.ndarray = True,
     n_neighbours_to_check: int = 10,
 ) -> None:
     """
@@ -69,7 +71,7 @@ def adjust_atoms_positions(
     atomic_numbers = atomic_numbers.tolist()
 
     for i in range(n_atoms):
-        _, distances = get_distances(positions, positions[i], cell=cell, pbc=True)
+        _, distances = get_distances(positions, positions[i], cell=cell, pbc=pbc)
 
         closest_neighbours = np.argsort(distances, axis=0)[
             1:n_neighbours_to_check
@@ -198,6 +200,9 @@ class Crossover(ABC):
         offspring_1 = None
         offspring_2 = None
 
+        par1_pbc = parent1.pbc.copy()
+        par2_pbc = parent2.pbc.copy()
+
         keep_offspring = False
         step = 0
         for step in range(self.max_steps):
@@ -288,12 +293,12 @@ class Crossover(ABC):
                 del parent1[:]
                 parent1.extend(offspring_1)
                 parent1.set_cell(offspring_1_cell)
-                parent1.set_pbc([True, True, True])
+                parent1.set_pbc(par1_pbc)
 
                 del parent2[:]
                 parent2.extend(offspring_2)
                 parent2.set_cell(offspring_2_cell)
-                parent2.set_pbc([True, True, True])
+                parent2.set_pbc(par2_pbc)
 
                 self.logger.debug("Done! After {} steps.".format(step + 1))
                 return (parent1, parent2, True)
