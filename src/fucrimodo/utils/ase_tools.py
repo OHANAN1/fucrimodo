@@ -64,13 +64,13 @@ def get_unique_keys_of_db(database: Database) -> list[str]:
 
 
 def get_data_with_specific_key_value_from_db(
-    crystals_db: Database, key: str, value: Any
+    structures_db: Database, key: str, value: Any
 ) -> tuple[list[ase.Atoms], list[dict[str, Any]]]:
     """
-    Returns the crystals and key value pairs from the database that have the
+    Returns the structures and key value pairs from the database that have the
     specified key and value.
     """
-    crystals = []
+    structures = []
     key_value_pairs = []
 
     def filter_stage(row):
@@ -85,14 +85,14 @@ def get_data_with_specific_key_value_from_db(
         else:
             warnings.warn(f"Could not find key {key} in row {row}.")
 
-    for row in crystals_db.select(filter=filter_stage):
-        crystals.append(row.toatoms())
+    for row in structures_db.select(filter=filter_stage):
+        structures.append(row.toatoms())
         key_value_pairs.append(row.key_value_pairs)
 
-    if len(crystals) == 0:
-        raise ValueError(f"Could not find any crystals for {key}.")
+    if len(structures) == 0:
+        raise ValueError(f"Could not find any structures for {key}.")
 
     if len(key_value_pairs) == 0:
         raise ValueError(f"Could not find any key value pairs for {key}.")
 
-    return crystals, key_value_pairs
+    return structures, key_value_pairs

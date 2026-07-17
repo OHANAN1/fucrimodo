@@ -91,17 +91,17 @@ class GlobalSOAP:
             "average": self.average,
         }
 
-    def __is_valid(self, crystal: ase.Atoms) -> bool:
-        if not isinstance(crystal, ase.Atoms):
+    def __is_valid(self, structure: ase.Atoms) -> bool:
+        if not isinstance(structure, ase.Atoms):
             warnings.warn("Input is not an ASE Atoms object")
             return False
 
-        atomic_numbers = crystal.get_atomic_numbers()
+        atomic_numbers = structure.get_atomic_numbers()
         if np.isnan(atomic_numbers).any():
             warnings.warn("Atomic numbers contain NaNs")
             return False
 
-        positions = crystal.get_positions()
+        positions = structure.get_positions()
         if np.isnan(positions).any():
             warnings.warn("Positions contain NaNs")
             return False
@@ -111,14 +111,14 @@ class GlobalSOAP:
             return False
 
         if len(atomic_numbers) == 0:
-            warnings.warn("No atoms in the crystal")
+            warnings.warn("No atoms in the structure")
             return False
 
-        if not hasattr(crystal, "cell"):
+        if not hasattr(structure, "cell"):
             warnings.warn("Cell is not defined")
             return False
 
-        cell = crystal.get_cell()[:]  # type: ignore
+        cell = structure.get_cell()[:]  # type: ignore
         if np.nan in cell:
             warnings.warn("Cell contains NaNs")
             return False
@@ -142,7 +142,7 @@ class GlobalSOAP:
             if not self.__is_valid(system):
                 raise ValueError("Invalid input. Check warnings for details.")
         else:
-            if not all(self.__is_valid(crystal) for crystal in system):
+            if not all(self.__is_valid(structure) for structure in system):
                 raise ValueError("Invalid input. Check warnings for details.")
 
         try:

@@ -28,7 +28,9 @@ class Mutation(ABC):
     @property
     def logger(self) -> logging.Logger:
         if not hasattr(self, "_logger"):
-            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+            raise AttributeError(
+                f"{self.__class__.__name__}: No logger set. Please set a logger."
+            )
         return self._logger
 
     @logger.setter
@@ -39,60 +41,60 @@ class Mutation(ABC):
         class_name = self.__class__.__name__
         variables = vars(self)
 
-        variables_str = ' '
+        variables_str = " "
         for key, value in variables.items():
             if key == "closest_distances" or key == "cell_bounds":
                 continue
-            variables_str += f'{key}={value}, '
+            variables_str += f"{key}={value}, "
 
         variables_str = variables_str[:-2]
-        return f'{class_name}({variables_str})'
+        return f"{class_name}({variables_str})"
 
-    def crystal_is_valid_object(self, crystal: Individual) -> bool:
+    def individual_is_valid_object(self, individual: Individual) -> bool:
         """
-        Tests if the crystal is a valid Individual object.
+        Tests if the individual is a valid Individual object.
         """
-        if not isinstance(crystal, Individual):
+        if not isinstance(individual, Individual):
             return False
 
-        if not len(crystal) > 0:
+        if not len(individual) > 0:
             return False
 
-        if not all(isinstance(atom, ase.Atom) for atom in crystal):
+        if not all(isinstance(atom, ase.Atom) for atom in individual):
             return False
 
-        if np.isnan(crystal.get_positions()).any():
+        if np.isnan(individual.get_positions()).any():
             return False
 
-        if np.isnan(crystal.get_cell()).any():
+        if np.isnan(individual.get_cell()).any():
             return False
 
-        if np.isnan(crystal.get_atomic_numbers()).any():
+        if np.isnan(individual.get_atomic_numbers()).any():
             return False
 
         return True
 
-    def crystal_is_physical(self, crystal: Individual) -> bool:
+    def individual_is_physical(self, individual: Individual) -> bool:
         """
-        Tests if the crystal is physical.
+        Tests if the individual is physical.
         """
-        if crystal.get_volume() < 1.:
+        if individual.get_volume() < 1.0:
             return False
 
-        if self.closest_distances.atoms_are_too_close(crystal):
+        if self.closest_distances.atoms_are_too_close(individual):
             return False
 
         return True
 
     @abstractmethod
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         """
         Should calculate the offspring from parent, depending on mutation type.
         If this was not possible, return None.
         """
         pass
 
-    def mutate(self, crystal: Individual) -> tuple[Individual, bool]:
+    def mutate(self, individual: Individual) -> tuple[Individual, bool]:
         """
         Should calculate the offspring from parent, depending on mutation type.
         Returns the offspring and a boolean if the mutation was successful.
@@ -104,15 +106,15 @@ class Mutation(ABC):
                 self.max_steps = 1
 
             offspring = None
-            if hasattr(crystal, "constraints"):
-                constraints = deepcopy(crystal.constraints)
+            if hasattr(individual, "constraints"):
+                constraints = deepcopy(individual.constraints)
             else:
                 constraints = []
 
             keep_offspring = False
             step = 0
             for step in range(self.max_steps):
-                offspring = crystal.copy()
+                offspring = individual.copy()
                 offspring.constraints = constraints
                 try:
                     offspring = self.perform_mutation(offspring)
@@ -120,7 +122,8 @@ class Mutation(ABC):
                 except Exception as e:
                     self.logger.warning(
                         "{}: Unknown Error. No mutation possible. {}".format(
-                            self.__class__.__name__, e)
+                            self.__class__.__name__, e
+                        )
                     )
                     keep_offspring = False
                     continue
@@ -132,22 +135,23 @@ class Mutation(ABC):
                     offspring.wrap()
 
                 try:
-                    offspring_is_valid = self.crystal_is_valid_object(
-                        offspring)
+                    offspring_is_valid = self.individual_is_valid_object(offspring)
                 except Exception as e:
                     self.logger.warning(
-                        "{}: Unknown Error crystal_is_valid_object. {}".format(
-                            self.__class__.__name__, e)
+                        "{}: Unknown Error individual_is_valid_object. {}".format(
+                            self.__class__.__name__, e
+                        )
                     )
                     keep_offspring = False
                     continue
 
                 try:
-                    offspring_is_physical = self.crystal_is_physical(offspring)
+                    offspring_is_physical = self.individual_is_physical(offspring)
                 except Exception as e:
                     self.logger.warning(
-                        "{}: Unknown Error in crystal_is_physical. {}".format(
-                            self.__class__.__name__, e)
+                        "{}: Unknown Error in individual_is_physical. {}".format(
+                            self.__class__.__name__, e
+                        )
                     )
                     keep_offspring = False
                     continue
@@ -156,7 +160,8 @@ class Mutation(ABC):
                     self.logger.warning(
                         "{}: Offspring is not a valid object.".format(
                             self.__class__.__name__
-                        ) + f"\nOffspring: {offspring}"
+                        )
+                        + f"\nOffspring: {offspring}"
                     )
                     keep_offspring = False
 
@@ -173,24 +178,25 @@ class Mutation(ABC):
 
                 # replace all Atoms in parent with offspring
                 # Lables and attributes stay the same
-                del crystal[:]
-                crystal.extend(offspring)
+                del individual[:]
+                individual.extend(offspring)
 
                 # make sure constraints are set
-                crystal.set_constraint(constraints)
-                crystal.set_cell(offspring_cell)
-                crystal.set_pbc([True, True, True])
+                individual.set_constraint(constraints)
+                individual.set_cell(offspring_cell)
+                individual.set_pbc([True, True, True])
 
-                self.logger.debug("Done! After {} steps.".format(step+1))
-                return crystal, True
+                self.logger.debug("Done! After {} steps.".format(step + 1))
+                return individual, True
 
             else:
                 self.logger.debug("Mutation failed.")
-                return crystal, False
+                return individual, False
 
         except Exception as e:
             self.logger.error(
                 "{}: Unknown Error. Couldnt perform mutation. {}".format(
-                    self.__class__.__name__, e)
+                    self.__class__.__name__, e
+                )
             )
-            return crystal, False
+            return individual, False

@@ -17,10 +17,10 @@ from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 
 class RandomSelectionPopulation(PopulationSelection):
     """
-    A class that returns a list of n random crystals.
-    Set database_name to describe the database the original crystals are from.
+    A class that returns a list of n random individuals.
+    Set database_name to describe the database the original individuals are from.
 
-    Call the object after initialization to get the list of crystals.
+    Call the object after initialization to get the list of individuals.
     """
 
     def __init__(self, n: int, database_name: Optional[str] = None):
@@ -29,13 +29,13 @@ class RandomSelectionPopulation(PopulationSelection):
 
     def add_individuals(self, individuals: list[Individual]) -> None:
         """
-        Adds a list of crystals to the start population.
+        Adds a list of individuals to the start population.
         """
         self.individuals = individuals
 
     def get_individual(self) -> Individual:
         """
-        Returns n random crystals from the crystals list.
+        Returns n random individuals from the individuals list.
         """
         chosen_individuals = random.choice(self.individuals)
         return chosen_individuals
@@ -45,7 +45,7 @@ class RandomSelectionPopulation(PopulationSelection):
         individuals: list[Individual],
     ) -> list[Individual]:
         """
-        Returns n random crystals from the crystals list.
+        Returns n random individuals from the individuals list.
         """
         chosen_individuals = random.choices(individuals, k=self.n)
         return chosen_individuals
@@ -136,12 +136,12 @@ class NSGA2Selection(PopulationSelection):
         return individuals
 
 
-class BestCrystalsPopulation(PopulationSelection):
+class BestIndividualsPopulation(PopulationSelection):
     """
-    A class that returns a list of n crystals with the highest fitness.
-    Set database_name to describe the database the original crystals are from.
+    A class that returns a list of n individuals with the highest fitness.
+    Set database_name to describe the database the original individuals are from.
 
-    Call the object after initialization to get the list of crystals.
+    Call the object after initialization to get the list of individuals.
     """
 
     def __init__(
@@ -165,19 +165,19 @@ class BestCrystalsPopulation(PopulationSelection):
         sorted_list = sorted(
             zip(individuals, fitness_list), key=lambda x: x[1], reverse=True
         )
-        best_individuals = [crystal for crystal, _ in sorted_list[: self.n]]
+        best_individuals = [ind for ind, _ in sorted_list[: self.n]]
 
         return best_individuals
 
     def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
         """
-        Returns n crystals with the highest fitness.
+        Returns n individuals with the highest fitness.
         """
 
         if self.n > len(individuals):
             n = len(individuals)
             warnings.warn(
-                "BestCrystalsPopulation: "
+                "BestIndividualsPopulation: "
                 + "n is larger than the number of individuals. "
                 + "Returning {} instead of {} individuals.".format(n, self.n)
             )
@@ -190,19 +190,19 @@ class BestCrystalsPopulation(PopulationSelection):
 
     def __repr__(self) -> str:
         if self.database_name is not None:
-            return "BestCrystalsPopulation(n={}, database_name={})".format(
+            return "BestIndividualsPopulation(n={}, database_name={})".format(
                 self.n, self.database_name
             )
         else:
-            return "BestCrystalsPopulation(n={})".format(self.n)
+            return "BestIndividualsPopulation(n={})".format(self.n)
 
 
-class WorstCrystalsPopulation(PopulationSelection):
+class WorstIndividualsPopulation(PopulationSelection):
     """
-    A class that returns a list of n crystals with the highest fitness.
-    Set database_name to describe the database the original crystals are from.
+    A class that returns a list of n individuals with the highest fitness.
+    Set database_name to describe the database the original individuals are from.
 
-    Call the object after initialization to get the list of crystals.
+    Call the object after initialization to get the list of individuals.
     """
 
     def __init__(
@@ -221,19 +221,19 @@ class WorstCrystalsPopulation(PopulationSelection):
         self, individuals: list[Individual], verbose: int = 1
     ) -> list[Individual]:
         fitness_list = []
-        for i, crystal in enumerate(individuals):
-            fitness_list.append(self.evaluation_function(crystal))
+        for i, ind in enumerate(individuals):
+            fitness_list.append(self.evaluation_function(ind))
 
         sorted_list = sorted(
             zip(individuals, fitness_list), key=lambda x: x[1], reverse=False
         )
-        sorted_crystals = [crystal for crystal, _ in sorted_list]
+        sorted_individuals = [ind for ind, _ in sorted_list]
 
-        return sorted_crystals[: self.n]
+        return sorted_individuals[: self.n]
 
     def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
         """
-        Returns n crystals with the highest fitness.
+        Returns n individuals with the highest fitness.
         """
         chosen_individuals = self.__get_n_worst_individuals(
             individuals=individuals, verbose=self.verbose
@@ -242,26 +242,26 @@ class WorstCrystalsPopulation(PopulationSelection):
 
     def __repr__(self) -> str:
         if self.database_name is not None:
-            return "WorstCrystalsPopulation(n={}, database_name={})".format(
+            return "WorstIndividualsPopulation(n={}, database_name={})".format(
                 self.n, self.database_name
             )
         else:
-            return "WorstCrystalsPopulation(n={}, ".format(self.n)
+            return "WorstIndividualsPopulation(n={}, ".format(self.n)
 
 
 class SelectAllPopulation(PopulationSelection):
     """
-    A class that returns all crystals.
-    Set database_name to describe the database the original crystals are from.
+    A class that returns all individuals.
+    Set database_name to describe the database the original individuals are from.
 
-    Call the object after initialization to get the list of crystals.
+    Call the object after initialization to get the list of individuals.
     """
 
     def __init__(self, database_name: Optional[str] = None):
         self.database_name = database_name
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Returns all crystals. Parameter n is ignored."""
+        """Returns all individuals. Parameter n is ignored."""
         return individuals
 
     def __repr__(self) -> str:
@@ -326,7 +326,7 @@ class DopePopulationSelection(PopulationSelection):
         self.generator = generator
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Add randomly generated crystals to the population.
+        """Add randomly generated individuals to the population.
 
         :param individuals: A list of individuals to add to.
         :param n: The number of individuals to add to the population.

@@ -18,11 +18,11 @@ class PhysicalityFitness(FitnessFunction):
 
     def __calculate_normalized_atom_distance_fitness(
         self,
-        crystal: ase.Atoms,
+        structure: ase.Atoms,
     ) -> float:
         """
         The Bigger the better.
-        Calculates the distances of all atoms in the crystal.
+        Calculates the distances of all atoms in the structure.
         If the distance between two atoms is bigger or equal to the
         min_allowed_dist the fitness is increased by 1.
 
@@ -32,9 +32,9 @@ class PhysicalityFitness(FitnessFunction):
 
         Nomalized by N(N-1)/2.
         """
-        positions = crystal.get_positions()
-        atomic_numbers = crystal.get_atomic_numbers()
-        cell = crystal.get_cell()
+        positions = structure.get_positions()
+        atomic_numbers = structure.get_atomic_numbers()
+        cell = structure.get_cell()
 
         _, distances = get_distances(p1=positions, cell=cell, pbc=True)
 
@@ -55,7 +55,7 @@ class PhysicalityFitness(FitnessFunction):
 
     def evaluate_individual(self, individual: Individual) -> float:
         return self.__calculate_normalized_atom_distance_fitness(
-            crystal=individual,
+            structure=individual,
         )
 
     def __repr__(self) -> str:

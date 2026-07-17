@@ -35,8 +35,8 @@ class ScaleUnitCellMutation(Mutation):
         self.cell_bounds = cell_bounds
         self.n_variable_cell_vectors = n_variable_cell_vectors
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        offspring = crystal.copy()
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        offspring = individual.copy()
         cell = offspring.get_cell()[:]  # type: ignore
 
         random_factor = np.random.uniform(self.min_scale, self.max_scale)
@@ -53,7 +53,7 @@ class ScaleUnitCellMutation(Mutation):
         )
 
         # If structure did not change, return None, to avoid false positives
-        if offspring == crystal:
+        if offspring == individual:
             self.logger.debug("Structure did not change.")
             return None
 
@@ -79,9 +79,9 @@ class StrainMutation(Mutation):
         self.max_steps = 1
         self.stddev = stddev
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         if self.cell_bounds is None:
-            len_ang = crystal.cell.cellpar()
+            len_ang = individual.cell.cellpar()
             a = len_ang[0]
             b = len_ang[1]
             c = len_ang[2]
@@ -103,9 +103,9 @@ class StrainMutation(Mutation):
             stddev=self.stddev,
             verbose=True,
         )
-        ase_strain.update_scaling_volume([crystal])
+        ase_strain.update_scaling_volume([individual])
 
-        offspring = crystal
+        offspring = individual
         mutant = ase_strain.mutate(offspring)
         return mutant
 
@@ -143,8 +143,8 @@ class EnlargeMutation(Mutation):
         else:
             return Cell(possible_cell_vectors), possible_sides
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        offspring = crystal
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        offspring = individual
         cell = offspring.get_cell()
         cell_vectors = cell[:]  # type: ignore
 
@@ -172,9 +172,9 @@ class NiggliReduceMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        build.niggli_reduce(crystal)
-        return crystal
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        build.niggli_reduce(individual)
+        return individual
 
 
 class MinimizeTiltMutation(Mutation):
@@ -184,9 +184,9 @@ class MinimizeTiltMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        build.minimize_tilt(crystal)
-        return crystal
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        build.minimize_tilt(individual)
+        return individual
 
 
 class CutoutMutation(Mutation):
@@ -202,8 +202,8 @@ class CutoutMutation(Mutation):
         self.cell_bounds = cell_bounds
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        if not self.cell_bounds.is_within_bounds(crystal.cell):
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        if not self.cell_bounds.is_within_bounds(individual.cell):
             return None
 
         a_vec = (np.random.uniform(0.0, 0.8), 0, 0)
@@ -213,15 +213,20 @@ class CutoutMutation(Mutation):
         else:
             c_vec = None
 
-        cutout_crystal = build.cut(
-            crystal, a=a_vec, b=b_vec, c=c_vec, clength=None, tolerance=self.tolerance
+        cutout_individual = build.cut(
+            individual,
+            a=a_vec,
+            b=b_vec,
+            c=c_vec,
+            clength=None,
+            tolerance=self.tolerance,
         )
 
-        if self.cell_bounds.is_within_bounds(cutout_crystal.cell):
-            if len(cutout_crystal) <= 1:
+        if self.cell_bounds.is_within_bounds(cutout_individual.cell):
+            if len(cutout_individual) <= 1:
                 return None
             else:
-                return cutout_crystal
+                return cutout_individual
         else:
             return None
 
@@ -233,8 +238,8 @@ class RotationMutation(Mutation):
         self.closest_distances = closest_distances
         self.max_steps = max_steps
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         v_rand = np.random.choice(["x", "y", "z"])
         a_rand = np.random.uniform(0, 90)
-        crystal.rotate(a=a_rand, v=v_rand, rotate_cell=False)
-        return crystal
+        individual.rotate(a=a_rand, v=v_rand, rotate_cell=False)
+        return individual

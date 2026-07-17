@@ -55,8 +55,8 @@ class MultipleMutations(Mutation):
 
         return selected_mutations
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        offspring = crystal
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        offspring = individual
 
         selected_mutations = self.__select_mutations()
 

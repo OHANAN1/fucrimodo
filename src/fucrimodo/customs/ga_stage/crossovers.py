@@ -14,35 +14,29 @@ from fucrimodo.customs.population_generator import convert_ase_atoms_to_individu
 from fucrimodo.core.modules import Individual
 import logging
 
-
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Utility functions                     ║
 # ╚══════════════════════════════════════════════════════════╝
 
-def atoms_in_crystal_are_to_close(
+
+def atoms_in_individual_are_to_close(
     positions: np.ndarray,
     atomic_numbers: np.ndarray,
     cell: Cell,
     closest_distances: dict[tuple[int, int], float],
-    n_neighbours_to_check: int = 10
+    n_neighbours_to_check: int = 10,
 ) -> bool:
     """
-    Returns True if atoms in crystal are to close to each other.
+    Returns True if atoms in individual are to close to each other.
     """
     n_atoms = len(atomic_numbers)
 
     for i in range(n_atoms):
-        _, distances = get_distances(
-            positions,
-            positions[i],
-            cell=cell,
-            pbc=True
-        )
+        _, distances = get_distances(positions, positions[i], cell=cell, pbc=True)
 
-        closest_neighbours = np.argsort(
-            distances,
-            axis=0
-        )[1:n_neighbours_to_check].flatten()
+        closest_neighbours = np.argsort(distances, axis=0)[
+            1:n_neighbours_to_check
+        ].flatten()
 
         for j in closest_neighbours:
             if i == j:
@@ -68,24 +62,18 @@ def adjust_atoms_positions(
     n_neighbours_to_check: int = 10,
 ) -> None:
     """
-    Adjusts atoms positions in the crystal to ensure minimum distances are
+    Adjusts atoms positions in the individual to ensure minimum distances are
     maintained.
     """
     n_atoms = len(atomic_numbers)
     atomic_numbers = atomic_numbers.tolist()
 
     for i in range(n_atoms):
-        _, distances = get_distances(
-            positions,
-            positions[i],
-            cell=cell,
-            pbc=True
-        )
+        _, distances = get_distances(positions, positions[i], cell=cell, pbc=True)
 
-        closest_neighbours = np.argsort(
-            distances,
-            axis=0
-        )[1:n_neighbours_to_check].flatten()
+        closest_neighbours = np.argsort(distances, axis=0)[
+            1:n_neighbours_to_check
+        ].flatten()
 
         for j in closest_neighbours.tolist():
             if i == j:
@@ -94,17 +82,14 @@ def adjust_atoms_positions(
             atomic_n_i = atomic_numbers[i]
             atomic_n_j = atomic_numbers[j]
 
-            min_allowed_distance = closest_distances[
-                (atomic_n_i, atomic_n_j)
-            ]
+            min_allowed_distance = closest_distances[(atomic_n_i, atomic_n_j)]
             current_distance = distances[j]
 
             if current_distance < min_allowed_distance:
                 direction = positions[j] - positions[i]
                 direction /= np.linalg.norm(direction)
 
-                correction = direction * \
-                    (min_allowed_distance - current_distance)
+                correction = direction * (min_allowed_distance - current_distance)
                 positions[i] -= correction
                 positions[j] += correction
 
@@ -113,19 +98,23 @@ def adjust_atoms_positions(
 # ║                 Abstract Crossover Class                 ║
 # ╚══════════════════════════════════════════════════════════╝
 
+
 class Crossover(ABC):
     """
     Here we define all attributes and methods that we need
     for _every_ crossover. The Crossover class will copy the parents,
     so that the original population is never changed.
     """
+
     def __init__(self, closest_distances: CustomClosestDistances):
         self.closest_distances = closest_distances
 
     @property
     def logger(self) -> logging.Logger:
         if not hasattr(self, "_logger"):
-            raise AttributeError(f"{self.__class__.__name__}: No logger set. Please set a logger.")
+            raise AttributeError(
+                f"{self.__class__.__name__}: No logger set. Please set a logger."
+            )
         return self._logger
 
     @logger.setter
@@ -136,57 +125,55 @@ class Crossover(ABC):
         class_name = self.__class__.__name__
         variables = vars(self)
 
-        variables_str = ' '
+        variables_str = " "
         for key, value in variables.items():
             if key == "closest_distances" or key == "cell_bounds":
                 continue
 
-            variables_str += f'{key}={value}, '
+            variables_str += f"{key}={value}, "
 
         variables_str = variables_str[:-2]
-        return f'{class_name}({variables_str})'
+        return f"{class_name}({variables_str})"
 
-    def crystal_is_valid_object(self, crystal: Individual) -> bool:
+    def individual_is_valid_object(self, individual: Individual) -> bool:
         """
-        Tests if the crystal is a valid Individual object.
+        Tests if the individual is a valid Individual object.
         """
-        if not isinstance(crystal, Individual):
+        if not isinstance(individual, Individual):
             return False
 
-        if not len(crystal) > 0:
+        if not len(individual) > 0:
             return False
 
-        if not all(isinstance(atom, ase.Atom) for atom in crystal):
+        if not all(isinstance(atom, ase.Atom) for atom in individual):
             return False
 
-        if np.isnan(crystal.get_positions()).any():
+        if np.isnan(individual.get_positions()).any():
             return False
 
-        if np.isnan(crystal.get_cell()).any():
+        if np.isnan(individual.get_cell()).any():
             return False
 
-        if np.isnan(crystal.get_atomic_numbers()).any():
+        if np.isnan(individual.get_atomic_numbers()).any():
             return False
 
         return True
 
-    def crystal_is_physical(self, crystal: Individual) -> bool:
+    def individual_is_physical(self, individual: Individual) -> bool:
         """
-        Tests if the crystal is physical.
+        Tests if the individual is physical.
         """
-        if crystal.get_volume() < 1.:
+        if individual.get_volume() < 1.0:
             return False
 
-        if self.closest_distances.atoms_are_too_close(crystal):
+        if self.closest_distances.atoms_are_too_close(individual):
             return False
 
         return True
 
     @abstractmethod
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
         """
         This is the methode where the specific crossover is performed.
@@ -195,9 +182,7 @@ class Crossover(ABC):
         pass
 
     def crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual, bool]:
         """
         Should calculate the offsprings from parents,
@@ -227,7 +212,8 @@ class Crossover(ABC):
             except Exception as e:
                 self.logger.error(
                     "{}: Unknown Error. No crossover possible. {}".format(
-                        self.__class__.__name__, e)
+                        self.__class__.__name__, e
+                    )
                 )
                 keep_offspring = False
                 continue
@@ -242,33 +228,32 @@ class Crossover(ABC):
                 except Exception as e:
                     self.logger.error(
                         "{}: Unknown Error in wrapping. {}".format(
-                            self.__class__.__name__, e)
+                            self.__class__.__name__, e
+                        )
                     )
                     keep_offspring = False
                     continue
 
             try:
-                offspring_1_is_valid = self.crystal_is_valid_object(
-                    offspring_1
-                )
-                offspring_2_is_valid = self.crystal_is_valid_object(
-                    offspring_2
-                )
+                offspring_1_is_valid = self.individual_is_valid_object(offspring_1)
+                offspring_2_is_valid = self.individual_is_valid_object(offspring_2)
             except Exception as e:
                 self.logger.error(
-                    "{}: Unknown Error in crystal_is_valid_object. {}".format(
-                        self.__class__.__name__, e)
+                    "{}: Unknown Error in individual_is_valid_object. {}".format(
+                        self.__class__.__name__, e
+                    )
                 )
                 keep_offspring = False
                 continue
 
             try:
-                offspring_1_is_physical = self.crystal_is_physical(offspring_1)
-                offspring_2_is_physical = self.crystal_is_physical(offspring_2)
+                offspring_1_is_physical = self.individual_is_physical(offspring_1)
+                offspring_2_is_physical = self.individual_is_physical(offspring_2)
             except Exception as e:
                 self.logger.error(
-                    "{}: Unknown Error in crystal_is_physical. {}".format(
-                        self.__class__.__name__, e)
+                    "{}: Unknown Error in individual_is_physical. {}".format(
+                        self.__class__.__name__, e
+                    )
                 )
                 keep_offspring = False
                 continue
@@ -277,7 +262,8 @@ class Crossover(ABC):
                 self.logger.warning(
                     "{}: Offspring is not a valid object.".format(
                         self.__class__.__name__
-                    ) + f"\nOffspring: {offspring_1} or {offspring_2}"
+                    )
+                    + f"\nOffspring: {offspring_1} or {offspring_2}"
                 )
                 keep_offspring = False
 
@@ -290,11 +276,7 @@ class Crossover(ABC):
 
         try:
 
-            if (
-                keep_offspring and
-                offspring_1 is not None
-                and offspring_2 is not None
-            ):
+            if keep_offspring and offspring_1 is not None and offspring_2 is not None:
                 offspring_1.wrap()
                 offspring_2.wrap()
 
@@ -313,7 +295,7 @@ class Crossover(ABC):
                 parent2.set_cell(offspring_2_cell)
                 parent2.set_pbc([True, True, True])
 
-                self.logger.debug("Done! After {} steps.".format(step+1))
+                self.logger.debug("Done! After {} steps.".format(step + 1))
                 return (parent1, parent2, True)
 
             else:
@@ -323,9 +305,11 @@ class Crossover(ABC):
         except Exception as e:
             self.logger.error(
                 "{}: Unknown Error. Couldnt return offspring. {}".format(
-                    self.__class__.__name__, e)
+                    self.__class__.__name__, e
+                )
             )
             return (parent1, parent2, False)
+
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                    Crossover Classes                     ║
@@ -337,16 +321,14 @@ class UnitCellCrossover(Crossover):
         self,
         closest_distances: CustomClosestDistances,
         scale_atoms: bool = True,
-        max_steps: int = 10
+        max_steps: int = 10,
     ):
         self.scale_atoms = scale_atoms
         self.max_steps = max_steps
         self.closest_distances = closest_distances
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
         offspring1 = parent1
@@ -367,13 +349,9 @@ class UnitCellCrossover(Crossover):
         cell_v3 = [cell1[2], cell2[2]]
         np.random.shuffle(cell_v3)
 
-        new_cell1 = Cell(
-            [cell_v1[0], cell_v2[0], cell_v3[0]]
-        )
+        new_cell1 = Cell([cell_v1[0], cell_v2[0], cell_v3[0]])
 
-        new_cell2 = Cell(
-            [cell_v1[1], cell_v2[1], cell_v3[1]]
-        )
+        new_cell2 = Cell([cell_v1[1], cell_v2[1], cell_v3[1]])
 
         offspring1.set_cell(new_cell1, scale_atoms=self.scale_atoms)
         offspring2.set_cell(new_cell2, scale_atoms=self.scale_atoms)
@@ -387,7 +365,7 @@ class StackCellsCrossover(Crossover):
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
         scale_atoms: bool = True,
-        max_steps: int = 10
+        max_steps: int = 10,
     ):
         self.scale_atoms = scale_atoms
         self.max_steps = max_steps
@@ -395,9 +373,7 @@ class StackCellsCrossover(Crossover):
         self.cell_bounds = cell_bounds
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
         axis = random.randint(0, 2)
@@ -410,23 +386,10 @@ class StackCellsCrossover(Crossover):
         if not self.cell_bounds.is_within_bounds(new_cell):
             return (None, None)
 
-        offspring1 = stack(
-            parent1,
-            parent2,
-            axis=axis,
-            cell=new_cell
-        )
-        offspring2 = stack(
-            parent2,
-            parent1,
-            axis=axis,
-            cell=new_cell
-        )
+        offspring1 = stack(parent1, parent2, axis=axis, cell=new_cell)
+        offspring2 = stack(parent2, parent1, axis=axis, cell=new_cell)
 
-        if (
-            isinstance(offspring1, Individual)
-            and isinstance(offspring2, Individual)
-        ):
+        if isinstance(offspring1, Individual) and isinstance(offspring2, Individual):
             return (offspring1, offspring2)
         else:
             return (None, None)
@@ -443,9 +406,7 @@ class OnePointElementCrossover(Crossover):
         self.closest_distances = closest_distances
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
         # Get minimum length of both parents
@@ -463,7 +424,6 @@ class OnePointElementCrossover(Crossover):
         if len(set(par_1_atomic_numbers + par_2_atomic_numbers)) == 1:
             return (None, None)
 
-
         # Get random index where to split the atomic numbers
         # Must be smaller then the minimum length to avoid to
         # many atoms in the offspring
@@ -471,8 +431,12 @@ class OnePointElementCrossover(Crossover):
 
         # Get the cut of atomic numbers of the opposite parents and
         # concatenate them to get the new atomic numbers
-        new_par_1_numbers = par_2_atomic_numbers[:cut_index] + par_1_atomic_numbers[cut_index:]
-        new_par_2_numbers = par_1_atomic_numbers[:cut_index] + par_2_atomic_numbers[cut_index:]
+        new_par_1_numbers = (
+            par_2_atomic_numbers[:cut_index] + par_1_atomic_numbers[cut_index:]
+        )
+        new_par_2_numbers = (
+            par_1_atomic_numbers[:cut_index] + par_2_atomic_numbers[cut_index:]
+        )
 
         offspring1 = parent1.copy()
         offspring1.set_atomic_numbers(new_par_1_numbers)
@@ -496,9 +460,7 @@ class OnePointPositionCrossover(Crossover):
         self.closest_distances = closest_distances
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
         # Get minimum length of both parents
@@ -550,9 +512,7 @@ class CutAndSpliceCrossover(Crossover):
         self.number_of_variable_cell_vectors = number_of_variable_cell_vectors
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
         if self.n_top == "all":
             n_top = len(parent1)
@@ -575,7 +535,7 @@ class CutAndSpliceCrossover(Crossover):
         if len(parent1) != len(parent2):
             return (None, None)
 
-        # Check if the parents have a minimum of 2 atoms, else the 
+        # Check if the parents have a minimum of 2 atoms, else the
         # CutAndSplicePairing is unnecessary
         if len(parent1) < 2:
             return (None, None)
@@ -593,22 +553,18 @@ class CutAndSpliceCrossover(Crossover):
             blmin=self.closest_distances,
             n_top=n_top,
             cellbounds=self.cell_bounds,
-            number_of_variable_cell_vectors=self.number_of_variable_cell_vectors
+            number_of_variable_cell_vectors=self.number_of_variable_cell_vectors,
         )
 
         # Create the first offspring
-        offspring_1 = cut_and_splice_pairing.cross(
-            parent1, parent2
-        )
+        offspring_1 = cut_and_splice_pairing.cross(parent1, parent2)
 
         # If it is not possible to create offspring, return None
         if offspring_1 is None:
             return (None, None)
 
         # Create the second offspring
-        offspring_2 = cut_and_splice_pairing.cross(
-            parent2, parent1
-        )
+        offspring_2 = cut_and_splice_pairing.cross(parent2, parent1)
 
         # If it is not possible to create offspring, return None
         if offspring_2 is None:
@@ -617,7 +573,7 @@ class CutAndSpliceCrossover(Crossover):
         # If both offspring are valid, return them
         return (
             convert_ase_atoms_to_individual(offspring_1),
-            convert_ase_atoms_to_individual(offspring_2)
+            convert_ase_atoms_to_individual(offspring_2),
         )
 
 
@@ -632,8 +588,6 @@ class DoNothingCrossover(Crossover):
         pass
 
     def perform_crossover(
-        self,
-        parent1: Individual,
-        parent2: Individual
+        self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
         return (None, None)

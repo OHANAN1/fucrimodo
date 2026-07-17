@@ -73,6 +73,7 @@ class GAStage(Stage):
             survivor_selection=survivor_selection,
             parent_selection=parent_selection,
             parent_ratio=parent_ratio,
+            save_n_best_individuals=save_n_structures,
         )
 
     @property

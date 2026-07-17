@@ -22,11 +22,10 @@ class ReplaceAtomsMutation(Mutation):
         possible_elements: list["str"],
         closest_distances: CustomClosestDistances,
         n_atoms_to_replace: int = 1,
-        max_steps: int = 1000
+        max_steps: int = 1000,
     ):
         self.possible_atomic_numbers: list[int] = [
-            ase_data.atomic_numbers[atom]
-            for atom in possible_elements
+            ase_data.atomic_numbers[atom] for atom in possible_elements
         ]
         self.n_atoms_to_replace = n_atoms_to_replace
         self.max_steps = max_steps
@@ -34,13 +33,13 @@ class ReplaceAtomsMutation(Mutation):
 
     def perform_mutation(
         self,
-        crystal: Individual,
+        individual: Individual,
     ) -> Individual | None:
 
-        if len(crystal) < self.n_atoms_to_replace:
+        if len(individual) < self.n_atoms_to_replace:
             return None
 
-        atomic_numbers = crystal.get_atomic_numbers()
+        atomic_numbers = individual.get_atomic_numbers()
 
         for _ in range(self.n_atoms_to_replace):
             random_index = random.choice(range(len(atomic_numbers)))
@@ -53,17 +52,15 @@ class ReplaceAtomsMutation(Mutation):
             if len(remaining_atomic_numbers) == 0:
                 return None
             else:
-                atomic_numbers[random_index] = random.choice(
-                    remaining_atomic_numbers
-                )
+                atomic_numbers[random_index] = random.choice(remaining_atomic_numbers)
 
-        crystal.set_atomic_numbers(atomic_numbers)
-        return crystal
+        individual.set_atomic_numbers(atomic_numbers)
+        return individual
 
 
 class AddAtomsMutation(Mutation):
     """
-    Add a random atom to the crystal.
+    Add a random atom to the individual.
     """
 
     def __init__(
@@ -72,11 +69,10 @@ class AddAtomsMutation(Mutation):
         closest_distances: CustomClosestDistances,
         max_steps: int = 400,
         n_atoms_to_add: int = 1,
-        only_same_species: bool = False
+        only_same_species: bool = False,
     ):
         self.possible_atomic_numbers: list[int] = [
-            ase_data.atomic_numbers[atom]
-            for atom in possible_elements
+            ase_data.atomic_numbers[atom] for atom in possible_elements
         ]
 
         self.n_atoms_to_add = n_atoms_to_add
@@ -92,10 +88,9 @@ class AddAtomsMutation(Mutation):
         max_steps=100,
     ) -> np.ndarray | None:
         for _ in range(max_steps):
-            candidate = np.array([
-                np.random.uniform(low, high)
-                for low, high in boundaries
-            ])
+            candidate = np.array(
+                [np.random.uniform(low, high) for low, high in boundaries]
+            )
 
             distances = np.linalg.norm(positions - candidate, axis=1)
 
@@ -107,47 +102,43 @@ class AddAtomsMutation(Mutation):
 
     def perform_mutation(
         self,
-        crystal: Individual,
+        individual: Individual,
     ) -> Individual | None:
 
-        positions = crystal.get_positions()
+        positions = individual.get_positions()
 
         for _ in range(self.n_atoms_to_add):
 
             random_atomic_number = random.choice(self.possible_atomic_numbers)
             if self.only_same_species:
-                unique_numbers = set(crystal.get_atomic_numbers())
+                unique_numbers = set(individual.get_atomic_numbers())
                 if len(unique_numbers) == 1:
-                    random_atomic_number = crystal.get_atomic_numbers()[0]
+                    random_atomic_number = individual.get_atomic_numbers()[0]
                 else:
                     random_atomic_number = random.choice(list(unique_numbers))
 
-            cell_len_ang = crystal.cell.cellpar()
+            cell_len_ang = individual.cell.cellpar()
             boundaries = (
                 (0, cell_len_ang[0]),
                 (0, cell_len_ang[1]),
-                (0, cell_len_ang[2])
+                (0, cell_len_ang[2]),
             )
 
             new_position = self.finde_distant_point(
-                positions,
-                1.0,
-                max_steps=100,
-                boundaries=boundaries  # type: ignore
+                positions, 1.0, max_steps=100, boundaries=boundaries  # type: ignore
             )
 
             if new_position is None:
                 return None
 
             else:
-                crystal.append(
+                individual.append(
                     ase.Atom(
-                        random_atomic_number,  # type: ignore
-                        position=new_position
+                        random_atomic_number, position=new_position  # type: ignore
                     )
                 )
 
-        return crystal
+        return individual
 
 
 class PermutationMutation(Mutation):
@@ -163,18 +154,16 @@ class PermutationMutation(Mutation):
         self.max_steps = 1
 
         if not isinstance(n_top, int) and not n_top == "all":
-            raise ValueError(
-                "n_top has to be an integer or the string 'all'"
-            )
+            raise ValueError("n_top has to be an integer or the string 'all'")
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        if len(crystal.numbers) == 1:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        if len(individual.numbers) == 1:
             return None
-        if len(np.unique(crystal.numbers)) == 1:
+        if len(np.unique(individual.numbers)) == 1:
             return None
 
         if self.n_top == "all":
-            n_top = len(crystal)
+            n_top = len(individual)
         else:
             n_top = self.n_top
 
@@ -182,17 +171,17 @@ class PermutationMutation(Mutation):
             n_top=n_top,
             probability=self.prob,
             blmin=self.closest_distances,
-            verbose=True
+            verbose=True,
         )
 
-        offspring = crystal
+        offspring = individual
         mutant = ase_permutation.mutate(offspring)
         return mutant
 
 
 class DeleteRandomAtomsMutation(Mutation):
     """
-    Deletes a random atom from the crystal.
+    Deletes a random atom from the individual.
     """
 
     def __init__(
@@ -204,8 +193,8 @@ class DeleteRandomAtomsMutation(Mutation):
         self.n_atoms_to_delete = n_atoms_to_delete
         self.closest_distances = closest_distances
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        offspring = crystal
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        offspring = individual
         number_of_atoms = len(offspring.get_atomic_numbers())
 
         if number_of_atoms <= 1:

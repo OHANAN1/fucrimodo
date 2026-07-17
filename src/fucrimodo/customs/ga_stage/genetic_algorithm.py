@@ -27,7 +27,7 @@ class GeneticAlgorithm:
         parent_selection: PopulationSelection,
         parent_ratio: float,
         survivor_selection: PopulationSelection,
-        save_n_best_crystals: int = 10,
+        save_n_best_individuals: int = 10,
     ):
         self.fitness_functions = fitness_functions
         self.fitness_weights = fitness_weights
@@ -40,7 +40,7 @@ class GeneticAlgorithm:
         self.break_condition = break_condition
         self.parent_selection = parent_selection
         self.survivor_selection = survivor_selection
-        self._hall_of_fame = tools.HallOfFame(save_n_best_crystals)
+        self._hall_of_fame = tools.HallOfFame(save_n_best_individuals)
         self.parent_ratio = parent_ratio
 
     @property

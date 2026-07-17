@@ -38,33 +38,33 @@ class RattleMutation(Mutation):
         if not isinstance(n_top, int) and not n_top == "all":
             raise ValueError("n_top has to be an integer or the string 'all'")
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         # Set n_top to the desired value
         if self.n_top == "all":
-            n_top = len(crystal)
+            n_top = len(individual)
         else:
             n_top = int(self.n_top)
 
         # Make sure n_top is not larger than the number of atoms
-        n_top = min(n_top, len(crystal))
+        n_top = min(n_top, len(individual))
 
-        positions = crystal.get_positions().copy()
-        indicees_to_rattle = np.random.choice(len(crystal), n_top, replace=False)
+        positions = individual.get_positions().copy()
+        indicees_to_rattle = np.random.choice(len(individual), n_top, replace=False)
         for i in indicees_to_rattle:
             positions[i] = positions[i] + np.random.normal(
                 scale=self.rattle_strength, size=positions[i].shape
             )
 
-        # Set the positions of the crystal
+        # Set the positions of the individual
         # This also respects the constraints set
-        crystal.set_positions(positions)
+        individual.set_positions(positions)
 
         # If constrains of Atoms made rattle movement not applicable
         # return None to signalize mutation failed
-        if np.any(positions != crystal.get_positions()):
+        if np.any(positions != individual.get_positions()):
             return None
 
-        return crystal
+        return individual
 
 
 class SmartRattleMutation(Mutation):
@@ -73,7 +73,7 @@ class SmartRattleMutation(Mutation):
 
     :param closest_distances: ClosestDistances object
     :param fitness_function: Fitness function that evaluates what is the best
-        crystal
+        individual
     :param descriptor_object: Descriptor to calculate the feature vectors
         of all possible atom movements in parallel. This can safe computation
         time. If None, the fitness function takes care of the descriptor if
@@ -99,12 +99,12 @@ class SmartRattleMutation(Mutation):
         self.fitness_function = fitness_function
         self.descriptor_object = descriptor_object
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
-        atom_index = np.random.randint(0, len(crystal) - 1)
+    def perform_mutation(self, individual: Individual) -> Individual | None:
+        atom_index = np.random.randint(0, len(individual) - 1)
         candidates = []
         for _ in range(self.directions_to_test):
-            # Copy the crystal to not change the original
-            candidate = crystal.copy()
+            # Copy the individual to not change the original
+            candidate = individual.copy()
 
             # rattle positions in random direction
             positions = candidate.positions.copy()
@@ -134,13 +134,13 @@ class SmartRattleMutation(Mutation):
         # Evaluate fitness of all candidates
         fitnesses = self.fitness_function.evaluate_individuals(candidates)
 
-        # Get the index of the best candidate and apply it to the crystal
-        best_crystal_ind = np.argmax(fitnesses)
+        # Get the index of the best candidate and apply it to the individual
+        best_individual_ind = np.argmax(fitnesses)
 
-        new_positions = candidates[best_crystal_ind].positions
-        crystal.positions[atom_index] = new_positions[atom_index]
+        new_positions = candidates[best_individual_ind].positions
+        individual.positions[atom_index] = new_positions[atom_index]
 
-        return crystal
+        return individual
 
 
 class GradientRattleMutation(Mutation):
@@ -151,7 +151,7 @@ class GradientRattleMutation(Mutation):
 
     :param closest_distances: ClosestDistances object
     :param rbf_similarity_obj: Object to calculate the rbf similarity
-        to the target crystal. Must have a descriptor_object set, so that
+        to the target individual. Must have a descriptor_object set, so that
         the gradient can be calculated.
     :param max_steps: Maximum number of steps to take
     :param n_atoms_to_move: Number of atoms to move
@@ -189,24 +189,24 @@ class GradientRattleMutation(Mutation):
             rbf_similarity_obj.descriptor_object is not None
         ), "The descriptor object of the rbf_similarity_obj must be set."
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         # adjust n_atoms_to_move if it is larger than the number of atoms
-        if self.n_atoms_to_move > len(crystal):
-            n_atoms_to_move = len(crystal)
+        if self.n_atoms_to_move > len(individual):
+            n_atoms_to_move = len(individual)
         else:
             n_atoms_to_move = self.n_atoms_to_move
 
         # Pick random atoms to move, all atoms indicees are only picked once
         atomic_indices = np.random.choice(
-            np.arange(len(crystal)), size=n_atoms_to_move, replace=False
+            np.arange(len(individual)), size=n_atoms_to_move, replace=False
         )
 
         # Calculate the gradient
         _, gradient = self.rbf_similarity_obj.derivative(
-            crystal, include=atomic_indices.tolist(), kwargs={"n_jobs": self.n_jobs}
+            individual, include=atomic_indices.tolist(), kwargs={"n_jobs": self.n_jobs}
         )
 
-        positions = crystal.positions.copy()
+        positions = individual.positions.copy()
 
         # Move the atoms
         for i in range(len(atomic_indices)):
@@ -228,19 +228,19 @@ class GradientRattleMutation(Mutation):
             ]
 
         # Set the new positions (constraints apply)
-        crystal.set_positions(positions)
+        individual.set_positions(positions)
 
         # If no positions could be changed return None
         # To symbolize that mutation failed
-        if np.all(positions != crystal.positions):
+        if np.all(positions != individual.positions):
             return None
 
-        return crystal
+        return individual
 
 
 class MirrorMutation(Mutation):
     """
-    Mirrors the crystal along a random axis.
+    Mirrors the individual along a random axis.
     """
 
     def __init__(
@@ -255,10 +255,10 @@ class MirrorMutation(Mutation):
         if not isinstance(n_top, int) and not n_top == "all":
             raise ValueError("n_top has to be an integer or the string 'all'")
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
 
         if self.n_top == "all":
-            n_top = len(crystal)
+            n_top = len(individual)
         else:
             n_top = self.n_top
 
@@ -266,7 +266,7 @@ class MirrorMutation(Mutation):
             blmin=self.closest_distances, n_top=n_top, verbose=False
         )
 
-        offspring = crystal
+        offspring = individual
         mutant = ase_mirror.mutate(offspring)
 
         return mutant

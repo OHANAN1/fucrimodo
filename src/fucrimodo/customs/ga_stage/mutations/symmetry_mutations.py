@@ -8,10 +8,10 @@ from .abstract import Mutation
 
 
 class GetConventionalCellMutation(Mutation):
-    """Tries to change the crystal to its conventional cell.
+    """Tries to change the individual to its conventional cell.
 
     This mutation is based on the `matid` :class:`SymmetryAnalyzer` class.
-    It will try to convert the crystal to its conventional cell by
+    It will try to convert the individual to its conventional cell by
     performing a symmetry analysis.
     The cell size and atomic positions will be changed accordingly.
 
@@ -43,14 +43,14 @@ class GetConventionalCellMutation(Mutation):
         self.max_volume_increase = max_volume_increase
         self.max_volume_decrease = max_volume_decrease
 
-    def perform_mutation(self, crystal: Individual) -> Individual | None:
+    def perform_mutation(self, individual: Individual) -> Individual | None:
         # Get the original volume
-        original_volume = crystal.get_volume()
+        original_volume = individual.get_volume()
 
-        crystal.set_pbc([True, True, True])
+        individual.set_pbc([True, True, True])
 
         # Analyze the individual to get the conventional cell
-        analyzer = matid.SymmetryAnalyzer(crystal.copy(), self.symmetry_tol)
+        analyzer = matid.SymmetryAnalyzer(individual.copy(), self.symmetry_tol)
         conventional_cell = analyzer.get_conventional_system()
 
         # Create a new individual with the analyzed properties
@@ -69,7 +69,7 @@ class GetConventionalCellMutation(Mutation):
 
         # Check if the new individual is the same as the original
         # If so, return None to symbolize that the mutation was not successful
-        if offspring == crystal:
+        if offspring == individual:
             return None
 
         return offspring
