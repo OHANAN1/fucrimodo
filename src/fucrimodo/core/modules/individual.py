@@ -1,7 +1,4 @@
 import ase
-from deap import base, creator
-from copy import deepcopy
-from functools import partial
 from operator import mul, truediv
 from collections.abc import Sequence
 import sys
@@ -12,23 +9,25 @@ import datetime
 class FitnessStorage(object):
     """Workaround for the DEAP Fitness class.
 
-    More information can be found in the DEAP documentation for the 
+    More information can be found in the DEAP documentation for the
     :class:'deap.base.Fitness' class.
     The main difference is that the FitnessStorage class can be initialized
     directly with a list of weights for the fitness values and does not depend
     on the DEAP creator module.
-    Everything els works the same way as the DEAP Fitness class, to ensure 
+    Everything els works the same way as the DEAP Fitness class, to ensure
     compatibility with the DEAP framework.
 
     :param weights: A sequence of weights that are associated with the fitness
         values. The weights are used to calculate the weighted fitness values.
     """
-    def __init__(self, weights = None):
+
+    def __init__(self, weights=None):
         self.weights = weights
         self.wvalues = ()
         if self.weights is not None and not isinstance(self.weights, Sequence):
             raise TypeError(
-                "Attribute weights of %r must be a sequence."% self.__class__)
+                "Attribute weights of %r must be a sequence." % self.__class__
+            )
 
     # TODO: Make this code more python like and consistent
     def getValues(self):
@@ -41,8 +40,9 @@ class FitnessStorage(object):
         if self.weights is None:
             self.wvalues = values
         else:
-            assert len(values) == len(self.weights), \
-                "Assigned values have not the same length than fitness weights"
+            assert len(values) == len(
+                self.weights
+            ), "Assigned values have not the same length than fitness weights"
             try:
                 self.wvalues = tuple(map(mul, values, self.weights))
             except TypeError:
@@ -52,19 +52,22 @@ class FitnessStorage(object):
                     "sequence of numbers when assigning to values of "
                     "%r. Currently assigning value(s) %r of %r to a "
                     "fitness with weights %s."
-                    % (self.__class__, values, type(values),
-                        self.weights)
+                    % (self.__class__, values, type(values), self.weights)
                 ).with_traceback(traceback)
 
     def delValues(self):
         self.wvalues = ()
 
     values = property(
-        getValues, setValues, delValues,
-        ("Fitness values. Use directly ``individual.fitness.values = values`` "
+        getValues,
+        setValues,
+        delValues,
+        (
+            "Fitness values. Use directly ``individual.fitness.values = values`` "
             "in order to set the fitness and ``del individual.fitness.values`` "
             "in order to clear (invalidate) the fitness. The (unweighted) fitness "
-            "can be directly accessed via ``individual.fitness.values``.")
+            "can be directly accessed via ``individual.fitness.values``."
+        ),
     )
 
     def dominates(self, other, obj=slice(None)):
@@ -127,14 +130,17 @@ class FitnessStorage(object):
 
     def __repr__(self):
         """Return the Python code to build a copy of the object."""
-        return "%s.%s(%r)" % (self.__module__, self.__class__.__name__,
-                              self.values if self.valid else tuple())
+        return "%s.%s(%r)" % (
+            self.__module__,
+            self.__class__.__name__,
+            self.values if self.valid else tuple(),
+        )
 
 
 class Individual(ase.Atoms):
     """
     An individual in the population. Inherits from :class:`ase.Atoms`.
-    Is initialized with the same arguments as the :class:`ase.Atoms` class 
+    Is initialized with the same arguments as the :class:`ase.Atoms` class
     and has additional attributes for the fitness values and additional
     information.
 
@@ -143,9 +149,8 @@ class Individual(ase.Atoms):
         :data:'pbc', etc.
     :param kwargs: Keyword arguments for the :class:`ase.Atoms` class.
     """
-    def __init__(
-        self, *args, **kwargs
-    ) -> None:
+
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.info = {}
         self._creation_time = datetime.datetime.now()
@@ -156,7 +161,7 @@ class Individual(ase.Atoms):
 
         The weights are used to calculate the weighted fitness values.
         Must be set, otherwise the fitness values are not calculated.
-        
+
         When the weights are set, the FitnessStorage object is reset to delete
         old values and set the new weights.
         """
@@ -186,7 +191,7 @@ class Individual(ase.Atoms):
         Example:
 
         .. code-block:: python
-            
+
             individual = Individual(ase.Atoms())
             individual.fitness = (1.0, 2.0, 3.0)
             fitness.values = (1.0, 2.0, 3.0)

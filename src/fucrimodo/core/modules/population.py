@@ -13,7 +13,8 @@ class Population:
     def individuals(self) -> list[Individual]:
         """The list of all individuals in the population.
 
-        If new individuals are set, the generation number is incremented.
+        If new individuals are set, the generation number is incremented
+        (see setter method).
         """
         return self._individuals
 
