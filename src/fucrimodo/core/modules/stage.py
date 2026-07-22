@@ -142,6 +142,10 @@ class Stage(ABC):
 
         Is set automatically by the MultiStageSearch algorithm.
         """
+        if not hasattr(self, "_id"):
+            raise AttributeError(
+                f"{self.__class__.__name__}: Please manually set ID before accessing it."
+            )
         return self._id
 
     @id.setter
