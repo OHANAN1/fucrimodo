@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+import os
 
 from fucrimodo.core.modules.individual import Individual
 from .population import Population
@@ -80,6 +81,9 @@ class Stage(ABC):
 
     @stage_dir.setter
     def stage_dir(self, value: str):
+        # Create dir if it not already exists
+        if not os.path.isdir(value):
+            os.mkdir(value)
         self._stage_dir = value
 
     @abstractmethod
