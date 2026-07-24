@@ -101,6 +101,10 @@ def load_target_file(save_path: str) -> tuple[GlobalSOAP, list, str]:
 
     if target_dict["descriptor_name"] == "GlobalSOAP":
         descriptor_object = GlobalSOAP(**target_dict["parameters"])
+    elif target_dict["descriptor_name"] == "CustomSOAP":
+        # To allow loading files with old descriptor name also
+        print("Using old API for GlobalSOAP: CustomSOAP")
+        descriptor_object = GlobalSOAP(**target_dict["parameters"])
     else:
         raise NotImplementedError(
             f"Descriptor {target_dict['descriptor_name']} is not implemented"

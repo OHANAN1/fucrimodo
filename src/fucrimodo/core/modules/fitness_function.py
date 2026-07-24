@@ -6,6 +6,7 @@ from .population import Population
 # ║        Abstract Base Class for Fitness Functions         ║
 # ╚══════════════════════════════════════════════════════════╝
 
+
 class FitnessFunction(ABC):
     """Class that defines the abstract base class for fitness functions.
 
@@ -20,6 +21,7 @@ class FitnessFunction(ABC):
     :raises ValueError: If the :data:'db_title' contains any spaces, numbers
         or special characters other than '_'.
     """
+
     def __init__(self, db_title: str | None = None):
         if db_title is not None:
             self.db_title = db_title
@@ -30,7 +32,7 @@ class FitnessFunction(ABC):
         fitness function in an ASE database.
         This title must not contain any spaces, numbers or special
         characters. '_' is allowed.
-        
+
         If the title is not set, the class name of the fitness function
         is used to generate a title.
         """
@@ -41,14 +43,12 @@ class FitnessFunction(ABC):
 
     @db_title.setter
     def db_title(self, title: str):
-        """Sets the title of the fitness. 
+        """Sets the title of the fitness.
 
         :raises ValueError: If the title contains any spaces, numbers
             or special characters other than '_'.
         """
-        forbidden_chars = [
-            " ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
-        ]
+        forbidden_chars = [" ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         if any([char in title for char in forbidden_chars]):
             raise ValueError(
                 "The title of the database must not contain any spaces, "
@@ -71,7 +71,7 @@ class FitnessFunction(ABC):
         Often it is more efficient to evaluate multiple individuals at once
         instead of evaluating them one by one. E.g. through parallelization.
         If not implemented by the class that inherits from this class,
-        this function will evaluate each individual one by one. 
+        this function will evaluate each individual one by one.
         (Not efficient)
 
         :param individuals: List of individuals to evaluate.
@@ -95,10 +95,12 @@ class FitnessFunction(ABC):
     def __repr__(self):
         class_name = self.__class__.__name__
         variables = vars(self)
-        variables_str = ""
+        variables_str_list = []
         for key, value in variables.items():
             if key == "target_soap_features":
                 value = "target_soap_features"
-            variables_str += f"{key}={value}, "
-
-        return f'{class_name}({variables_str})'
+            if key.startswith("_"):
+                continue
+            variables_str_list.append(f"{key}={value}")
+        variables_str = ", ".join(variables_str_list)
+        return f"{class_name}({variables_str})"
