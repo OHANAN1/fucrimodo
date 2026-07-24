@@ -1,7 +1,7 @@
 from .abstract import Mutation
 from fucrimodo.core.modules import Individual
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from ase.ga import soft_mutation as ase_soft_mut
+from ase_ga import soft_mutation as ase_soft_mut
 
 
 class SoftMutation(Mutation):

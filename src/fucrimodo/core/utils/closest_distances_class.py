@@ -1,7 +1,7 @@
 import ase
 import numpy as np
 from ase import data as ase_data
-from ase.ga import utilities as ase_utilities
+from ase_ga import utilities as ase_utilities
 
 
 def parallelepiped_heights(
@@ -34,7 +34,7 @@ def parallelepiped_heights(
 
 class CustomClosestDistances(dict[tuple[int, int], float]):
     """
-    Works like ase.ga.utilities.closest_distances_generator, but with custom
+    Works like ase_ga.utilities.closest_distances_generator, but with custom
     functionality:
     - has better __repr__ method to print the bounds
     - Can be used as easier type hint for type checking

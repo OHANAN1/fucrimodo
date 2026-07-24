@@ -1,7 +1,7 @@
 from .abstract import Mutation
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.core.modules import Individual
-import ase.ga.standardmutations as ase_standard_mut
+import ase_ga.standardmutations as ase_standard_mut
 import ase
 import ase.data as ase_data
 import random

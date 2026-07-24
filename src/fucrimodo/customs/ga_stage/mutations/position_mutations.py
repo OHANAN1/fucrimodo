@@ -3,7 +3,7 @@ from .abstract import Mutation
 from fucrimodo.core.modules import Individual, FitnessFunction
 from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
 from fucrimodo.customs.global_soap_target import GlobalSOAP, RBFSimilarity
-import ase.ga.standardmutations as ase_standard_mut
+import ase_ga.standardmutations as ase_standard_mut
 import numpy as np
 
 
@@ -13,7 +13,7 @@ class RattleMutation(Mutation):
     The maximal movement is defined by max_movement.
     This is then limited by the closest distance between atoms.
     The closest distance is calculated by the
-    ase.ga.utilities.closest_distances_generator.
+    ase_ga.utilities.closest_distances_generator.
 
     The bool shuffle_when_n_top determines if the atoms are shuffled
     if n_top is not "all". If False, always the first n_top atoms are moved.

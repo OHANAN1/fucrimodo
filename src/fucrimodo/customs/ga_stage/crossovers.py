@@ -3,7 +3,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 import ase
 from ase.cell import Cell
-from ase.ga.cutandsplicepairing import CutAndSplicePairing
+from ase_ga.cutandsplicepairing import CutAndSplicePairing
 from ase.build import stack
 from numpy.typing import NDArray
 from ase import build

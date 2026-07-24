@@ -28,7 +28,7 @@ class PhysicalityFitness(FitnessFunction):
 
         The minimal distance between two atoms is calculated by the
         covalent radii of the atoms with the closest_distances_generator
-        function from ase.ga.utilities.
+        function from ase_ga.utilities.
 
         Nomalized by N(N-1)/2.
         """
