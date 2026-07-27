@@ -1,6 +1,6 @@
 import random
 
-import ase.ga.standardmutations as ase_standard_mut
+import ase_ga.standardmutations as ase_standard_mut
 import numpy as np
 from ase import build
 from ase.cell import Cell

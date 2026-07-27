@@ -1,9 +1,9 @@
-from ase.ga.utilities import CellBounds
+from ase_ga.utilities import CellBounds
 
 
 class CustomCellBounds():
     """
-    Basically works like ase.ga.utilities.CellBounds, but with custom
+    Basically works like ase_ga.utilities.CellBounds, but with custom
     functionality:
     - has better __repr__ method to print the bounds
     - bounds is a property
