@@ -1,12 +1,16 @@
 from ase_ga.utilities import CellBounds
+from fucrimodo.core.modules import Individual
+from ase.cell import Cell
+import numpy as np
 
 
-class CustomCellBounds():
+class CustomCellBounds:
     """
     Basically works like ase_ga.utilities.CellBounds, but with custom
     functionality:
-    - has better __repr__ method to print the bounds
+    - has __repr__ method to print the bounds
     - bounds is a property
+    - has method `ind_is_within_bounds` to test if individual object is within bounds
 
     Example use:
     >>> CustomCellBounds(
@@ -27,6 +31,15 @@ class CustomCellBounds():
 
     def is_within_bounds(self, cell):
         return self._ase_cellbounds.is_within_bounds(cell)
+
+    def ind_is_within_bounds(self, individual: Individual):
+        assert hasattr(
+            individual, "cell"
+        ), "Only individuals with cell can be within the cell bound."
+        assert not np.all(
+            individual.cell[:] == 0.0  # type: ignore
+        ), "Cell of individual is not valid. Is it a molecule?"
+        return self.is_within_bounds(individual.cell)
 
     @property
     def bounds(self) -> dict[str, list[float]]:
