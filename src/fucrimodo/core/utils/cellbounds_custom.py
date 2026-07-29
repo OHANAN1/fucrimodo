@@ -29,7 +29,7 @@ class CustomCellBounds:
         self._ase_cellbounds = CellBounds(bounds)
         self._bounds = self._ase_cellbounds.bounds
 
-    def is_within_bounds(self, cell):
+    def is_within_bounds(self, cell: Cell):
         return self._ase_cellbounds.is_within_bounds(cell)
 
     def ind_is_within_bounds(self, individual: Individual):
