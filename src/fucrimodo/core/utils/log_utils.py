@@ -44,9 +44,7 @@ def setup_stage_logger(
     file_handler.setFormatter(formatter)
 
     # Add the file handler to the logger
-    # Avoid adding multiple handlers to the logger
-    if not logger.hasHandlers():
-        logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
 
     return logger, logger_name
 
@@ -89,9 +87,7 @@ def setup_run_logger(
     file_handler.setFormatter(formatter)
 
     # Add the file handler to the logger
-    # Avoid adding multiple handlers to the logger
-    if not logger.hasHandlers():
-        logger.addHandler(file_handler)
+    logger.addHandler(file_handler)
 
     # Add a StreamHandler if verbose is True to print to console
     if verbose:
