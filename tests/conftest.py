@@ -1,7 +1,14 @@
-import numpy as np
 import pytest
+import logging
+import tempfile
+import uuid
+import os
+from deap import tools
+from ase.db.core import Database
+from typing import Callable
+import numpy as np
 
-from fucrimodo.core.modules import Individual, Population
+from fucrimodo.core.modules import Individual, Population, Stage, FitnessFunction
 
 
 @pytest.fixture
@@ -46,6 +53,53 @@ def scored_individual(ind):
 
 
 @pytest.fixture
+def example_fitness():
+    class ExampleFitnessFunction(FitnessFunction):
+        def evaluate_individual(self, individual: Individual) -> float:
+            return np.sum(individual.pbc)
+
+    return ExampleFitnessFunction()
+
+
+@pytest.fixture
 def rng():
     """Deterministic random generator for reproducible tests."""
     return np.random.default_rng(seed=42)
+
+
+@pytest.fixture
+def logger():
+    return logging.getLogger()
+
+
+@pytest.fixture
+def temp_dir():
+    return os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+
+
+@pytest.fixture
+def ExampleStage():
+    class ExampleStage(Stage):
+        def run(
+            self,
+            population: Population,
+            global_log: tools.Logbook,
+            global_stats: tools.MultiStatistics | None,
+        ) -> Population:
+            return population
+
+        def save_results(
+            self,
+            save_dir: str,
+            structures_db: Database,
+            global_statistics_dict: (
+                dict[str, Callable[[Individual], float]] | None
+            ) = None,
+        ) -> None:
+            return None
+
+        @property
+        def info_dict(self) -> dict:
+            return {}
+
+    return ExampleStage
