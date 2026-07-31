@@ -14,7 +14,9 @@ import json
 import time
 
 
-def get_multi_stage_search(tmp_path, name=None):  # Uses pytest fixture
+# Do not use pytest fixture, to ensure temp paths
+# are seperate
+def get_multi_stage_search(tmp_path, name=None):
     return MultiStageSearch(
         save_dir=tmp_path,
         target_features=np.array([1, 2, 3]),
@@ -90,21 +92,38 @@ def test_structures_db(tmp_path, ind_slab):
     assert structure_db.count() == 2
 
 
-def test_global_statistics_and_log_initialization(tmp_path):
+def test_global_statistics_and_log_initialization(tmp_path, ind_crystal):
     multi_stage_search = get_multi_stage_search(tmp_path)
 
-    def mock_stats(ind):
-        return 1.0
-
-    # Test if global logbook gets properly initialized
-    assert not hasattr(multi_stage_search, "_global_log")
     assert multi_stage_search._global_statistics is None
 
-    multi_stage_search.global_statistics_dict = {"mock_stats": mock_stats}
+    multi_stage_search.global_statistics_dict = {"stats_1": lambda ind: 1.0}
 
+    # Test if global logbook and statistic gets properly initialized
     assert hasattr(multi_stage_search, "_global_log")
     assert isinstance(multi_stage_search.global_logbook, tools.Logbook)
     assert isinstance(multi_stage_search.global_statistics, tools.MultiStatistics)
+
+    ind_crystal.fitness_weights = (1.0,)
+    ind_crystal.fitness.values = (1.0,)
+    global_record = multi_stage_search.global_statistics.compile(
+        [ind_crystal, ind_crystal]
+    )
+    multi_stage_search.global_logbook.record(gen=1, stage_id=1, **global_record)
+
+    # Check if stats are properly recorded
+    assert len(multi_stage_search.global_logbook) == 1
+    assert len(multi_stage_search.global_logbook.chapters["stats_1"]) == 1
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["avg"] == 1.0
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["min"] == 1.0
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["max"] == 1.0
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["std"] == 0.0
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["gen"] == 1
+    assert multi_stage_search.global_logbook.chapters["stats_1"][0]["stage_id"] == 1
+
+    # If log is already recorded statistics cannot be replaced
+    with pytest.raises(AssertionError):
+        multi_stage_search.global_statistics_dict = {"stats_2": lambda ind: 2.0}
 
 
 def test_stage_history(tmp_path):
@@ -183,13 +202,145 @@ def test_stage_handelling(tmp_path, ExampleStage):
     assert line_count_new - line_count_old == 1
 
 
-def test_save_results():
-    pass
+def test_save_results_no_records(tmp_path, ind_crystal):
+    multi_stage_search = get_multi_stage_search(tmp_path)
+
+    info_file = os.path.join(multi_stage_search.run_dir, "global_statistics.json")
+
+    # Test that nothing is saved when no stats were ever recorded:
+    multi_stage_search.save_results()
+    with open(info_file, "r") as f:
+        assert f.read() == "{}"
 
 
-def test_save_info():
-    pass
+# Define seperate function since same file location is used
+def test_save_results_no_global_stats(tmp_path, ind_crystal):
+    # If no global stats are set but logbook records user is
+    # warned, that no results will be stored
+    #
+    multi_stage_search = get_multi_stage_search(tmp_path)
+    info_file = os.path.join(multi_stage_search.run_dir, "global_statistics.json")
+
+    multi_stage_search.global_logbook.record(gen=1, stage_id=1)
+    with pytest.warns():
+        multi_stage_search.save_results()
+    with open(info_file, "r") as f:
+        assert f.read() == "{}"
 
 
-def test_run():
-    pass
+# Define seperate function since same file location is used
+def test_save_results_with_global_stats(tmp_path, ind_crystal):
+    multi_stage_search = get_multi_stage_search(tmp_path)
+    info_file = os.path.join(multi_stage_search.run_dir, "global_statistics.json")
+
+    def stat_1(ind):
+        return 1.0
+
+    def stat_2(ind):
+        return 2.0
+
+    multi_stage_search.global_statistics_dict = {
+        "stat_1_name": stat_1,
+        "stat_2_name": stat_2,
+    }
+    multi_stage_search.global_logbook.record()
+
+    global_record = multi_stage_search.global_statistics.compile(  # type: ignore
+        [ind_crystal, ind_crystal]
+    )
+    multi_stage_search.global_logbook.record(gen=1, stage_id=1, **global_record)
+    multi_stage_search.global_logbook.record(gen=2, stage_id=1, **global_record)
+    multi_stage_search.save_results()
+
+    with open(info_file, "r") as f:
+        data = json.load(f)
+
+    assert data["names"] == ["stat_1_name", "stat_2_name"]
+    assert data["functions"] == ["stat_1", "stat_2"]
+    assert len(data["results"][0]["gen"]) == 2
+    assert data["results"][0]["gen"] == [1, 2]
+    assert data["results"][1]["gen"] == [1, 2]
+    assert data["results"][0]["min"] == [1, 1]
+    assert data["results"][1]["min"] == [2, 2]
+
+
+def test_save_info(tmp_path):
+    multi_stage_search = get_multi_stage_search(tmp_path, "test_name")
+    file_path = os.path.join(multi_stage_search.run_dir, "info.json")
+
+    # Set start time manually
+    multi_stage_search._start_time = datetime.datetime.now()
+
+    multi_stage_search.save_info()
+
+    with open(file_path, "r") as f:
+        data = json.load(f)
+
+    assert data["name"] == "test_name"
+    assert "description" in data
+    assert "start_time" in data
+    assert "start_time_ms" in data
+    assert "end_time" in data
+    assert "end_time_ms" in data
+    assert data["total_runtime"] == "0:00:00"
+    assert data["total_runtime_ms"] == 0
+    assert data["stage_history"] == {"ID": [], "relative_save_path": []}
+
+    # Test if I change e.g. end time the file changes
+    time.sleep(0.02)
+    multi_stage_search.set_end_time()
+
+    multi_stage_search.save_info()
+    with open(file_path, "r") as f:
+        data = json.load(f)
+    assert data["total_runtime_ms"] != 0
+
+
+def test_run(tmp_path, population, ExampleStage):
+    multi_stage_search = get_multi_stage_search(tmp_path)
+
+    # Set global stats that must be tracked by stage
+    multi_stage_search.global_statistics_dict = {"stat": lambda ind: 1.0}
+
+    example_stage = ExampleStage("test stage", "")
+
+    multi_stage_search.run(population, example_stage)
+
+    # Time and stage tracking was performed
+    assert multi_stage_search.current_stage_id == 1
+    assert multi_stage_search.start_time != multi_stage_search.end_time
+
+    # Stage was set up properly
+    assert hasattr(example_stage, "id")
+    assert example_stage.id == 1
+    assert multi_stage_search.stage_history == {
+        "ID": [1],
+        "relative_save_path": ["stage_1"],
+    }
+
+    # Run and save method of stage was called
+    assert example_stage.was_run == True
+    assert example_stage.was_saved == True
+
+    generated_files = os.listdir(multi_stage_search.run_dir)
+    assert "global_statistics.json" in generated_files
+    assert "info.json" in generated_files
+    assert "run.log" in generated_files
+    assert "stage_1" in generated_files
+
+    # Global stats were recorded for multi_stage_search
+    with open(
+        os.path.join(multi_stage_search.run_dir, "global_statistics.json"), "r"
+    ) as f:
+        data = json.load(f)
+    assert data["names"] == ["stat"]
+
+
+def test_run_without_global_stats(tmp_path, population, ExampleStage):
+    multi_stage_search = get_multi_stage_search(tmp_path)
+
+    example_stage: Stage = ExampleStage("test stage", "")
+
+    # Get warning if no global stats are set
+    with pytest.warns(UserWarning):
+        multi_stage_search.run(population, example_stage)

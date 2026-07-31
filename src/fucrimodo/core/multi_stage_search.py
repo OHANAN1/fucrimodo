@@ -4,6 +4,7 @@ import logging
 import os
 from typing import Callable
 
+from deap.tools.crossover import warnings
 import numpy as np
 from ase import db
 from ase.db.core import Database
@@ -18,24 +19,31 @@ from .modules import Population, Stage
 class MultiStageSearch:
     """Class to run the multi-stage optimization algorithm.
 
-    The multi-stage optimization algorithm is used to run stages
-    of optimization algorithms.
+    This class is used to manage data, time-keeping, organization of stages, ...
+    during a multi-stage search.  On initialization the class creates a
+    :attr:`run_dir` inside the :param:`save_dir` where information about the run
+    can be stored. A new directory inside :attr:`run_dir` is then automatically
+    assigned for each stage so it can store its own data.
+    After setting up the MultiStageSearch a stage can be run with the `run` method.
 
     :param save_dir: Directory where a dictionary should be created to store
         the data of the run.
     :param target_features: Array with the target features that the
         optimization algorithm should invert.
-    :param descriptor_object: Object of the descriptor that is used to
+    :param descriptor_object: Descriptor object that is used to
         calculate the features of the individuals.
     :param descriptive_name: Optional name of the run. If no name is given,
-        the current time and date is used. Saved to :attr:`name`.
+        the current time and date is used. The directory, where all data is
+        stored (:attr:`run_dir`) is initialized with the :attr:`name`.
+    :param description: Optional description for the run. Will be stored
+        automatically in the info.json in the :attr:`run_dir`.
     :param global_statistics_dict: Dictionary, where the keys are the
         names of the statistics and the values are functions that calculate the
         statistics for an individual. The statistics are calculated for each
         iteration that modifies the population (e.g. in Genetic Algorithms they
         are calculated for each generation) of all stages of the optimization
         algorithm. If not initialized at start must be set later.
-    :param log_level: Log level of the global logger. Set to logging.INFO to
+    :param log_level: Log level of the global logger. Set it to logging.INFO to
         see the progress of the run.
     :param verbose: If set to True, the global logger also logs to the console
         in addition to the log file.
@@ -53,18 +61,13 @@ class MultiStageSearch:
         verbose: bool = True,
     ) -> None:
         # If no descriptive name is given, use the current time and date.
-        # Define name attribute without setter, since it should never be changed
         if descriptive_name is None:
             self._name = self.__get_time_string()
         else:
             self._name = descriptive_name
 
         self._description = description
-
-        # Set the target features of the optimization algorithm
         self._target_features = target_features
-
-        # Set the descriptor object that is used to calculate the features
         self._descriptor_object = descriptor_object
 
         # Create the dictionary to store the data of the run
@@ -73,7 +76,7 @@ class MultiStageSearch:
         # Save the global statistics dictionary to access it during saving
         self.global_statistics_dict = global_statistics_dict
 
-        # Set the current stage id to 0
+        # Initially set the stage id to 0
         self.current_stage_id = 0
 
         # Set up the global logger for the run
@@ -88,6 +91,8 @@ class MultiStageSearch:
 
     @property
     def name(self) -> str:
+        """Name of the run. The :attr:run_dir will be named after it."""
+        # Define name attribute without setter, since it should never be changed
         return self._name
 
     @property
@@ -104,7 +109,6 @@ class MultiStageSearch:
 
     @log_level.setter
     def log_level(self, value: int):
-        # set new log level attribute
         self._log_level = value
 
         # update the log level of the global logger
@@ -112,6 +116,10 @@ class MultiStageSearch:
 
     @property
     def start_time(self) -> datetime.datetime:
+        if not hasattr(self, "_start_time"):
+            raise AttributeError(
+                "No start time set. Please first run a stage before calling start_time."
+            )
         return self._start_time
 
     @property
@@ -129,7 +137,7 @@ class MultiStageSearch:
     def max_number_of_parallel_jobs(self) -> int:
         """Maximum number of parallel jobs that should be run.
 
-        Only for information. The number of parallel jobs must be set in the
+        Only for information. The number of parallel jobs must be set
         correctly in the stages but this can be used to check if the number
         of parallel jobs is set correctly in all stages.
         """
@@ -145,26 +153,44 @@ class MultiStageSearch:
 
     @property
     def global_statistics_dict(self) -> dict[str, Callable[[Individual], float]] | None:
+        if not hasattr(self, "_global_statistics_dict"):
+            self._global_statistics_dict = None
         return self._global_statistics_dict
 
     @global_statistics_dict.setter
     def global_statistics_dict(
         self, value: dict[str, Callable[[Individual], float]] | None
     ):
-        """Setter for the global statistics dictionary.
+        """Dictionary of the global statistics dictionary.
 
-        The setter also creates the global statistics and the logbook for the
-        new statistics.
+        The global statistics are a list of descriptive names for each statistic
+        and a callable function that can evaluate individuals. E.g.:
+        ```python
+        global_statistics_dict = {
+            "volume": lambda ind: ind.get_volume(),
+        }
+        ```
+
+        Global statistics are tracked for all stages and are stored in the file
+        :attr:`run_dir`/global_statistics.json.
+
+        Setting a new global statistics dict also creates the :attr:`_global_statistics` and
+        the :attr:`global_logbook` for the new statistics.
         """
+        # Only allow setting statistics if no stats have been recorded yet.
+        assert len(self.global_logbook) == 0
+
         self._global_statistics_dict = value
+
         # Create the global statistics and the logbook for the new statistics
         if value is None:
             self._global_statistics = None
+            self._global_log = self._get_global_logbook()
         else:
             self._global_statistics = self.__create_global_statistics(
                 self._global_statistics_dict
             )
-            self._global_log = self.global_logbook
+            self._global_log = self._get_global_logbook()
 
     @property
     def target_features(self) -> np.ndarray:
@@ -195,7 +221,19 @@ class MultiStageSearch:
 
     @property
     def global_statistics(self) -> tools.MultiStatistics | None:
+        if not hasattr(self, "_global_statistics"):
+            self._global_statistics = None
         return self._global_statistics
+
+    def _get_global_logbook(self) -> tools.Logbook:
+        """Generate the global logbook for set global_statistics."""
+        global_log = tools.Logbook()
+        global_stats_fields = []
+        if self.global_statistics is not None:
+            global_stats_fields = self.global_statistics.fields
+
+        global_log.header = ["stage_id", "gen"] + global_stats_fields  # type: ignore
+        return global_log
 
     @property
     def global_logbook(self) -> tools.Logbook:
@@ -209,13 +247,7 @@ class MultiStageSearch:
         stage id and the generation number.
         """
         if not hasattr(self, "_global_log"):
-            self._global_log = tools.Logbook()
-
-            global_stats_fields = []
-            if self.global_statistics is not None:
-                global_stats_fields = self.global_statistics.fields
-
-            self._global_log.header = ["stage_id", "gen"] + global_stats_fields  # type: ignore
+            self._global_log = self._get_global_logbook()
 
         return self._global_log
 
@@ -419,24 +451,43 @@ class MultiStageSearch:
                     "stage_id": stat_log.select("stage_id"),
                 }
                 global_stats_dict["results"].append(stat_result)
+        elif len(self.global_logbook) > 0:
+            # For the chase that global stats are not set but there are records in the log
+            # warn user that nothing will be recorded
+            warnings.warn(
+                "Global statistics were never set, so no results will be recorded."
+            )
 
         # Save the global statistics in a JSON file
         file_path = os.path.join(self.run_dir, "global_statistics.json")
         with open(file_path, "w") as f:
-            json.dump(global_stats_dict, f, indent=4)
+            json.dump(global_stats_dict, f)
 
     def save_info(self):
+        """Stores info of the run to json file.
+
+        File is located at info.json in :attr:`run_dir`.
+        Stores :attr:`name`, :attr:`description`, :attr:`start_time`, :attr:`end_time`,
+        `total_runtime`, :attr:`stage_history` (See its attribute description.).
+
+        All times are stored as timestemp as well as millisecs since epoch.
+        """
         file_path = os.path.join(self.run_dir, "info.json")
         info_dict = {
             "name": self.name,
             "description": self.description,
             "start_time": self.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "start_time_ms": int(self.start_time.timestamp() * 1000),
             "end_time": self.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "end_time_ms": int(self.end_time.timestamp() * 1000),
             "total_runtime": str(self.end_time - self.start_time),
+            "total_runtime_ms": int(
+                (self.end_time - self.start_time).total_seconds() * 1000
+            ),
             "stage_history": self.stage_history,
         }
         with open(file_path, "w") as f:
-            json.dump(info_dict, f, indent=4)
+            json.dump(info_dict, f)
 
     def run(self, population: Population, stage: Stage) -> Population:
         """Method to run a stage of the optimization algorithm.
@@ -450,11 +501,10 @@ class MultiStageSearch:
         :param population: Population that should be optimized.
         :param stage: Stage that should be run.
         """
-
-        # TODO: Make global statistics optional
         if not self.global_statistics_dict:
-            raise ValueError(
-                "Please set a global_statistics_dict, so stats on the run can be tracked."
+            warnings.warn(
+                "No global_statistics_dict set, so no global stats will be tracked.",
+                UserWarning,
             )
 
         # Update the current stage ID, to ensure the stages have unique IDs

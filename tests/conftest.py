@@ -1,3 +1,4 @@
+import time
 import pytest
 import logging
 import tempfile
@@ -86,6 +87,14 @@ def ExampleStage():
             global_log: tools.Logbook,
             global_stats: tools.MultiStatistics | None,
         ) -> Population:
+            if global_stats:
+                global_record = global_stats.compile(population.individuals)
+                global_log.record(
+                    gen=population.generation, stage_id=self.id, **global_record
+                )
+
+            time.sleep(0.05)
+            self.was_run = True
             return population
 
         def save_results(
@@ -96,6 +105,7 @@ def ExampleStage():
                 dict[str, Callable[[Individual], float]] | None
             ) = None,
         ) -> None:
+            self.was_saved = True
             return None
 
         @property
