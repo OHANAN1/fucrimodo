@@ -2,8 +2,6 @@
 from fucrimodo.core.utils import reproducability
 import os
 
-from numpy.lib import save
-
 
 def test_get_last_commig_msg():
     # Check if it can be executed
