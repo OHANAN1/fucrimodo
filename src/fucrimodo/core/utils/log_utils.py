@@ -64,9 +64,8 @@ def setup_run_logger(
     :param verbose: If True, log messages will be printed to the console
         through the StreamHandler.
 
-    :return: A tuple containing the logger and the name of the logger.
-        The name of the logger is the run name separated by an underscore
-        {run_name}_logger.
+    :return: The logger. Note: The name of the logger is the run name separated
+        by an underscore {run_name}_logger.
     """
     # Create logger name
     logger_name = f"{run_name}_logger"

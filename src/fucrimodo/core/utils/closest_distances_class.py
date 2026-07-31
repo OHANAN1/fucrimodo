@@ -1,4 +1,3 @@
-import ase
 from fucrimodo.core.modules.individual import Individual
 import numpy as np
 from ase import data as ase_data

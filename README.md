@@ -60,8 +60,13 @@ Exemplary raw data is provided to perform test runs.
 
 ### Documentation
 
-Additional info can be found in the Documentation. To generate html docs
-run the following:
+Additional info can be found in the Documentation. To generate docs first install the requirements.
+```bash
+pip install "fucrimodo[docs]"
+```
+
+
+Now an html version of the docs can be generated:
 ```bash
 cd docs/
 make html

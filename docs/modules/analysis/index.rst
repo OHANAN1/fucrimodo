@@ -1,6 +1,6 @@
-=====================
-Analyse Dokumentation
-=====================
+==============
+Analyse Module
+==============
 
 .. contents::
    :depth: 2

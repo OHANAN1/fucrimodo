@@ -133,6 +133,10 @@ class MultiStageSearch:
         correctly in the stages but this can be used to check if the number
         of parallel jobs is set correctly in all stages.
         """
+        if not hasattr(self, "_max_number_of_parallel_jobs"):
+            raise AttributeError(
+                "Please set the maximum number of parallel jobs manually before calling."
+            )
         return self._max_number_of_parallel_jobs
 
     @max_number_of_parallel_jobs.setter
@@ -184,7 +188,9 @@ class MultiStageSearch:
     def structures_database(self) -> Database:
         """ASE Database to store selected structures of the run."""
         if not hasattr(self, "_structures_database"):
-            self._structures_database = db.connect(f"{self.run_dir}/structures.db")
+            self._structures_database = db.connect(
+                os.path.join(self.run_dir, "structures.db")
+            )
         return self._structures_database
 
     @property
@@ -275,8 +281,7 @@ class MultiStageSearch:
         """
         run_dir = os.path.join(os.getcwd(), save_dir, self.name)
 
-        # Check if dir already exists and create fallback if thats the chase
-        # This is done to avoid the error that happens sometimes on slurm
+        # Check if dir already exists to not overwrite old data
         # TODO: Replace this with the option to restart run from old data
         if os.path.isdir(run_dir):
             raise FileExistsError(
@@ -294,7 +299,7 @@ class MultiStageSearch:
         date_string = now.strftime("%Y_%m_%d_H%H_%M_%S")
         return date_string
 
-    def __save_stage_info(self, stage: Stage, stage_dir: str):
+    def __save_stage_info(self, stage: Stage):
         """Method to save the info of a stage in a JSON file.
 
         The info of the stage is saved in a JSON file in the stage directory.
@@ -313,18 +318,23 @@ class MultiStageSearch:
                 "name": stage.name,
                 "description": stage.description,
                 "start_time": stage.start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "start_time_ms": int(stage.start_time.timestamp() * 1000),
                 "end_time": stage.end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_time_ms": int(stage.end_time.timestamp() * 1000),
                 "total_runtime": str(stage.end_time - stage.start_time),
+                "total_runtime_ms": int(
+                    (stage.end_time - stage.start_time).total_seconds() * 1000
+                ),
             }
         )
 
-        file_path = os.path.join(stage_dir, "info.json")
+        file_path = os.path.join(stage.stage_dir, "info.json")
         with open(file_path, "w") as f:
-            json.dump(stage_info_dict, f, indent=4)
+            json.dump(stage_info_dict, f)
 
         stage.logger.debug(f"Saved info.json of stage at {file_path}")
 
-    def __set_up_stage(self, stage: Stage, stage_id: int) -> str:
+    def __set_up_stage(self, stage: Stage) -> str:
         """Method to set up the stage for a run.
 
         Adds the stage ID to the stage and creates a directory for the stage.
@@ -339,14 +349,14 @@ class MultiStageSearch:
         :param stage_id: A unique ID that should be assigned to the stage.
         """
         # Assign the stage ID to the stage
-        stage.id = stage_id
+        stage.id = self.current_stage_id
 
         # Add the current time as the start time of the stage
         stage.set_start_time()
 
         # Create a directory for the stage in the run directory
         # stage should be saved in a directory relative to the run
-        relative_stage_dir = f"stage_{stage_id}"
+        relative_stage_dir = f"stage_{stage.id}"
         stage_dir = os.path.join(self.run_dir, relative_stage_dir)
         os.mkdir(stage_dir)
 
@@ -364,14 +374,14 @@ class MultiStageSearch:
         # Attach logger to the stage
         stage.logger = stage_logger
 
-        stage_logger.info(f"Set up stage {stage_id}: {stage.name}")
+        stage_logger.info(f"Set up stage {stage.id}: {stage.name}")
 
         # Save the info of the stage in a JSON file in the stage directory
-        self.__save_stage_info(stage, stage_dir)
+        self.__save_stage_info(stage)
 
         # Update the stage history with the currently run stage
         self.__update_stage_history(
-            stage_id=self.current_stage_id, relative_save_path=relative_stage_dir
+            stage_id=stage.id, relative_save_path=relative_stage_dir
         )
 
         return stage_dir
@@ -455,7 +465,7 @@ class MultiStageSearch:
             self._start_time = datetime.datetime.now()
 
         # Create a directory for the stage first, to ensure data can be saved
-        stage_dir = self.__set_up_stage(stage, self.current_stage_id)
+        stage_dir = self.__set_up_stage(stage)
 
         # Run the stage and save the results
         self.logger.info(
@@ -482,7 +492,7 @@ class MultiStageSearch:
         stage.set_end_time()
 
         # Save the stage_info_dict again, to update data. E.g. number of generations
-        self.__save_stage_info(stage, stage_dir)
+        self.__save_stage_info(stage)
 
         # Set the end time of the run. Will be overwritten if run again.
         self.set_end_time()

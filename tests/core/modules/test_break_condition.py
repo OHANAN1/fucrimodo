@@ -1,12 +1,6 @@
 import pytest
 from fucrimodo.core.modules import BreakCondition, Population
 
-# def __repr__(self):
-#     class_name = self.__class__.__name__
-#     variables = vars(self)
-#     variables_str = ", ".join(f"{key}={value}" for key, value in variables.items())
-#     return f"{class_name}({variables_str})"
-
 
 class MockBreakCondition(BreakCondition):
     def __init__(self, var1, var2):

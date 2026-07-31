@@ -1,5 +1,6 @@
-Documentation of Core
-=====================
+===========
+Core Module
+===========
 
 .. currentmodule:: fucrimodo.core
 

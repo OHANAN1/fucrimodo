@@ -38,8 +38,8 @@ dependencies = [
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
-docs = ['sphinx', 'sphinx_rtd_theme', 'nbsphinx', 'sphinxcontrib-tikz']
-dev = ['pytest']
+docs = ['sphinx == 9.1.0', 'sphinx_rtd_theme == 3.1.0', 'nbsphinx == 0.9.8', 'sphinxcontrib-tikz == 0.4.20']
+dev = ['pytest == 9.1.1']
 
 [project.urls]
 Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
