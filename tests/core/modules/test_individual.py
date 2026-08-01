@@ -138,23 +138,31 @@ class TestIndividual:
         assert atoms.info == {}
         assert isinstance(atoms.creation_time, datetime.datetime)
         assert atoms.features is None
-        assert atoms.fitness_weights is None
 
-    def test_fitness_weights_setter_resets_fitness(self, atoms):
-        atoms.fitness_weights = (1.0, -1.0)
-        assert atoms.fitness_weights == (1.0, -1.0)
-        assert isinstance(atoms.fitness, FitnessStorage)
-        assert atoms.fitness.weights == (1.0, -1.0)
+    def test_lazy_fitness_initialization(self, atoms):
+        # Calling fitness without setting returns an empty
+        # fitness object
+        assert atoms.fitness.weights == ()
+        assert atoms.fitness.values == ()
+        assert not atoms.fitness.valid
 
-    def test_fitness_lazy_creation(self, atoms):
-        # Accessing fitness without setting weights still returns a storage
-        assert isinstance(atoms.fitness, FitnessStorage)
-        assert atoms.fitness.weights is None
+    def test_set_fitness_values(self, atoms: Individual):
+        atoms.set_new_fitness_storage(weights=(1.0,), fitness=(1.0,))
+        assert atoms.fitness.values == (1.0,)
+        assert atoms.fitness.valid
 
-    def test_set_fitness_values(self, atoms):
-        atoms.fitness_weights = (1.0,)
         atoms.fitness.values = (2.0,)
         assert atoms.fitness.values == (2.0,)
+        assert atoms.fitness.valid
+
+    def test_set_new_fitness_storage(self, atoms: Individual):
+        atoms.set_new_fitness_storage(weights=(1.0,), fitness=(1.0,))
+        assert atoms.fitness.valid
+
+        # Test that fitness storage will be overwritten
+        atoms.set_new_fitness_storage(weights=(1.0, 1.0))
+        atoms.fitness.values = (1.0, 2.0)
+        assert atoms.fitness.values == (1.0, 2.0)
         assert atoms.fitness.valid
 
     def test_info_setter(self, atoms):
@@ -167,7 +175,7 @@ class TestIndividual:
         np.testing.assert_array_equal(atoms.features, feats)
 
     def test_reset(self, atoms):
-        atoms.fitness_weights = (1.0,)
+        atoms.set_new_fitness_storage(weights=(1.0,))
         atoms.fitness.values = (5.0,)
         atoms.features = np.array([1.0])
         old_time = atoms.creation_time

@@ -27,7 +27,7 @@ def test_assign_fitness_to_individual(example_fitness, ind_slab):
     )
 
     assert ind_slab.fitness.values == (2, 2)
-    assert ind_slab.fitness_weights == (1.0, 0.5)
+    assert ind_slab.fitness.weights == (1.0, 0.5)
 
 
 def test_assign_fitness_to_individuals(
@@ -46,9 +46,9 @@ def test_assign_fitness_to_individuals(
     assert ind_crystal.fitness.values == (3, 3)
 
     # Check that weights are assigned
-    assert ind_molecule.fitness_weights == (1.0, 0.5)
-    assert ind_crystal.fitness_weights == (1.0, 0.5)
-    assert ind_slab.fitness_weights == (1.0, 0.5)
+    assert ind_molecule.fitness.weights == (1.0, 0.5)
+    assert ind_crystal.fitness.weights == (1.0, 0.5)
+    assert ind_slab.fitness.weights == (1.0, 0.5)
 
 
 def test_assign_fitness_to_population(example_fitness, population):
@@ -63,6 +63,6 @@ def test_assign_fitness_to_population(example_fitness, population):
     assert population.individuals[2].fitness.values == (0, 0)
 
     # Check that weights are assigned
-    assert population.individuals[0].fitness_weights == (1.0, 0.5)
-    assert population.individuals[1].fitness_weights == (1.0, 0.5)
-    assert population.individuals[2].fitness_weights == (1.0, 0.5)
+    assert population.individuals[0].fitness.weights == (1.0, 0.5)
+    assert population.individuals[1].fitness.weights == (1.0, 0.5)
+    assert population.individuals[2].fitness.weights == (1.0, 0.5)

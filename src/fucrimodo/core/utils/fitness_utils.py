@@ -44,14 +44,19 @@ def assign_fitness_to_individual(
     fitness_functions: (
         Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
     ),
+    force_reset_storage: bool = False,
 ) -> None:
     """Evaluates and assigns the fitness of individual for each fitness function.
 
-    It also assigns the weights to the individual each time it is called.
+    It automatically resets the fitness storage of the individual, if weights do not
+    match the previous weights. Reset of fitness storage can also be forced with
+    :param:`force_reset_storage`.
     """
     fitness_func_list, weights = _seperate_fitness_and_weights(fitness_functions)
 
-    individual.fitness_weights = weights
+    if force_reset_storage or (weights != individual.fitness.weights):
+        individual.set_new_fitness_storage(weights)
+
     individual.fitness.values = [
         f.evaluate_individual(individual) for f in fitness_func_list
     ]
@@ -62,11 +67,15 @@ def assign_fitness_to_individuals(
     fitness_functions: (
         Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
     ),
+    force_reset_storage: bool = False,
 ) -> None:
     """Evaluates and assigns the fitness of individuals for each fitness function.
 
     Can speed up the evaluation by evaluating all individuals at once.
-    It also assigns the weights to the individuals each time it is called.
+
+    It automatically resets the fitness storage of the individuals, if weights do not
+    match the previous weights. Reset of fitness storage can also be forced with
+    :param:`force_reset_storage`.
     """
     fitness_func_list, weights = _seperate_fitness_and_weights(fitness_functions)
 
@@ -78,7 +87,8 @@ def assign_fitness_to_individuals(
 
     # Get fitness tuple for each individual and assign it
     for ind, ind_fitness in zip(individuals, np.array(fitness_matrix).T):
-        ind.fitness_weights = weights
+        if force_reset_storage or (weights != ind.fitness.weights):
+            ind.set_new_fitness_storage(weights)
         ind.fitness.values = tuple(ind_fitness)
 
 
@@ -87,9 +97,14 @@ def assign_fitness_to_population(
     fitness_functions: (
         Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
     ),
+    force_reset_storage: bool = False,
 ) -> None:
     """Evaluates and Assigns fitness to all individuals in the population.
 
-    It also assigns the fitness weights to the individuals.
+    It automatically resets the fitness storage of the individuals, if weights do not
+    match the previous weights. Reset of fitness storage can also be forced with
+    :param:`force_reset_storage`.
     """
-    assign_fitness_to_individuals(population.individuals, fitness_functions)
+    assign_fitness_to_individuals(
+        population.individuals, fitness_functions, force_reset_storage
+    )

@@ -7,14 +7,13 @@ import datetime
 
 
 class FitnessStorage(object):
-    """Workaround for the DEAP Fitness class.
+    """Storage of fitness, inspired by the DEAP library.
 
     More information can be found in the DEAP documentation for the
-    :class:'deap.base.Fitness' class.
-    The main difference is that the FitnessStorage class can be initialized
-    directly with a list of weights for the fitness values and does not depend
-    on the DEAP creator module.
-    Everything els works the same way as the DEAP Fitness class, to ensure
+    :class:'deap.base.Fitness' class. The main difference is that the
+    FitnessStorage class can be initialized directly with a list of weights for
+    the fitness values and does not depend on the DEAP creator module.
+    Everything else works the same way as the DEAP Fitness class, to ensure
     compatibility with the DEAP framework.
 
     :param weights: A sequence of weights that are associated with the fitness
@@ -113,17 +112,6 @@ class FitnessStorage(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    # def __deepcopy__(self, memo):
-    #     """Replace the basic deepcopy function with a faster one.
-    #
-    #     It assumes that the elements in the :attr:`values` tuple are
-    #     immutable and the fitness does not contain any other object
-    #     than :attr:`values` and :attr:`weights`.
-    #     """
-    #     copy_ = self.__class__()
-    #     copy_.wvalues = self.wvalues
-    #     return copy_
-
     def __str__(self):
         """Return the values of the Fitness object."""
         return str(self.values if self.valid else tuple())
@@ -139,10 +127,11 @@ class FitnessStorage(object):
 
 class Individual(ase.Atoms):
     """
-    An individual in the population. Inherits from :class:`ase.Atoms`.
-    Is initialized with the same arguments as the :class:`ase.Atoms` class
-    and has additional attributes for the fitness values and additional
-    information.
+    An individual of the population. Inherits from :class:`ase.Atoms` and
+    is initialized with the same arguments. However, it has additional
+    attibutes: fitness, fitness_weights, features.
+
+    fitness values and additional information.
 
     :param args: Arguments for the :class:`ase.Atoms` class.
         Common args are :data:'symbols', :data:'positions', :data:'cell',
@@ -155,30 +144,26 @@ class Individual(ase.Atoms):
         self.info = {}
         self._creation_time = datetime.datetime.now()
 
-    @property
-    def fitness_weights(self) -> Sequence[float] | None:
-        """The weights for the fitness values.
+    def set_new_fitness_storage(
+        self, weights: tuple[float, ...], fitness: Sequence[float] | None = None
+    ):
+        """Method to initialize new fitness storage.
 
-        The weights are used to calculate the weighted fitness values.
-        Must be set, otherwise the fitness values are not calculated.
+        This is only necessary, if the number of fitness values or the weights of each value change.
+        If fitness types and weights stays the same please just use:
 
-        When the weights are set, the FitnessStorage object is reset to delete
-        old values and set the new weights.
+        .. code-block:: python
+            ind.fitness.value = <new_values_tuple>
+
+        :params weights: Tuple with the weights for each of the fitness values.
+            Must have the same number of entries as the fitness functions used.
+            To disable weights, set all entries to the same value.
+        :params fitness: Tuple with the fitness values. If not set the values attribute
+            of the :attr:`fitness` stays empty and can be set as described above.
         """
-        if not hasattr(self, "_fitness_weights"):
-            return None
-        else:
-            return self._fitness_weights
-
-    @fitness_weights.setter
-    def fitness_weights(self, value: Sequence[float] | None):
-        """Sets the weights for the fitness values.
-
-        Automatically resets the FitnessStorage object to delete old values
-        and set the new weights.
-        """
-        self._fitness = FitnessStorage(value)
-        self._fitness_weights = value
+        self._fitness = FitnessStorage(weights)
+        if fitness:
+            self._fitness.values = fitness
 
     @property
     def fitness(self) -> FitnessStorage:
@@ -191,16 +176,18 @@ class Individual(ase.Atoms):
         Example:
 
         .. code-block:: python
-
             individual = Individual(ase.Atoms())
-            individual.fitness = (1.0, 2.0, 3.0)
-            fitness.values = (1.0, 2.0, 3.0)
-            print(fitness.values)
-            # (1.0, 2.0, 3.0)
+            individual.set_up_fitness_storage(weights=(1., 0.5), fitness=(1., 2.))
+            print(individual.fitness.values)
+            # (1.0, 2.0)
 
+            individual.fitness.values = (2., 3.)
+            print(individual.fitness.values)
+            # (2.0, 3.0)
         """
         if not hasattr(self, "_fitness"):
-            self._fitness = FitnessStorage(self.fitness_weights)
+            # Generate an empty fitness storage
+            self._fitness = FitnessStorage(weights=())
 
         return self._fitness
 
