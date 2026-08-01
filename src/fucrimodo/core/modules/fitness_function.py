@@ -2,10 +2,6 @@ from abc import ABC, abstractmethod
 from .individual import Individual
 from .population import Population
 
-# ╔══════════════════════════════════════════════════════════╗
-# ║        Abstract Base Class for Fitness Functions         ║
-# ╚══════════════════════════════════════════════════════════╝
-
 
 class FitnessFunction(ABC):
     """Class that defines the abstract base class for fitness functions.
@@ -35,6 +31,9 @@ class FitnessFunction(ABC):
 
         If the title is not set, the class name of the fitness function
         is used to generate a title.
+
+        :raises ValueError: If set and the title contains any spaces, numbers
+            or special characters other than '_'.
         """
         if not hasattr(self, "_db_title"):
             return self.__class__.__name__
@@ -43,11 +42,6 @@ class FitnessFunction(ABC):
 
     @db_title.setter
     def db_title(self, title: str):
-        """Sets the title of the fitness.
-
-        :raises ValueError: If the title contains any spaces, numbers
-            or special characters other than '_'.
-        """
         forbidden_chars = [" ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
         if any([char in title for char in forbidden_chars]):
             raise ValueError(
@@ -62,21 +56,22 @@ class FitnessFunction(ABC):
         """Method to calculate the fitness value of an individual.
 
         :param individual: Individual
+
+        :returns: Fitness of individual
         """
         pass
 
     def evaluate_individuals(self, individuals: list[Individual]) -> list[float]:
         """Method to calculate the fitness value of a list of individuals.
 
-        Often it is more efficient to evaluate multiple individuals at once
+        Sometimes it is more efficient to evaluate multiple individuals at once
         instead of evaluating them one by one. E.g. through parallelization.
         If not implemented by the class that inherits from this class,
-        this function will evaluate each individual one by one.
-        (Not efficient)
+        this function will just evaluate each individual one by one.
 
         :param individuals: List of individuals to evaluate.
 
-        :returns: List of fitness values for each individual.
+        :returns: List of fitness values of each individual.
         """
         fitnesses = []
         for individual in individuals:
@@ -88,7 +83,6 @@ class FitnessFunction(ABC):
         """
         Optional function that can be used to adjust for example the
         rbf gamma value to the given population.
-        If not needed it can be left empty.
         """
         pass
 

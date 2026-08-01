@@ -153,14 +153,6 @@ class MultiStageSearch:
 
     @property
     def global_statistics_dict(self) -> dict[str, Callable[[Individual], float]] | None:
-        if not hasattr(self, "_global_statistics_dict"):
-            self._global_statistics_dict = None
-        return self._global_statistics_dict
-
-    @global_statistics_dict.setter
-    def global_statistics_dict(
-        self, value: dict[str, Callable[[Individual], float]] | None
-    ):
         """Dictionary of the global statistics dictionary.
 
         The global statistics are a list of descriptive names for each statistic
@@ -177,6 +169,14 @@ class MultiStageSearch:
         Setting a new global statistics dict also creates the :attr:`_global_statistics` and
         the :attr:`global_logbook` for the new statistics.
         """
+        if not hasattr(self, "_global_statistics_dict"):
+            self._global_statistics_dict = None
+        return self._global_statistics_dict
+
+    @global_statistics_dict.setter
+    def global_statistics_dict(
+        self, value: dict[str, Callable[[Individual], float]] | None
+    ):
         # Only allow setting statistics if no stats have been recorded yet.
         assert len(self.global_logbook) == 0
 
