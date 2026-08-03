@@ -150,7 +150,7 @@ class Individual(ase.Atoms):
         """Method to initialize new fitness storage.
 
         This is only necessary, if the number of fitness values or the weights of each value change.
-        If fitness types and weights stays the same please just use:
+        If fitness number and weights stays the same please just use:
 
         .. code-block:: python
             ind.fitness.value = <new_values_tuple>
@@ -158,7 +158,7 @@ class Individual(ase.Atoms):
         :params weights: Tuple with the weights for each of the fitness values.
             Must have the same number of entries as the fitness functions used.
             To disable weights, set all entries to the same value.
-        :params fitness: Tuple with the fitness values. If not set the values attribute
+        :params fitness: Optional, tuple with the fitness values. If not set the values attribute
             of the :attr:`fitness` stays empty and can be set as described above.
         """
         self._fitness = FitnessStorage(weights)
@@ -172,7 +172,9 @@ class Individual(ase.Atoms):
         Uses the :class:'deap.base.Fitness' class with the weights set to the
         fitness_weights.
         The fitness values are stored in the 'values' attribute of the
-        fitness object.
+        fitness object. Please set up the storage with the
+        method `set_up_fitness_storage`. If not set up an empty fitnessStorage
+        will be returned i.e. no values can be entered.
         Example:
 
         .. code-block:: python

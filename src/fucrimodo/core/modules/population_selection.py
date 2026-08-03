@@ -7,24 +7,26 @@ from .individual import Individual
 
 
 class PopulationSelection(ABC):
-    """Class that defines the abstract base class for population selection.
+    """Abstract base class for selecting individuals of a population.
 
-    Population selection is used to select individuals from the population
-    based on a selection strategy.
-    This is often used in the genetic algorithms to select individuals that
-    get modified or used for the next generation.
+    Population selection is used to select individuals from the population based
+    on a selection strategy. This is often used in the genetic algorithms to
+    select individuals that get modified or used for the next generation.
     """
-
-    def __init__(self):
-        pass
 
     @abstractmethod
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Method that selects individuals from a given list of individuals.
 
         The selection strategy must be implemented in this method.
-        NOTE: Here we use a list of individuals to avoid that population
-        is overwritten, since it stores data of the run.
+        NOTE: Contrary to the name the method does not use the population but a list of
+        individuals. This is often the desired chase, since the selected individuals
+        often do not directly build the new population. To use individuals of a population
+        do the following:
+
+        .. code-block:: python
+            selected_individuals = population_selection.select(population.individuals)
+
 
         :param individuals: A list of individuals that are used for
             the selection.
