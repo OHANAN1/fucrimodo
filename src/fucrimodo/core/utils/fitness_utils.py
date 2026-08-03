@@ -8,7 +8,7 @@ def _seperate_fitness_and_weights(
         Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
     ),
 ) -> tuple[list[FitnessFunction], tuple[float, ...]]:
-    """Returns the fitness functions seperatly from weights
+    """Returns the fitness functions and weights seperatly
 
     If no weights are given for a fitness, a weight of 1.0 is assumed.
     """
@@ -67,8 +67,7 @@ def assign_fitness_to_individuals(
 ) -> None:
     """Evaluates and assigns the fitness of individuals for each fitness function.
 
-    Can speed up the evaluation by evaluating all individuals at once.
-
+    Depending on the fitness this can speed up the evaluation.
     It automatically overwrites the weights of the fitness storage of the individuals,
     if weights do not match the previous weights.
     """
@@ -92,7 +91,7 @@ def assign_fitness_to_population(
         Sequence[FitnessFunction | tuple[FitnessFunction, float]] | FitnessFunction
     ),
 ) -> None:
-    """Evaluates and Assigns fitness to all individuals in the population.
+    """Evaluates and assigns fitness to all individuals in the population.
 
     It automatically overwrites the weights of the fitness storage of the individuals,
     if weights do not match the previous weights.

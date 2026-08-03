@@ -29,6 +29,12 @@ class Stage(ABC):
 
     @property
     def start_time(self) -> datetime:
+        """Property to note when stage was started.
+
+        The :class:`MultiStageSearch` class automatically sets the time.
+        To set manually, please use the method `set_start_time` to set
+        time to current time.
+        """
         if not hasattr(self, "_start_time"):
             raise AttributeError(
                 f"{self.__class__.__name__}: No start time set. "
@@ -49,7 +55,7 @@ class Stage(ABC):
         """Return the end time of the stage.
 
         If the end time is not set, the start time is returned.
-        Will be set automatically after the run method by the
+        Will be set automatically after the run by the
         :class:`MultiStageSearch`.
         """
         if not hasattr(self, "_end_time"):
@@ -61,6 +67,11 @@ class Stage(ABC):
 
     @property
     def logger(self) -> logging.Logger:
+        """Logger of the stage.
+
+        The :class:`MultiStageSearch` class automatically sets the appropriate
+        logger.
+        """
         if not hasattr(self, "_logger"):
             raise AttributeError(
                 f"{self.__class__.__name__}: No logger set. Please set a logger."
@@ -73,6 +84,11 @@ class Stage(ABC):
 
     @property
     def stage_dir(self) -> str:
+        """Directory to store information about the run.
+
+        The :class:`MultiStageSearch` class automatically assigns the
+        appropriate directory.
+        """
         if not hasattr(self, "_stage_dir"):
             raise AttributeError(
                 f"{self.__class__.__name__}: No stage directory set. Please set a stage directory."
@@ -114,7 +130,7 @@ class Stage(ABC):
         pass
 
     def type(self) -> str:
-        """Return the type of the stage.
+        """Return the type of the stage, i.e. class name.
 
         This method is used to determine the type of the stage in the analysis
         scripts.
@@ -125,7 +141,7 @@ class Stage(ABC):
     @abstractmethod
     def info_dict(self) -> dict:
         """Contains all information about the stage that is necessary to
-        recreate the stage (manually or automatically).
+        recreate the stage.
 
         Information must be savable to a JSON file.
         What information is saved is up to the implementation of the stage.
@@ -159,5 +175,5 @@ class Stage(ABC):
 
     @property
     def description(self) -> str:
-        """Optional description of the stage, used for analysis."""
+        """Optional description of the stage, used to identify it."""
         return self._description

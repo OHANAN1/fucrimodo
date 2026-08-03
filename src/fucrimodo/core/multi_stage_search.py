@@ -91,7 +91,7 @@ class MultiStageSearch:
 
     @property
     def name(self) -> str:
-        """Name of the run. The :attr:run_dir will be named after it."""
+        """Name of the run. The :attr:`run_dir` will be named after it."""
         # Define name attribute without setter, since it should never be changed
         return self._name
 
@@ -111,11 +111,16 @@ class MultiStageSearch:
     def log_level(self, value: int):
         self._log_level = value
 
-        # update the log level of the global logger
+        # Update the log level of the global logger
         self.logger.setLevel(value)
 
     @property
     def start_time(self) -> datetime.datetime:
+        """Time the run is started.
+
+        Is set automatically when the `run` method is called for the first
+        stage.
+        """
         if not hasattr(self, "_start_time"):
             raise AttributeError(
                 "No start time set. Please first run a stage before calling start_time."
@@ -124,6 +129,10 @@ class MultiStageSearch:
 
     @property
     def end_time(self) -> datetime.datetime:
+        """Time the run ended.
+
+        If not assigned yet, returns the :attr:`start_time`.
+        """
         if not hasattr(self, "_end_time"):
             # If the end time is not set, return the start time
             return self.start_time
@@ -168,6 +177,7 @@ class MultiStageSearch:
 
         Setting a new global statistics dict also creates the :attr:`_global_statistics` and
         the :attr:`global_logbook` for the new statistics.
+        A new global statistics dict can only be set if no records have been made yet.
         """
         if not hasattr(self, "_global_statistics_dict"):
             self._global_statistics_dict = None
@@ -177,7 +187,7 @@ class MultiStageSearch:
     def global_statistics_dict(
         self, value: dict[str, Callable[[Individual], float]] | None
     ):
-        # Only allow setting statistics if no stats have been recorded yet.
+        # Only allow setting new statistics if no stats have been recorded yet.
         assert len(self.global_logbook) == 0
 
         self._global_statistics_dict = value
@@ -205,8 +215,9 @@ class MultiStageSearch:
     @property
     def run_dir(self) -> str:
         """Directory where the data of the run is stored.
-        The directory is named after the name of the run or the time of the
-        initialization of the class and is stored in the given save_dir.
+
+        The directory is named after the name of the run and is stored in the
+        given save_dir.
         """
         return self._run_dir
 
@@ -226,7 +237,7 @@ class MultiStageSearch:
         return self._global_statistics
 
     def _get_global_logbook(self) -> tools.Logbook:
-        """Generate the global logbook for set global_statistics."""
+        """Generate the global logbook for the global_statistics."""
         global_log = tools.Logbook()
         global_stats_fields = []
         if self.global_statistics is not None:
@@ -306,15 +317,14 @@ class MultiStageSearch:
     def __create_run_dir(self, save_dir: str) -> str:
         """Method to create a directory to store the data of the run.
 
-        In the given save_dir a new directory is created with the name of the
-        run.
+        It is created as a subdir of the `save_dir` and named after the run
+        name.
 
         :param save_dir: Directory where the run directory should be created.
         """
         run_dir = os.path.join(os.getcwd(), save_dir, self.name)
 
         # Check if dir already exists to not overwrite old data
-        # TODO: Replace this with the option to restart run from old data
         if os.path.isdir(run_dir):
             raise FileExistsError(
                 f"Cannot create: {run_dir}!\n"
@@ -327,6 +337,7 @@ class MultiStageSearch:
         return run_dir
 
     def __get_time_string(self) -> str:
+        """Get the current time as a string %Y_%m_%d_H%H_%M_%S."""
         now = datetime.datetime.now()
         date_string = now.strftime("%Y_%m_%d_H%H_%M_%S")
         return date_string
@@ -369,16 +380,14 @@ class MultiStageSearch:
     def __set_up_stage(self, stage: Stage) -> str:
         """Method to set up the stage for a run.
 
-        Adds the stage ID to the stage and creates a directory for the stage.
-        For this a new directory is created in the run directory with the name
-        "stage_{:data:`stage_id`}".
-        Takes the :attr:`Stage.info_dict` of the stage and adds the
-        :data:`stage_id`, :attr:`Stage.type`, :attr:`Stage.name` and
-        :attr:`Stage.description` to the dictionary.
+        Adds the unique stage ID to the stage and creates a directory for the
+        stage. Creates a new directory in the run directory with the name
+        "stage_{:data:`stage_id`}".  Takes the :attr:`Stage.info_dict` of the
+        stage and adds the :data:`stage_id`, :attr:`Stage.type`,
+        :attr:`Stage.name` and :attr:`Stage.description` to the dictionary.
         Then saves the dictionary as a JSON file in the stage directory.
 
         :param stage: Stage that should be set up.
-        :param stage_id: A unique ID that should be assigned to the stage.
         """
         # Assign the stage ID to the stage
         stage.id = self.current_stage_id
@@ -396,7 +405,7 @@ class MultiStageSearch:
         stage.stage_dir = stage_dir
 
         # Set up a logger for the stage
-        stage_logger, log_name = setup_stage_logger(
+        stage_logger, _ = setup_stage_logger(
             log_file_path=f"{stage_dir}/stage.log",
             run_name=self.name,
             stage_name=stage.name,
@@ -422,10 +431,10 @@ class MultiStageSearch:
         """Method to save the results of the run in a JSON file.
 
         The results of the run are saved in a JSON file in the run directory.
-        The results are the global statistics of the run if they are set.
-        The keys of the dictionary are "names", "functions" and "results".
-        The values are lists where each index corresponds to one statistic.
-        The results are stored in a dictionary with the keys "stage_id", "gen",
+        The results are the global statistics of the run if they are set.  The
+        keys of the dictionary are "names", "functions" and "results". The
+        values are lists where each index corresponds to one statistic. The
+        results are stored in a dictionary with the keys "stage_id", "gen",
         "min", "max", "avg" and "std" for each statistic.
         """
         # Create a dictionary to store the global statistics if they are set
@@ -493,7 +502,7 @@ class MultiStageSearch:
         """Method to run a stage of the optimization algorithm.
 
         This method runs a stage of the optimization algorithm and makes the
-        stage save the results of the optimization algorithm.
+        stage save its results.
         Manages the stage ID and directory where the results are saved.
         Also saves the info.json of the run and the global_statisitics.json.
         If already present overwrites them.
