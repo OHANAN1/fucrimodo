@@ -142,12 +142,13 @@ class TestIndividual:
     def test_lazy_fitness_initialization(self, atoms):
         # Calling fitness without setting returns an empty
         # fitness object
-        assert atoms.fitness.weights == ()
+        assert atoms.fitness.weights == None
         assert atoms.fitness.values == ()
         assert not atoms.fitness.valid
 
     def test_set_fitness_values(self, atoms: Individual):
-        atoms.set_new_fitness_storage(weights=(1.0,), fitness=(1.0,))
+        atoms.fitness.weights = (1.0,)
+        atoms.fitness.values = (1.0,)
         assert atoms.fitness.values == (1.0,)
         assert atoms.fitness.valid
 
@@ -155,15 +156,21 @@ class TestIndividual:
         assert atoms.fitness.values == (2.0,)
         assert atoms.fitness.valid
 
-    def test_set_new_fitness_storage(self, atoms: Individual):
-        atoms.set_new_fitness_storage(weights=(1.0,), fitness=(1.0,))
+    def test_set_new_fitness(self, atoms: Individual):
+        atoms.fitness.weights = (1.0,)
+        assert not atoms.fitness.valid
+        atoms.fitness.values = (1.0,)
         assert atoms.fitness.valid
 
         # Test that fitness storage will be overwritten
-        atoms.set_new_fitness_storage(weights=(1.0, 1.0))
+        atoms.fitness.weights = (1.0, 1.0)
         atoms.fitness.values = (1.0, 2.0)
         assert atoms.fitness.values == (1.0, 2.0)
         assert atoms.fitness.valid
+
+        # Cannot set new fitness if its not the same shape as fitness
+        with pytest.raises(AssertionError):
+            atoms.fitness.values = (1.0, 2.0, 3.0)
 
     def test_info_setter(self, atoms):
         atoms.info = {"mutation": "swap"}
@@ -175,7 +182,7 @@ class TestIndividual:
         np.testing.assert_array_equal(atoms.features, feats)
 
     def test_reset(self, atoms):
-        atoms.set_new_fitness_storage(weights=(1.0,))
+        atoms.fitness.weights = (1.0,)
         atoms.fitness.values = (5.0,)
         atoms.features = np.array([1.0])
         old_time = atoms.creation_time

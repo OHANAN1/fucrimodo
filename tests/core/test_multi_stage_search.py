@@ -104,7 +104,7 @@ def test_global_statistics_and_log_initialization(tmp_path, ind_crystal):
     assert isinstance(multi_stage_search.global_logbook, tools.Logbook)
     assert isinstance(multi_stage_search.global_statistics, tools.MultiStatistics)
 
-    ind_crystal.set_new_fitness_storage(weights=(1.0,))
+    ind_crystal.fitness.weights = (1.0,)
     ind_crystal.fitness.values = (1.0,)
     global_record = multi_stage_search.global_statistics.compile(
         [ind_crystal, ind_crystal]

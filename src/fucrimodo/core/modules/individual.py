@@ -41,7 +41,7 @@ class FitnessStorage(object):
         else:
             assert len(values) == len(
                 self.weights
-            ), "Assigned values have not the same length than fitness weights"
+            ), f"Assigned values have not the same length than fitness weights. weight-lenght: {len(self.weights)}"
             try:
                 self.wvalues = tuple(map(mul, values, self.weights))
             except TypeError:
@@ -144,27 +144,6 @@ class Individual(ase.Atoms):
         self.info = {}
         self._creation_time = datetime.datetime.now()
 
-    def set_new_fitness_storage(
-        self, weights: tuple[float, ...], fitness: Sequence[float] | None = None
-    ):
-        """Method to initialize new fitness storage.
-
-        This is only necessary, if the number of fitness values or the weights of each value change.
-        If fitness number and weights stays the same please just use:
-
-        .. code-block:: python
-            ind.fitness.value = <new_values_tuple>
-
-        :params weights: Tuple with the weights for each of the fitness values.
-            Must have the same number of entries as the fitness functions used.
-            To disable weights, set all entries to the same value.
-        :params fitness: Optional, tuple with the fitness values. If not set the values attribute
-            of the :attr:`fitness` stays empty and can be set as described above.
-        """
-        self._fitness = FitnessStorage(weights)
-        if fitness:
-            self._fitness.values = fitness
-
     @property
     def fitness(self) -> FitnessStorage:
         """A storage for the fitness values of the individual.
@@ -179,7 +158,8 @@ class Individual(ase.Atoms):
 
         .. code-block:: python
             individual = Individual(ase.Atoms())
-            individual.set_up_fitness_storage(weights=(1., 0.5), fitness=(1., 2.))
+            individual.fitness.weights = (1., 0.5)
+            individual.fitness.values = (1., 2.)
             print(individual.fitness.values)
             # (1.0, 2.0)
 
@@ -189,7 +169,7 @@ class Individual(ase.Atoms):
         """
         if not hasattr(self, "_fitness"):
             # Generate an empty fitness storage
-            self._fitness = FitnessStorage(weights=())
+            self._fitness = FitnessStorage(weights=None)
 
         return self._fitness
 
