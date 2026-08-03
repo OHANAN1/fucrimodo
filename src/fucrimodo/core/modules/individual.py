@@ -157,6 +157,7 @@ class Individual(ase.Atoms):
         Example:
 
         .. code-block:: python
+
             individual = Individual(ase.Atoms())
             individual.fitness.weights = (1., 0.5)
             individual.fitness.values = (1., 2.)

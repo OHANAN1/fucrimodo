@@ -5,8 +5,9 @@ import numpy as np
 
 
 class CustomCellBounds:
-    """
-    Class that works like ase_ga.utilities.CellBounds, but with custom
+    """Define and check the max/min allowed size of a unitcell.
+
+    This class works like ase_ga.utilities.CellBounds, but with custom
     functionality:
     - has __repr__ method to print the bounds
     - bounds is a property

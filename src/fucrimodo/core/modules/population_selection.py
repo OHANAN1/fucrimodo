@@ -7,7 +7,7 @@ from .individual import Individual
 
 
 class PopulationSelection(ABC):
-    """Abstract base class for selecting individuals of a population.
+    """Select a subset of the population of individuals.
 
     Population selection is used to select individuals from the population based
     on a selection strategy. This is often used in the genetic algorithms to
@@ -25,6 +25,7 @@ class PopulationSelection(ABC):
         do the following:
 
         .. code-block:: python
+
             selected_individuals = population_selection.select(population.individuals)
 
 

@@ -21,7 +21,7 @@ class MultiStageSearch:
 
     This class is used to manage data, time-keeping, organization of stages, ...
     during a multi-stage search.  On initialization the class creates a
-    :attr:`run_dir` inside the :param:`save_dir` where information about the run
+    :attr:`run_dir` inside the :attr:`save_dir` where information about the run
     can be stored. A new directory inside :attr:`run_dir` is then automatically
     assigned for each stage so it can store its own data.
     After setting up the MultiStageSearch a stage can be run with the `run` method.
@@ -166,11 +166,12 @@ class MultiStageSearch:
 
         The global statistics are a list of descriptive names for each statistic
         and a callable function that can evaluate individuals. E.g.:
-        ```python
-        global_statistics_dict = {
-            "volume": lambda ind: ind.get_volume(),
-        }
-        ```
+
+        .. code-block::python
+
+            global_statistics_dict = {
+                "volume": lambda ind: ind.get_volume(),
+            }
 
         Global statistics are tracked for all stages and are stored in the file
         :attr:`run_dir`/global_statistics.json.

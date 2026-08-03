@@ -4,7 +4,7 @@ from .population import Population
 
 
 class FitnessFunction(ABC):
-    """Class that defines the abstract base class for fitness functions.
+    """Evaluate how well individuals fullfill an objective.
 
     Fitness functions are used for example in the genetic algorithm to
     assign a fitness value to an individual.

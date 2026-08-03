@@ -5,7 +5,8 @@ from ase_ga import utilities as ase_utilities
 
 
 class CustomClosestDistances(dict[tuple[int, int], float]):
-    """
+    """Check if atoms are too close to each other based on coval radii.
+
     Class that works like ase_ga.utilities.closest_distances_generator, but with custom
     functionality:
     - has __repr__ method to print the bounds

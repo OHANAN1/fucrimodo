@@ -3,8 +3,10 @@ from .population import Population
 
 
 class BreakCondition(ABC):
-    def __init__(self):
-        pass
+    """Check if algorithm should stop based on the state of the population.
+
+    This should implement a check based on the state of the population
+    """
 
     @abstractmethod
     def check(self, population: Population, info: dict | None = None) -> bool:

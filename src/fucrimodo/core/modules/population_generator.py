@@ -5,7 +5,7 @@ from .population import Population
 
 
 class PopulationGenerator(ABC):
-    """Abstract Base class for generating a population.
+    """Generate a new population.
 
     The population generator should create the individuals of a population.
     """

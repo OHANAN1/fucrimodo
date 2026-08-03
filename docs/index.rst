@@ -37,6 +37,8 @@ In this conda environment, `fucrimodo` is installed and added to the path as
 a command line client. You can now run the program by typing `fucrimodo` in
 the terminal to see the help message.
 
+TODO: Add installation with virtual env
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
