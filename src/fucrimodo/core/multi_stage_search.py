@@ -87,6 +87,12 @@ class MultiStageSearch:
             verbose=verbose,
         )
 
+        # Initialize empty stage history
+        self._stage_history = {
+            "ID": [],
+            "relative_save_path": [],
+        }
+
         self.logger.info(f"Initialized run {self.name}")
 
     @property
@@ -263,27 +269,10 @@ class MultiStageSearch:
 
         return self._global_log
 
-    @property
-    def stage_history(self) -> dict[str, list]:
-        """Dictionary to store the history of the stages.
-
-        The dictionary stores ordered lists of the stage IDs and
-        paths to the directories of the stages relative to the directory the
-        run was saved in. Each index in the lists corresponds to one stage.
-
-        :returns: History dict of the stages. Keys are: "ID", "relative_save_path"
-        """
-        if not hasattr(self, "_stage_history"):
-            self._stage_history = {
-                "ID": [],
-                "relative_save_path": [],
-            }
-        return self._stage_history
-
     def __update_stage_history(self, stage_id: int, relative_save_path: str):
         """Adds new entry to the :attr:`stage_history`."""
-        self.stage_history["ID"].append(stage_id)
-        self.stage_history["relative_save_path"].append(relative_save_path)
+        self._stage_history["ID"].append(stage_id)
+        self._stage_history["relative_save_path"].append(relative_save_path)
 
     def __create_global_statistics(
         self, global_stats_dict: dict[str, Callable[[Individual], float]] | None
@@ -476,9 +465,11 @@ class MultiStageSearch:
     def save_info(self):
         """Stores info of the run to json file.
 
-        File is located at info.json in :attr:`run_dir`.
-        Stores :attr:`name`, :attr:`description`, :attr:`start_time`, :attr:`end_time`,
-        `total_runtime`, :attr:`stage_history` (See its attribute description.).
+        File is located at info.json in :attr:`run_dir`.  Stores :attr:`name`,
+        :attr:`description`, :attr:`start_time`, :attr:`end_time`,
+        `total_runtime`, :attr:`_stage_history`. The stage history is a dict of
+        stage ids and the corresponding directory paths (relative to
+        :attr:`run_dir`), where the data of the stage is stored.
 
         All times are stored as timestemp as well as millisecs since epoch.
         """
@@ -494,7 +485,7 @@ class MultiStageSearch:
             "total_runtime_ms": int(
                 (self.end_time - self.start_time).total_seconds() * 1000
             ),
-            "stage_history": self.stage_history,
+            "stage_history": self._stage_history,
         }
         with open(file_path, "w") as f:
             json.dump(info_dict, f)

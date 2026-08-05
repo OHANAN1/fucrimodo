@@ -1,5 +1,10 @@
-Multi stage GA search Dokumentation
-===================================
+==================
+Multi stage search
+==================
+
+.. currentmodule:: fucrimodo.core.multi_stage_search
+
+This is the main class needed to run a Multi Stage Search. The most important method for the user is :meth:`MultiStageSearch.run`. With it the stages can be performed.
 
 .. automodule:: fucrimodo.core.multi_stage_search
    :members:

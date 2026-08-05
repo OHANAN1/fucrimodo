@@ -9,12 +9,15 @@ class CustomCellBounds:
 
     This class works like ase_ga.utilities.CellBounds, but with custom
     functionality:
-    - has __repr__ method to print the bounds
-    - bounds is a property
-    - has method `ind_is_within_bounds` to test if individual object is within bounds
+
+    * has __repr__ method to print the bounds
+    * bounds is a property
+    * has method `ind_is_within_bounds` to test if individual object is within bounds
 
     Example use:
+
     .. code-block:: python
+
         CustomCellBounds(
             bounds={
                 'phi': [20, 160],
@@ -25,6 +28,7 @@ class CustomCellBounds:
                 'c': [2, 20]
             }
         )
+
     """
 
     def __init__(self, bounds: dict[str, list[float]] = {}):

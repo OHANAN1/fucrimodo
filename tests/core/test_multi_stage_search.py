@@ -1,10 +1,9 @@
-from numpy.lib.arraysetops import isin
 import pytest
 
 import logging
 import os
 import numpy as np
-from fucrimodo.core import MultiStageSearch, multi_stage_search
+from fucrimodo.core import MultiStageSearch
 from fucrimodo.core.modules import Stage
 import ase.db
 from ase.db.core import Database
@@ -130,16 +129,13 @@ def test_stage_history(tmp_path):
     multi_stage_search = get_multi_stage_search(tmp_path)
 
     # Test initialization
-    assert not hasattr(multi_stage_search, "_stage_history")
-    stage_hist = multi_stage_search.stage_history
-    assert hasattr(multi_stage_search, "_stage_history")
-    assert list(stage_hist.keys()) == ["ID", "relative_save_path"]
+    assert multi_stage_search._stage_history == {"ID": [], "relative_save_path": []}
 
     # Test addition of entry
     #  Note: here I need to call a private method
     multi_stage_search._MultiStageSearch__update_stage_history(1, "test_path")  # type: ignore
-    assert multi_stage_search.stage_history["ID"] == [1]
-    assert multi_stage_search.stage_history["relative_save_path"] == ["test_path"]
+    assert multi_stage_search._stage_history["ID"] == [1]
+    assert multi_stage_search._stage_history["relative_save_path"] == ["test_path"]
 
 
 def test_stage_handelling(tmp_path, ExampleStage):
@@ -163,8 +159,8 @@ def test_stage_handelling(tmp_path, ExampleStage):
     assert isinstance(example_stage.logger, logging.Logger)
 
     # Test that stage is added to history
-    assert multi_stage_search.stage_history["ID"] == [1]
-    assert multi_stage_search.stage_history["relative_save_path"] == [
+    assert multi_stage_search._stage_history["ID"] == [1]
+    assert multi_stage_search._stage_history["relative_save_path"] == [
         os.path.basename(example_stage.stage_dir)
     ]
 
@@ -202,7 +198,7 @@ def test_stage_handelling(tmp_path, ExampleStage):
     assert line_count_new - line_count_old == 1
 
 
-def test_save_results_no_records(tmp_path, ind_crystal):
+def test_save_results_no_records(tmp_path):
     multi_stage_search = get_multi_stage_search(tmp_path)
 
     info_file = os.path.join(multi_stage_search.run_dir, "global_statistics.json")
@@ -214,7 +210,7 @@ def test_save_results_no_records(tmp_path, ind_crystal):
 
 
 # Define seperate function since same file location is used
-def test_save_results_no_global_stats(tmp_path, ind_crystal):
+def test_save_results_no_global_stats(tmp_path):
     # If no global stats are set but logbook records user is
     # warned, that no results will be stored
     #
@@ -313,7 +309,7 @@ def test_run(tmp_path, population, ExampleStage):
     # Stage was set up properly
     assert hasattr(example_stage, "id")
     assert example_stage.id == 1
-    assert multi_stage_search.stage_history == {
+    assert multi_stage_search._stage_history == {
         "ID": [1],
         "relative_save_path": ["stage_1"],
     }

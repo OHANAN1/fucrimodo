@@ -1,8 +1,10 @@
-===========
-Core Module
-===========
+===========================
+The Multi-Stage Search Core
+===========================
 
-The core module contains the framework to implement the multi-stage
+.. currentmodule:: fucrimodo.core
+
+The :mod:`fucrimodo.core` module contains the framework and utilities to implement the multi-stage
 search algorithm. At its center is the :class:`MultiStageSearch` class which
 handles the data and time-keeping, as well as organizing and running stages.
 
@@ -11,13 +13,16 @@ handles the data and time-keeping, as well as organizing and running stages.
 
    multi_stage_search
 
+An multi stage ga workflow to invert the global SOAP descriptor is published in the paper [TODO: Add paper ref]. Its implementation can be found here: [TODO: Add ref to workflow implementation].
+
 ------------------
 Abstract Framework
 ------------------
 
-.. currentmodule:: fucrimodo.core.modules
+In addition to the main framework :mod:`fucrimodo.core.modules` adds the abstract :class:`Stage` to set up the individual parts of the optimization algorithm and some useful abstract base classes, needed in most optimization algorithms.
+The classes in the module exist so a user can implement them for their specific use-chase. The module :mod:`fucrimodo.customs` includes multiple such examples.
 
-In addition to the main framework the core module adds the abstract :class:`Stage` to set up the individual parts of the optimization algorithm and some useful abstract base classes, needed in most optimization algorithms:
+.. currentmodule:: fucrimodo.core.modules
 
 .. autosummary::
    :signatures: none
@@ -30,17 +35,6 @@ In addition to the main framework the core module adds the abstract :class:`Stag
    PopulationGenerator
    PopulationSelection
 
-An example for a multi stage search to invert the global SOAP descriptor is
-provided in the paper [TODO: Add paper ref].
-
-.. figure:: workflow.png
-    :scale: 50 %
-    :alt: Example workflow of the multi stage search
-
-    Multi-stage optimization workflow to invert the global SOAP descriptor.
-    Its implementation is located here [TODO: Add link to example workflow].
-
-
 .. toctree::
    :maxdepth: 1
 
@@ -49,14 +43,14 @@ provided in the paper [TODO: Add paper ref].
 ---------
 Utilities
 ---------
+
 .. currentmodule:: fucrimodo.core.utils
 
 Apart from the abstract framework the core includes utilities for
 performing the algorithm and interfacing with the framework.
 
 
-.. autosummary::
-   :signatures: none
+.. toctree::
+   :maxdepth: 2
 
-   CustomCellBounds
-   CustomClosestDistances
+   utils

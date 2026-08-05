@@ -9,14 +9,14 @@ class CustomClosestDistances(dict[tuple[int, int], float]):
 
     Class that works like ase_ga.utilities.closest_distances_generator, but with custom
     functionality:
-    - has __repr__ method to print the bounds
-    - Can use chemical symbols as strings or atomic numbers as integers
+
+    * has __repr__ method to print the bounds
+    * Can use chemical symbols as strings or atomic numbers as integers
       (dict is still made with atomic numbers)
-      - assigns self._chemical_symbols to the chemical symbols
-        and self._atomic_numbers to the atomic numbers
-    - Method 'atoms_are_too_close' checks if atoms in an individual are too close to each other
+    * Method 'atoms_are_too_close' checks if atoms in an individual are too close to each other
       (Also check if atoms are too close to themselves for periodic boundary conditions)
-    - Can be used as easier type hint for type checking
+    * Can be used as easier type hint for type checking
+
     """
 
     def __init__(self, species: list[int] | list[str], ratio_of_covalent_radii: float):
