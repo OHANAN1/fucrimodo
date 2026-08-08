@@ -1,7 +1,8 @@
 import logging
 import os
 import pytest
-from fucrimodo.core.modules import Individual, Stage, Population
+from fucrimodo.core.abstracts import Stage
+from fucrimodo.core import Individual, Population
 from ase.db.core import Database
 from typing import Callable
 from deap import tools

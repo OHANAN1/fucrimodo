@@ -5,6 +5,9 @@ import shutil
 def get_last_commit_msg(run_path: str) -> str:
     """Returns the last commit message of the specified git repo.
 
+    This can be used to set the description of the :class:`MultiStageSearch`
+    automatically to the last commit message.
+
     :run_path: Path to dir, where git command should be executed.
         Can be the git root or any place inside the desired git repo.
     """

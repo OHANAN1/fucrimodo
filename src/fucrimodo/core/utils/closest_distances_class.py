@@ -1,19 +1,20 @@
-from fucrimodo.core.modules.individual import Individual
+from ..individual import Individual
 import numpy as np
 from ase import data as ase_data
+import ase
 from ase_ga import utilities as ase_utilities
 
 
 class CustomClosestDistances(dict[tuple[int, int], float]):
     """Check if atoms are too close to each other based on coval radii.
 
-    Class that works like ase_ga.utilities.closest_distances_generator, but with custom
+    This class works like :meth:`ase_ga.utilities.closest_distances_generator` from the `ASE-GA library <https://github.com/dtu-energy/ase-ga>`__, but with custom
     functionality:
 
     * has __repr__ method to print the bounds
     * Can use chemical symbols as strings or atomic numbers as integers
       (dict is still made with atomic numbers)
-    * Method 'atoms_are_too_close' checks if atoms in an individual are too close to each other
+    * Method :meth:`atoms_are_too_close` checks if atoms in an individual are too close to each other
       (Also check if atoms are too close to themselves for periodic boundary conditions)
     * Can be used as easier type hint for type checking
 
@@ -54,10 +55,10 @@ class CustomClosestDistances(dict[tuple[int, int], float]):
         r_str += ")"
         return r_str
 
-    def atoms_are_too_close(self, individual: Individual) -> bool:
+    def atoms_are_too_close(self, individual: Individual | ase.Atoms) -> bool:
         """Checks if the atoms in are structure are too close.
 
-        Uses the atoms too close function from ASE, which also checks if the atoms
+        Uses the :meth:`ase_ga.utilities.atoms_too_close` method from the `ASE-GA library <https://github.com/dtu-energy/ase-ga>`__ , which also checks if the atoms
         are too close to themselves in the neighboring unit cells if pbc enabled.
         """
         return ase_utilities.atoms_too_close(individual, self._ase_closest_distances)

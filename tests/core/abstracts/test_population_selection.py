@@ -1,5 +1,5 @@
 import pytest
-from fucrimodo.core.modules import PopulationSelection
+from fucrimodo.core.abstracts import PopulationSelection
 
 
 def test_subclass_without_generate_cannot_instantiate():

@@ -1,5 +1,5 @@
 import pytest
-from fucrimodo.core.modules import Population
+from fucrimodo.core import Population
 
 
 @pytest.fixture

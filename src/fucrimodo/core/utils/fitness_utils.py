@@ -1,5 +1,7 @@
 from collections.abc import Sequence
-from fucrimodo.core.modules import Population, Individual, FitnessFunction
+from ..abstracts.fitness_function import FitnessFunction
+from ..individual import Individual
+from ..population import Population
 import numpy as np
 
 

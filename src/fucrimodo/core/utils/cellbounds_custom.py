@@ -1,5 +1,5 @@
 from ase_ga.utilities import CellBounds
-from fucrimodo.core.modules import Individual
+from ..individual import Individual
 from ase.cell import Cell
 import numpy as np
 
@@ -7,7 +7,7 @@ import numpy as np
 class CustomCellBounds:
     """Define and check the max/min allowed size of a unitcell.
 
-    This class works like ase_ga.utilities.CellBounds, but with custom
+    This class works like :class:`ase_ga.utilities.CellBounds` from the `ASE library <https://github.com/dtu-energy/ase-ga>`__, but with custom
     functionality:
 
     * has __repr__ method to print the bounds

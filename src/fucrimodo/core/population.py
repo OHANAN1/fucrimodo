@@ -4,9 +4,9 @@ from .individual import Individual
 class Population:
     """Object to store individuals.
 
-    The individuals used during the run can be stored in the population, like a list.
-    Additionally, the object has the :attr:`generation`. Whenever new individuals are
-    assigned the generation value increases by one.
+    The individuals used during the run can be stored in the population, like a
+    list. Additionally, the object has the attribute :attr:`generation`.
+    Whenever new individuals are assigned the generation value increases by one.
     """
 
     def __init__(self, individuals: list[Individual]):

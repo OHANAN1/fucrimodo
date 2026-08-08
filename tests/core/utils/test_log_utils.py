@@ -1,5 +1,4 @@
 import logging
-import pytest
 import os
 
 from fucrimodo.core.utils.log_utils import (
@@ -23,7 +22,7 @@ def test_clear_existing_handlers():
 
 def test_setup_stage_logger(tmp_path):
     log_file_path = os.path.join(tmp_path, "test_logger.log")
-    logger, logger_name = setup_stage_logger(
+    logger = setup_stage_logger(
         log_file_path=log_file_path,
         run_name="example_run_name",
         stage_name="example_stage_name",
@@ -32,7 +31,7 @@ def test_setup_stage_logger(tmp_path):
 
     expected_logger_name = "example_run_name_example_stage_name_logger"
 
-    assert logger_name == expected_logger_name
+    assert logger.name == expected_logger_name
     assert expected_logger_name in logging.Logger.manager.loggerDict
 
     # Test if logger writes to correct file

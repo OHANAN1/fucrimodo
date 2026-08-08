@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import os
 
-from fucrimodo.core.modules.individual import Individual
-from .population import Population
+from ..individual import Individual
+from ..population import Population
 from ase.db.core import Database
 from deap import tools
 from typing import Callable
@@ -13,11 +13,10 @@ import logging
 class Stage(ABC):
     """Abstract base class for stages in the optimization algorithm.
 
-    Stages are used to define the different steps in the optimization
-    algorithm. Each stage can perform a defined optimization algorithm, for
-    example a genetic algorithm or a swarm search algorithm.
-    Stages should not be run directly, but should be used with the
-    multi-stage optimization algorithm.
+    Stages are the building blocks of the multi-stage optimization algorithm.
+    Each stage can perform a defined optimization algorithm, for example a
+    genetic algorithm or a swarm search. Stages should not be run directly, but
+    should be executed by the class :class:`MultiStageSearch`.
 
     :param name: User friendly name of the stage, used for analysis.
     :param description: Optional description of the stage, used for analysis.
@@ -32,7 +31,7 @@ class Stage(ABC):
         """Property to note when stage was started.
 
         The :class:`MultiStageSearch` class automatically sets the time.
-        To set manually, please use the method `set_start_time` to set
+        To set manually, please use the method :meth:`set_start_time` to set
         time to current time.
         """
         if not hasattr(self, "_start_time"):

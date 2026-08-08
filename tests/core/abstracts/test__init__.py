@@ -1,15 +1,14 @@
 def test_imports():
-    from fucrimodo.core.modules import (
+    from fucrimodo.core.abstracts import (
         FitnessFunction,
         PopulationGenerator,
         PopulationSelection,
         Stage,
-        Individual,
         BreakCondition,
     )
 
 
 def test_star_imports():
-    import fucrimodo.core.modules
+    import fucrimodo.core.abstracts
 
-    assert hasattr(fucrimodo.core.modules, "__all__")
+    assert hasattr(fucrimodo.core.abstracts, "__all__")

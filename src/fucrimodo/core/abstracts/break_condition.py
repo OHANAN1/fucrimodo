@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from .population import Population
+from ..population import Population
 
 
 class BreakCondition(ABC):
     """Checks if algorithm should stop based on the state of the population.
 
     Children of this class should implement the :meth:`check` method, to test if
-    the algorithm should be stoped based on the state of the population or any
+    the algorithm should be stopped based on the state of the population or any
     other algorithm attribute (e.g. generation number).
     """
 

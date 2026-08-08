@@ -1,20 +1,20 @@
 from abc import ABC, abstractmethod
-from .individual import Individual
-from .population import Population
+from ..individual import Individual
+from ..population import Population
 
 
 class FitnessFunction(ABC):
-    """Evaluate how well individuals fullfill an objective.
+    """Evaluates how well individuals fullfill an objective.
 
     Fitness functions are used for example in the genetic algorithm to
-    assign a fitness value to an individual.
+    calculate the fitness value of an individual.
     Individuals can then be compared based on their fitness value.
 
     :param db_title: Descriptive title that can be used to refer to the
-        fitness function in an ASE database. See :attr:'db_title' for more
+        fitness function in an ASE database. See :attr:`db_title` for more
         information.
 
-    :raises ValueError: If the :data:'db_title' contains any spaces, numbers
+    :raises ValueError: If the :data:`db_title` contains any spaces, numbers
         or special characters other than '_'.
     """
 
@@ -67,7 +67,7 @@ class FitnessFunction(ABC):
         Sometimes it is more efficient to evaluate multiple individuals at once
         instead of evaluating them one by one. E.g. through parallelization.
         If not implemented by the class that inherits from this class,
-        this function will just evaluate each individual one by one.
+        this function will evaluate the individuals sequentially.
 
         :param individuals: List of individuals to evaluate.
 

@@ -12,7 +12,7 @@ def setup_stage_logger(
     run_name: str,
     stage_name: str,
     log_level: int = logging.INFO,
-) -> tuple[logging.Logger, str]:
+) -> logging.Logger:
     """Set up a logger for each stage of the run.
 
     :param log_file_path: Path to the log file. Normally the directory of the
@@ -21,9 +21,7 @@ def setup_stage_logger(
     :param stage_name: Name of the stage.
     :param log_level: Level of the log messages. Default is logging.INFO.
 
-    :return: A tuple containing the logger and the name of the logger.
-        The name of the logger is the run name and the stage name separated by
-        a underscore {run_name}_{stage_name}_logger.
+    :return: The created logger.
     """
     # Create logger name
     logger_name = f"{run_name}_{stage_name}_logger"
@@ -46,7 +44,7 @@ def setup_stage_logger(
     # Add the file handler to the logger
     logger.addHandler(file_handler)
 
-    return logger, logger_name
+    return logger
 
 
 def setup_run_logger(
@@ -64,8 +62,7 @@ def setup_run_logger(
     :param verbose: If True, log messages will be printed to the console
         through the StreamHandler.
 
-    :return: The logger. Note: The name of the logger is the run name separated
-        by an underscore {run_name}_logger.
+    :return: The created logger.
     """
     # Create logger name
     logger_name = f"{run_name}_logger"

@@ -2,7 +2,7 @@ import pytest
 from fucrimodo.core.utils.closest_distances_class import (
     CustomClosestDistances,
 )
-from fucrimodo.core.modules import Individual
+from fucrimodo.core import Individual
 
 
 @pytest.fixture

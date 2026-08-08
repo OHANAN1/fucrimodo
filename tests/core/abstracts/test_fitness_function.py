@@ -1,5 +1,6 @@
 import pytest
-from fucrimodo.core.modules import FitnessFunction, Individual
+from fucrimodo.core.abstracts import FitnessFunction
+from fucrimodo.core import Individual
 
 
 class MockFitnessFunction(FitnessFunction):

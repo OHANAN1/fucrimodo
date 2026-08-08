@@ -10,10 +10,11 @@ from ase import db
 from ase.db.core import Database
 from deap import tools
 
-from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.log_utils import setup_run_logger, setup_stage_logger
+from .individual import Individual
+from .population import Population
+from .utils.log_utils import setup_run_logger, setup_stage_logger
 
-from .modules import Population, Stage
+from .abstracts import Stage
 
 
 class MultiStageSearch:
@@ -395,7 +396,7 @@ class MultiStageSearch:
         stage.stage_dir = stage_dir
 
         # Set up a logger for the stage
-        stage_logger, _ = setup_stage_logger(
+        stage_logger = setup_stage_logger(
             log_file_path=f"{stage_dir}/stage.log",
             run_name=self.name,
             stage_name=stage.name,

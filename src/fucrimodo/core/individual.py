@@ -1,16 +1,19 @@
 import ase
 from operator import mul, truediv
-from collections.abc import Sequence
 import sys
 import numpy as np
 import datetime
 
 
 class FitnessStorage(object):
-    """Storage of fitness, inspired by the DEAP library.
+    """Storage of fitness and their weight values.
+
+    Implementation is inspired by the `DEAP library <https://github.com/deap/deap>`__.
+    FitnessStorages can be compared with each other via the comparison operators.
+    This compares the weighted fitness values :attr:`wvalues` lexicographically.
 
     More information can be found in the DEAP documentation for the
-    :class:'deap.base.Fitness' class. The main difference is that the
+    :class:`deap.base.Fitness` class. The main difference is that the
     FitnessStorage class can be initialized directly with a list of weights for
     the fitness values and does not depend on the DEAP creator module.
     Everything else works the same way as the DEAP Fitness class, to ensure
@@ -20,22 +23,48 @@ class FitnessStorage(object):
         values. The weights are used to calculate the weighted fitness values.
     """
 
-    def __init__(self, weights=None):
-        self.weights = weights
+    def __init__(self, weights: tuple | None = None):
+        self._weights = weights
         self.wvalues = ()
-        if self.weights is not None and not isinstance(self.weights, Sequence):
-            raise TypeError(
-                "Attribute weights of %r must be a sequence." % self.__class__
-            )
 
-    # TODO: Make this code more python like and consistent
-    def getValues(self):
+    @property
+    def weights(self):
+        """Weights of each of the fitness values.
+
+        Setting new weights deletes the current :attr:`values`.
+        """
+        return self._weights
+
+    @weights.setter
+    def weights(self, weights: tuple | None):
+        # reset the values
+        del self.values
+
+        self._weights = weights
+
+    @weights.deleter
+    def weights(self):
+        self._weights = None
+
+        # also delete values
+        del self.values
+
+    @property
+    def values(self):
+        """Fitness values.
+
+        Use directly ``individual.fitness.values = values`` in order to set the
+        fitness and ``del individual.fitness.values`` in order to clear
+        (invalidate) the fitness. The (unweighted) fitness can be directly
+        accessed via ``individual.fitness.values``.
+        """
         if self.weights is None:
             return self.wvalues
         else:
             return tuple(map(truediv, self.wvalues, self.weights))
 
-    def setValues(self, values):
+    @values.setter
+    def values(self, values):
         if self.weights is None:
             self.wvalues = values
         else:
@@ -54,20 +83,9 @@ class FitnessStorage(object):
                     % (self.__class__, values, type(values), self.weights)
                 ).with_traceback(traceback)
 
-    def delValues(self):
+    @values.deleter
+    def values(self):
         self.wvalues = ()
-
-    values = property(
-        getValues,
-        setValues,
-        delValues,
-        (
-            "Fitness values. Use directly ``individual.fitness.values = values`` "
-            "in order to set the fitness and ``del individual.fitness.values`` "
-            "in order to clear (invalidate) the fitness. The (unweighted) fitness "
-            "can be directly accessed via ``individual.fitness.values``."
-        ),
-    )
 
     def dominates(self, other, obj=slice(None)):
         """Return true if each objective of *self* is not strictly worse than
@@ -88,7 +106,10 @@ class FitnessStorage(object):
 
     @property
     def valid(self):
-        """Assess if a fitness is valid or not."""
+        """Assess if a fitness is valid or not.
+
+        Valid means that fitness values are assigned
+        """
         return len(self.wvalues) != 0
 
     def __hash__(self):
@@ -126,16 +147,15 @@ class FitnessStorage(object):
 
 
 class Individual(ase.Atoms):
-    """
-    An individual of the population. Inherits from :class:`ase.Atoms` and
-    is initialized with the same arguments. However, it has additional
-    attibutes: fitness, fitness_weights, features.
+    """A solution to the optimization problem.
 
-    fitness values and additional information.
+    The individual inherits from :class:`ase.Atoms` and is initialized with the
+    same arguments. However, it has the additional attibutes :attr:`fitness`,
+    :attr:`features` and :attr:`creation_time`.
 
     :param args: Arguments for the :class:`ase.Atoms` class.
-        Common args are :data:'symbols', :data:'positions', :data:'cell',
-        :data:'pbc', etc.
+        Common args are :data:`symbols`, :data:`positions`, :data:`cell`,
+        :data:`pbc`, etc.
     :param kwargs: Keyword arguments for the :class:`ase.Atoms` class.
     """
 
@@ -148,25 +168,31 @@ class Individual(ase.Atoms):
     def fitness(self) -> FitnessStorage:
         """A storage for the fitness values of the individual.
 
-        Uses the :class:'deap.base.Fitness' class with the weights set to the
-        fitness_weights.
-        The fitness values are stored in the 'values' attribute of the
-        fitness object. Please set up the storage with the
-        method `set_up_fitness_storage`. If not set up an empty fitnessStorage
-        will be returned i.e. no values can be entered.
+        Stores fitness and fitness weights in a :class:`FitnessStorage`. The
+        fitness values are stored in the 'values' attribute of the fitness
+        object. Weights have to be set before the values are entered. The
+        number of fitness values must always match the weights. Weights can be
+        overwritten. The weighted fitnesses of different individuals can be
+        compared via the comparison operators.
         Example:
 
         .. code-block:: python
 
             individual = Individual(ase.Atoms())
-            individual.fitness.weights = (1., 0.5)
-            individual.fitness.values = (1., 2.)
+            individual.fitness.weights = (1.0, 0.5)
+            individual.fitness.values = (1.0, 2.0)
             print(individual.fitness.values)
             # (1.0, 2.0)
 
-            individual.fitness.values = (2., 3.)
+            individual.fitness.values = (2.0, 3.0)
             print(individual.fitness.values)
             # (2.0, 3.0)
+
+            individual.fitness.weights = (1.0)
+            individual.fitness.values = (1.0)
+            print(individual.fitness.values)
+            # (1.0)
+
         """
         if not hasattr(self, "_fitness"):
             # Generate an empty fitness storage
@@ -175,22 +201,14 @@ class Individual(ase.Atoms):
         return self._fitness
 
     @property
-    def info(self) -> dict:
-        """A dictionary that can be used to store additional information about
-        the individual.
-
-        For example, the mutation that was applied to the individual.
-        Is NOT reset when the individual is reset.
-        Must be reset manually or overwritten if needed.
-        """
-        return self._info
-
-    @info.setter
-    def info(self, value: dict):
-        self._info = value
-
-    @property
     def features(self) -> np.ndarray | None:
+        """Descriptor features of the individual.
+
+        Attribute can be used to store the features so they do not need to be
+        recalculated for e.g. the similarity fitness.  Please assign features
+        manually. Do not forget to reset the features if structural/chemical
+        changes occure to the individual.
+        """
         if not hasattr(self, "_features"):
             return None
         return self._features
@@ -201,9 +219,17 @@ class Individual(ase.Atoms):
 
     @property
     def creation_time(self) -> datetime.datetime:
+        """Time the structure was first created or reset."""
         return self._creation_time
 
     def reset(self):
+        """Reset the individual.
+
+        Resets the attributes :attr:`features` and :attr:`fitness.values` and
+        sets the :attr:`creation_time` to the current time.
+
+        All other attributes, like e.g. :attr:`info` stay untouched.
+        """
         self._features = None
         self._creation_time = datetime.datetime.now()
         del self.fitness.values

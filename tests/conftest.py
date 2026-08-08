@@ -9,7 +9,9 @@ from ase.db.core import Database
 from typing import Callable
 import numpy as np
 
-from fucrimodo.core.modules import Individual, Population, Stage, FitnessFunction
+from fucrimodo.core.abstracts import Stage, FitnessFunction
+from fucrimodo.core import Individual, Population
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 
 
 @pytest.fixture
@@ -37,6 +39,30 @@ def ind_slab():
         positions=[[0, 0, 5], [0, 0, 6]],
         cell=[3.0, 3.0, 15.0],  # vacuum along z
         pbc=(True, True, False),  # periodic in x,y only
+    )
+
+
+@pytest.fixture
+def periodic_soap_obj():
+    return GlobalSOAP(
+        r_cut=2,
+        n_max=2,
+        l_max=2,
+        species=["H", "Na", "Cl", "O"],
+        periodic=True,
+        average="outer",
+    )
+
+
+@pytest.fixture
+def unperiodic_soap_obj():
+    return GlobalSOAP(
+        r_cut=2,
+        n_max=2,
+        l_max=2,
+        species=["H", "Na", "Cl", "O"],
+        periodic=False,
+        average="outer",
     )
 
 

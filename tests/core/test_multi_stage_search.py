@@ -4,7 +4,7 @@ import logging
 import os
 import numpy as np
 from fucrimodo.core import MultiStageSearch
-from fucrimodo.core.modules import Stage
+from fucrimodo.core.abstracts import Stage
 import ase.db
 from ase.db.core import Database
 from deap import tools

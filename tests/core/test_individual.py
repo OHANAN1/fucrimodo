@@ -5,7 +5,7 @@ import ase
 import numpy as np
 import pytest
 
-from fucrimodo.core.modules.individual import FitnessStorage, Individual
+from fucrimodo.core.individual import FitnessStorage, Individual
 
 
 class TestFitnessStorage:
@@ -18,11 +18,6 @@ class TestFitnessStorage:
         f = FitnessStorage(weights=(1.0, -1.0))
         assert f.weights == (1.0, -1.0)
         assert f.wvalues == ()
-
-    def test_init_invalid_weights_raises(self):
-        # An int is not a Sequence -> TypeError
-        with pytest.raises(TypeError):
-            FitnessStorage(weights=5)
 
     def test_set_and_get_values_weighted(self):
         f = FitnessStorage(weights=(2.0, -1.0))
@@ -53,6 +48,22 @@ class TestFitnessStorage:
         f = FitnessStorage(weights=(1.0,))
         f.values = (5.0,)
         del f.values
+        assert f.wvalues == ()
+        assert not f.valid
+
+    def test_del_weights(self):
+        f = FitnessStorage(weights=(1.0,))
+        f.values = (5.0,)
+        del f.weights
+        assert f.values == ()
+        assert f.wvalues == ()
+        assert not f.valid
+
+    def test_overwriting_weights_deletes_values(self):
+        f = FitnessStorage(weights=(1.0,))
+        f.values = (5.0,)
+        f.weights = (1.0, 2.0)
+        assert f.values == ()
         assert f.wvalues == ()
         assert not f.valid
 

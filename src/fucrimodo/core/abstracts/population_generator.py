@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 
-from fucrimodo.core.modules.individual import Individual
-from .population import Population
+from ..individual import Individual
+from ..population import Population
 
 
 class PopulationGenerator(ABC):
-    """Generate a new population.
+    """Generates a new population.
 
-    The population generator should create the individuals of a population.
+    The population generator should create the individuals of a population with
+    the :meth:`generate_individuals` method.
     """
 
     def generate_population(self, size: int) -> Population:
