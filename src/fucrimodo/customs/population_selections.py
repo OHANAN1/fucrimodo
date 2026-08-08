@@ -1,62 +1,26 @@
-import random
-import warnings
-from typing import Callable, Optional
+from typing import Callable
 
+import numpy as np
 from deap import tools
-from fucrimodo.core.modules import (
-    Individual,
-    PopulationGenerator,
+from operator import attrgetter
+from ..core import Individual
+from ..core.abstracts import (
     PopulationSelection,
 )
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-
-# ╒══════════════════════════════════════════════════════════╕
-#                    StartPopulation Class
-# ╘══════════════════════════════════════════════════════════╛
 
 
-class RandomSelectionPopulation(PopulationSelection):
-    """
-    A class that returns a list of n random individuals.
-    Set database_name to describe the database the original individuals are from.
-
-    Call the object after initialization to get the list of individuals.
-    """
-
-    def __init__(self, n: int, database_name: Optional[str] = None):
-        self.n = n
-        self.database_name = database_name
-
-    def add_individuals(self, individuals: list[Individual]) -> None:
-        """
-        Adds a list of individuals to the start population.
-        """
-        self.individuals = individuals
-
-    def get_individual(self) -> Individual:
-        """
-        Returns n random individuals from the individuals list.
-        """
-        chosen_individuals = random.choice(self.individuals)
-        return chosen_individuals
-
-    def select_start_pop(
+class RandomSelection(PopulationSelection):
+    def __init__(
         self,
-        individuals: list[Individual],
-    ) -> list[Individual]:
-        """
-        Returns n random individuals from the individuals list.
-        """
-        chosen_individuals = random.choices(individuals, k=self.n)
-        return chosen_individuals
+        rng: np.random.Generator | None = None,
+    ):
+        if not rng:
+            rng = np.random.default_rng()
+        self._rng = rng
 
-    def __repr__(self) -> str:
-        if self.database_name is not None:
-            return "RandomSelectionPopulation(n={}, database_name={})".format(
-                self.n, self.database_name
-            )
-        else:
-            return "RandomSelectionPopulation(n={})".format(self.n)
+    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
+        idx = self._rng.integers(len(individuals), size=n)
+        return [individuals[i] for i in idx]
 
 
 class TournamentSelection(PopulationSelection):
@@ -74,11 +38,13 @@ class TournamentSelection(PopulationSelection):
     def __init__(
         self,
         tournament_size: int,
+        rng: np.random.Generator | None = None,
     ):
         self._tournament_size = tournament_size
+        self.random_selection = RandomSelection(rng=rng)
 
     def __repr__(self) -> str:
-        return f"TournamentSelection(tournsize={self._tournament_size})"
+        return f"TournamentSelection(tournament_size={self._tournament_size})"
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         """Selects a population using the tournament selection.
@@ -90,12 +56,11 @@ class TournamentSelection(PopulationSelection):
 
         :return: A list of individuals selected using the tounament selection.
         """
-        # Perform tournament selection.
-        individuals = tools.selTournament(
-            individuals, k=n, tournsize=self._tournament_size
-        )
-
-        return individuals
+        chosen = []
+        for _ in range(n):
+            aspirants = self.random_selection.select(individuals, self._tournament_size)
+            chosen.append(max(aspirants, key=attrgetter("fitness")))
+        return chosen
 
 
 class NSGA2Selection(PopulationSelection):
@@ -136,141 +101,6 @@ class NSGA2Selection(PopulationSelection):
         return individuals
 
 
-class BestIndividualsPopulation(PopulationSelection):
-    """
-    A class that returns a list of n individuals with the highest fitness.
-    Set database_name to describe the database the original individuals are from.
-
-    Call the object after initialization to get the list of individuals.
-    """
-
-    def __init__(
-        self,
-        n: int,
-        evaluation_function: Callable[[Individual], float],
-        database_name: Optional[str] = None,
-        verbose: int = 1,
-    ):
-        self.n = n
-        self.evaluation_function = evaluation_function
-        self.database_name = database_name
-        self.verbose = verbose
-
-    def __get_n_best_individuals(
-        self, individuals: list[Individual], verbose: int = 1
-    ) -> list[Individual]:
-        fitness_list = [
-            self.evaluation_function(individual) for individual in individuals
-        ]
-        sorted_list = sorted(
-            zip(individuals, fitness_list), key=lambda x: x[1], reverse=True
-        )
-        best_individuals = [ind for ind, _ in sorted_list[: self.n]]
-
-        return best_individuals
-
-    def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
-        """
-        Returns n individuals with the highest fitness.
-        """
-
-        if self.n > len(individuals):
-            n = len(individuals)
-            warnings.warn(
-                "BestIndividualsPopulation: "
-                + "n is larger than the number of individuals. "
-                + "Returning {} instead of {} individuals.".format(n, self.n)
-            )
-            return individuals
-
-        chosen_individuals = self.__get_n_best_individuals(
-            individuals=individuals, verbose=self.verbose
-        )
-        return chosen_individuals
-
-    def __repr__(self) -> str:
-        if self.database_name is not None:
-            return "BestIndividualsPopulation(n={}, database_name={})".format(
-                self.n, self.database_name
-            )
-        else:
-            return "BestIndividualsPopulation(n={})".format(self.n)
-
-
-class WorstIndividualsPopulation(PopulationSelection):
-    """
-    A class that returns a list of n individuals with the highest fitness.
-    Set database_name to describe the database the original individuals are from.
-
-    Call the object after initialization to get the list of individuals.
-    """
-
-    def __init__(
-        self,
-        n: int,
-        evaluation_function: Callable[[Individual], float],
-        database_name: Optional[str] = None,
-        verbose: int = 1,
-    ):
-        self.n = n
-        self.evaluation_function = evaluation_function
-        self.database_name = database_name
-        self.verbose = verbose
-
-    def __get_n_worst_individuals(
-        self, individuals: list[Individual], verbose: int = 1
-    ) -> list[Individual]:
-        fitness_list = []
-        for i, ind in enumerate(individuals):
-            fitness_list.append(self.evaluation_function(ind))
-
-        sorted_list = sorted(
-            zip(individuals, fitness_list), key=lambda x: x[1], reverse=False
-        )
-        sorted_individuals = [ind for ind, _ in sorted_list]
-
-        return sorted_individuals[: self.n]
-
-    def select_start_pop(self, individuals: list[Individual]) -> list[Individual]:
-        """
-        Returns n individuals with the highest fitness.
-        """
-        chosen_individuals = self.__get_n_worst_individuals(
-            individuals=individuals, verbose=self.verbose
-        )
-        return chosen_individuals
-
-    def __repr__(self) -> str:
-        if self.database_name is not None:
-            return "WorstIndividualsPopulation(n={}, database_name={})".format(
-                self.n, self.database_name
-            )
-        else:
-            return "WorstIndividualsPopulation(n={}, ".format(self.n)
-
-
-class SelectAllPopulation(PopulationSelection):
-    """
-    A class that returns all individuals.
-    Set database_name to describe the database the original individuals are from.
-
-    Call the object after initialization to get the list of individuals.
-    """
-
-    def __init__(self, database_name: Optional[str] = None):
-        self.database_name = database_name
-
-    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Returns all individuals. Parameter n is ignored."""
-        return individuals
-
-    def __repr__(self) -> str:
-        if self.database_name is not None:
-            return "SelectAllPopulation(database_name={})".format(self.database_name)
-        else:
-            return "SelectAllPopulation()"
-
-
 class TournamentDCDSelection(PopulationSelection):
     """Selects a population using the tournament selection algorithm with DCD.
 
@@ -285,10 +115,58 @@ class TournamentDCDSelection(PopulationSelection):
 
     def __init__(
         self,
-        sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values[0],
+        rng: np.random.Generator | None = None,
+        sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values,
     ):
-        super().__init__()
+
+        if rng is None:
+            rng = np.random.default_rng()
+        self._rng = rng
         self.sort_by = sort_by
+
+    def _np_selTournamentDCD(self, individuals: list[Individual], n: int):
+        """Tournament selection based on dominance (D) and crowding distance (CD).
+
+        Same semantics as DEAP's selTournamentDCD, but uses an explicit
+        np.random.Generator instead of Python's global random module.
+        """
+        if n > len(individuals):
+            raise ValueError(
+                "selTournamentDCD: k must be less than or equal to individuals length"
+            )
+
+        if n == len(individuals) and n % 4 != 0:
+            raise ValueError(
+                "selTournamentDCD: k must be divisible by four if k == len(individuals)"
+            )
+
+        def tourn(ind1, ind2):
+            if ind1.fitness.dominates(ind2.fitness):
+                return ind1
+            elif ind2.fitness.dominates(ind1.fitness):
+                return ind2
+
+            if ind1.fitness.crowding_dist < ind2.fitness.crowding_dist:
+                return ind2
+            elif ind1.fitness.crowding_dist > ind2.fitness.crowding_dist:
+                return ind1
+
+            if self._rng.random() <= 0.5:
+                return ind1
+            return ind2
+
+        # Two independent shuffles of the population indices
+        idx1 = self._rng.permutation(len(individuals))
+        idx2 = self._rng.permutation(len(individuals))
+
+        chosen = []
+        for i in range(0, n, 4):
+            chosen.append(tourn(individuals[idx1[i]], individuals[idx1[i + 1]]))
+            chosen.append(tourn(individuals[idx1[i + 2]], individuals[idx1[i + 3]]))
+            chosen.append(tourn(individuals[idx2[i]], individuals[idx2[i + 1]]))
+            chosen.append(tourn(individuals[idx2[i + 2]], individuals[idx2[i + 3]]))
+
+        return chosen
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
         # Assign crowding distance to each individual, as expected by the
@@ -296,49 +174,19 @@ class TournamentDCDSelection(PopulationSelection):
         tools.emo.assignCrowdingDist(individuals)
 
         # Select individuals using the selTournamentDCD function
-        selected_individuals = tools.selTournamentDCD(individuals, n)
+        chosen = self._np_selTournamentDCD(individuals=individuals, n=n)
 
         # Reset the crowding distance of the selected individuals
-        for individual in selected_individuals:
+        for individual in chosen:
             if hasattr(individual, "crowding_dist"):
                 del individual.crowding_dist
 
         if self.sort_by is not None:
-            selected_individuals.sort(
+            chosen.sort(
                 key=self.sort_by,
             )
 
-        return selected_individuals
+        return chosen
 
     def __repr__(self) -> str:
         return "TournamentDCDSelection()"
-
-
-class DopePopulationSelection(PopulationSelection):
-    def __init__(
-        self,
-        atom_types: list[str],
-        cell_bounds: CustomCellBounds,
-        generator: PopulationGenerator,
-    ) -> None:
-        self.atom_types = atom_types
-        self.cell_bounds = cell_bounds
-        self.generator = generator
-
-    def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Add randomly generated individuals to the population.
-
-        :param individuals: A list of individuals to add to.
-        :param n: The number of individuals to add to the population.
-
-        :return: A list of individuals with n new individuals added.
-            Therefore the length of the list is len(individuals) + n.
-        """
-        new_individuals = self.generator.generate_individuals(n)
-
-        return individuals + new_individuals
-
-    def __repr__(self) -> str:
-        return "DopePopulationSelection(atom_types={}, cell_bounds={}, generator={})".format(
-            self.atom_types, self.cell_bounds
-        )
