@@ -1,15 +1,14 @@
 from .abstract import Mutation
-from fucrimodo.core.modules import Individual
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from ....core import Individual
+from ....core.utils import CustomClosestDistances
 from ase_ga import soft_mutation as ase_soft_mut
 
 
 class SoftMutation(Mutation):
-    def __init__(self, closest_distances: CustomClosestDistances) -> None:
-        self.closest_distances = closest_distances
-        self.max_steps = 1
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
+        # always keep at one, since this mutation works fully deterministic anyways
+        self.max_retries = 1
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
         individual.info["confid"] = 0
         if len(individual.numbers) == 1:
             return None

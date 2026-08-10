@@ -137,7 +137,7 @@ class GlobalSOAP:
         n_jobs=1,
         only_physical_cores=False,
         verbose=False,
-    ) -> NDArray[np.float64]:
+    ) -> list[np.ndarray]:
         if isinstance(system, ase.Atoms):
             if not self.__is_valid(system):
                 raise ValueError("Invalid input. Check warnings for details.")
@@ -146,11 +146,14 @@ class GlobalSOAP:
                 raise ValueError("Invalid input. Check warnings for details.")
 
         try:
-            return self._dscribe_soap.create(  # type: ignore
+            results = self._dscribe_soap.create(
                 system=system,
                 n_jobs=n_jobs,
                 only_physical_cores=only_physical_cores,
                 verbose=verbose,
             )
+            if len(system) == 1:
+                return [results]  # type: ignore
+            return results  # type: ignore
         except Exception as e:
             raise ValueError(f"Error in creating SOAP: {e}")

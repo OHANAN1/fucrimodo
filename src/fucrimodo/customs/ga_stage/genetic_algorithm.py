@@ -1,10 +1,10 @@
 import copy
 import functools
-from fucrimodo.core.modules import Population, FitnessFunction, Individual
-from fucrimodo.core.modules.population_selection import PopulationSelection
+from ...core.abstracts import FitnessFunction, PopulationSelection
+from ...core import Population, Individual
 from .mutations import Mutation
 from .crossovers import Crossover
-from .break_conditions import BreakCondition
+from ..break_conditions import BreakCondition
 from typing import Any, Sequence
 from deap import tools
 import numpy as np

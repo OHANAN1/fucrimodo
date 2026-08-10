@@ -9,9 +9,12 @@ from ase.db.core import Database
 from typing import Callable
 import numpy as np
 
-from fucrimodo.core.abstracts import Stage, FitnessFunction
+from fucrimodo.core.abstracts import Stage, FitnessFunction, PopulationSelection
 from fucrimodo.core import Individual, Population
 from fucrimodo.customs.global_soap_target import GlobalSOAP
+from fucrimodo.core.utils import CustomClosestDistances, CustomCellBounds
+from fucrimodo.customs.ga_stage.crossovers import Crossover
+from fucrimodo.customs.ga_stage.mutations import Mutation
 
 
 @pytest.fixture
@@ -39,6 +42,27 @@ def ind_slab():
         positions=[[0, 0, 5], [0, 0, 6]],
         cell=[3.0, 3.0, 15.0],  # vacuum along z
         pbc=(True, True, False),  # periodic in x,y only
+    )
+
+
+@pytest.fixture()
+def closest_distances():
+    return CustomClosestDistances(
+        species=["H", "He", "Li", "Na", "Cl", "O"], ratio_of_covalent_radii=0.5
+    )
+
+
+@pytest.fixture()
+def cell_bounds():
+    return CustomCellBounds(
+        bounds={
+            "phi": [20, 160],
+            "chi": [60, 120],
+            "psi": [20, 160],
+            "a": [1, 20],
+            "b": [1, 20],
+            "c": [1, 20],
+        }
     )
 
 
@@ -139,3 +163,79 @@ def ExampleStage():
             return {}
 
     return ExampleStage
+
+
+@pytest.fixture
+def example_crossover(closest_distances):
+    class ExampleCrossover(Crossover):
+        """
+        This Crossover just returns copies of the parents.
+        """
+
+        def _perform_crossover(
+            self, parent1: Individual, parent2: Individual
+        ) -> tuple[Individual, Individual] | tuple[None, None]:
+            return (parent1.copy(), parent2.copy())
+
+    return ExampleCrossover(closest_distances)
+
+
+@pytest.fixture
+def example_mutation(closest_distances):
+    class ExampleMutation(Mutation):
+        """
+        This Mutation just returns copies of the parent.
+        """
+
+        def _perform_mutation(self, individual: Individual) -> Individual | None:
+            return individual.copy()
+
+    return ExampleMutation(closest_distances)
+
+
+@pytest.fixture
+def example_selection():
+    class ExampleSelection(PopulationSelection):
+        def select(self, individuals: list[Individual], n: int) -> list[Individual]:
+            return individuals[:n]
+
+    return ExampleSelection()
+
+
+@pytest.fixture
+def mutation_reproducability_assessment():
+    def assess(individual: Individual, mut: Mutation, assess_change=True):
+
+        # Save initial state of rng
+        original_state = mut._rng.bit_generator.state
+
+        # run multiple tests
+        gen_inds = []
+        successes = []
+        for _ in range(5):
+            ind, success = mut.mutate(individual.copy())
+            gen_inds.append(ind)
+            successes.append(success)
+            if success:
+                assert ind != individual
+
+        # Check if there was at least one success
+        assert any(successes)
+
+        # Check reproducability
+        # Restore original big generator state
+        mut._rng.bit_generator.state = original_state
+        for i in range(5):
+            ind, success = mut.mutate(individual.copy())
+            assert ind == gen_inds[i]
+            assert success == successes[i]
+
+        if assess_change:
+            # Check that results can change
+            res_changed = []
+            for i in range(5):
+                ind, _ = mut.mutate(individual.copy())
+                res_changed.append(ind != gen_inds[i])
+            assert any(res_changed)
+
+    return assess

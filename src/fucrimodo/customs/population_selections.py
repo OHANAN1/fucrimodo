@@ -22,6 +22,9 @@ class RandomSelection(PopulationSelection):
         idx = self._rng.integers(len(individuals), size=n)
         return [individuals[i] for i in idx]
 
+    def __repr__(self):
+        return "RandomSelection()"
+
 
 class TournamentSelection(PopulationSelection):
     """Selects a population using the tournament selection algorithm.
@@ -40,8 +43,12 @@ class TournamentSelection(PopulationSelection):
         tournament_size: int,
         rng: np.random.Generator | None = None,
     ):
+        if not rng:
+            rng = np.random.default_rng()
+        self._rng = rng
+        self._random_selection = RandomSelection(rng=rng)
+
         self._tournament_size = tournament_size
-        self.random_selection = RandomSelection(rng=rng)
 
     def __repr__(self) -> str:
         return f"TournamentSelection(tournament_size={self._tournament_size})"
@@ -58,7 +65,9 @@ class TournamentSelection(PopulationSelection):
         """
         chosen = []
         for _ in range(n):
-            aspirants = self.random_selection.select(individuals, self._tournament_size)
+            aspirants = self._random_selection.select(
+                individuals, self._tournament_size
+            )
             chosen.append(max(aspirants, key=attrgetter("fitness")))
         return chosen
 
@@ -118,10 +127,10 @@ class TournamentDCDSelection(PopulationSelection):
         rng: np.random.Generator | None = None,
         sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values,
     ):
-
         if rng is None:
             rng = np.random.default_rng()
         self._rng = rng
+
         self.sort_by = sort_by
 
     def _np_selTournamentDCD(self, individuals: list[Individual], n: int):
@@ -132,12 +141,15 @@ class TournamentDCDSelection(PopulationSelection):
         """
         if n > len(individuals):
             raise ValueError(
-                "selTournamentDCD: k must be less than or equal to individuals length"
+                "selTournamentDCD: n must be less than or equal to individuals length"
             )
+
+        if n < 4:
+            raise ValueError("n must be bigger or equal to 4")
 
         if n == len(individuals) and n % 4 != 0:
             raise ValueError(
-                "selTournamentDCD: k must be divisible by four if k == len(individuals)"
+                "selTournamentDCD: n must be divisible by four if k == len(individuals)"
             )
 
         def tourn(ind1, ind2):
@@ -169,6 +181,14 @@ class TournamentDCDSelection(PopulationSelection):
         return chosen
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
+        """
+
+
+        :raises ValueError: if n is smaller than 4
+        :raises AssertionError: if number of individuals is smaller than 4
+        """
+        assert len(individuals) >= 4
+
         # Assign crowding distance to each individual, as expected by the
         # selTournamentDCD function
         tools.emo.assignCrowdingDist(individuals)

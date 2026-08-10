@@ -1,5 +1,5 @@
-from fucrimodo.customs import population_generator as pop_gen
-from fucrimodo.core import modules
+from fucrimodo.customs import population_generators as pop_gen
+from fucrimodo.core import Individual
 from io import StringIO
 import re
 import ase
@@ -41,7 +41,7 @@ def create_target_file_data(
 
 def get_target_individual_from_additional_notes(
     additional_notes: str,
-) -> modules.Individual:
+) -> Individual:
     """Load the target structure from the additional notes of the input file.
 
     It is assumed that the target structure is stored in the additional notes

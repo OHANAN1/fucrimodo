@@ -1,15 +1,17 @@
 from collections.abc import Sequence
 
-from fucrimodo.core.modules import FitnessFunction
+import ase
+import numpy as np
 
+from ..core.abstracts import FitnessFunction
+from ..core import Individual
 from . import fitness_functions as ff
 from .fitness_functions import FitnessFunction
 from .global_soap_target import GlobalSOAP
-from .global_soap_target import soap_similarity as soap_sim
 
 
 def get_soap_similarity_fitness_list(
-    target_soap_features,
+    target_soap_features: np.ndarray,
     soap_object: GlobalSOAP,
     rbf_gammas: Sequence[float | int] = [1.0, 0.1, 0.01],
     function_titles: list[str] = [
@@ -26,17 +28,13 @@ def get_soap_similarity_fitness_list(
     ), "Define same number of titles as rbf gammas."
 
     soap_fitnesses = []
-    for i in range(len(rbf_gammas)):
+    for gamma, title in zip(rbf_gammas, function_titles):
         soap_fitnesses.append(
-            ff.SimilarityToTargetSOAPFitness(
+            ff.SoapRbfSimilarityFitness(
                 target_soap_features=target_soap_features,
                 soap_object=soap_object,
-                soap_similarity=soap_sim.RBFSimilarity(
-                    target_feature_vector=target_soap_features,
-                    rbf_gamma=rbf_gammas[i],
-                    adjust_gamma=False,
-                ),
-                db_title=function_titles[i],
+                rbf_gamma=gamma,
+                db_title=title,
                 round_result=round_result,
                 n_jobs=n_jobs,
             )
@@ -45,35 +43,74 @@ def get_soap_similarity_fitness_list(
     return soap_fitnesses
 
 
-def get_species_specific_soap_fitness_list(
+def get_species_specific_soap_sim_fitness_list(
     target_soap_features,
-    soap_species: Sequence[str | int],
+    species: list[str | int],
     soap_object: GlobalSOAP,
     rbf_gamma: int | float = 0.1,
-    function_name: str = "species_specific_fit",
+    function_title: str = "species_specific_fit",
     round_result: None | int = None,
     n_jobs: int = 1,
 ) -> list[FitnessFunction]:
+    from ase.data import chemical_symbols
+
+    # Convert the soap species to chemical symbols
+    soap_species_sym = []
+    for s in species:
+        if type(s) == int:
+            s = chemical_symbols[s]
+        soap_species_sym.append(s)
+
+    # Set up the fitness functions:
     species_specific_fitnesses = []
-    for i in range(len(soap_species)):
-        for j in range(i, len(soap_species)):
-            soap_fit_spec = ff.SimilarityToTargetSOAPFitness(
+    for i in range(len(species)):
+        for j in range(i, len(species)):
+            soap_fit_spec = ff.SpeciesSpecificSoapRbfSimFitness(
                 target_soap_features=target_soap_features,
                 soap_object=soap_object,
-                soap_similarity=soap_sim.SpeciesSpecificRBFSim(
-                    target_feature_vector=target_soap_features,
-                    rbf_gamma=rbf_gamma,
-                    adjust_gamma=False,
-                    soap_object=soap_object,
-                    species=soap_species[i],  # type: ignore
-                    species_to_compare=[soap_species[j]],  # type: ignore
-                ),
-                db_title="{}_{}_{}".format(
-                    function_name, soap_species[i], soap_species[j]
-                ),
+                species=(soap_species_sym[i], soap_species_sym[j]),
+                db_title="{}_{}_{}".format(function_title, species[i], species[j]),
+                rbf_gamma=rbf_gamma,
                 round_result=round_result,
                 n_jobs=n_jobs,
             )
             species_specific_fitnesses.append(soap_fit_spec)
 
     return species_specific_fitnesses
+
+
+def convert_ase_atoms_to_individual(atoms: ase.Atoms) -> Individual:
+    return Individual(
+        positions=atoms.get_positions(),
+        cell=atoms.get_cell(),
+        pbc=atoms.pbc,
+        symbols=atoms.get_chemical_symbols(),
+    )
+
+
+class LegacyRNGAdapter:
+    """Wrap a numpy.random.Generator so it looks like np.random.RandomState.
+
+    This can be used whenever the legacy np.random api needs to be used.
+    """
+
+    def __init__(self, rng: np.random.Generator):
+        self._rng = rng
+
+    def random(self, *args, **kwargs):
+        return self._rng.random(*args, **kwargs)
+
+    def choice(self, *args, **kwargs):
+        return self._rng.choice(*args, **kwargs)
+
+    def normal(self, loc=0.0, scale=1.0, size=None):
+        return self._rng.normal(loc=loc, scale=scale, size=size)
+
+    def randint(self, low, high=None, size=None, dtype=int):
+        if high is None:
+            return self._rng.integers(low, size=size, dtype=dtype)
+        return self._rng.integers(low, high, size=size, dtype=dtype)
+
+    def __getattr__(self, name):
+        # Forward anything else to the Generator
+        return getattr(self._rng, name)

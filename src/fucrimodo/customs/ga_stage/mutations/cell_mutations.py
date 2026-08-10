@@ -1,13 +1,11 @@
-import random
-
 import ase_ga.standardmutations as ase_standard_mut
 import numpy as np
 from ase import build
 from ase.cell import Cell
 
-from fucrimodo.core.modules.individual import Individual
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from ....core import Individual
+from ....core.utils import CustomCellBounds, CustomClosestDistances
+from ...utils import LegacyRNGAdapter
 
 from .abstract import Mutation
 
@@ -24,25 +22,27 @@ class ScaleUnitCellMutation(Mutation):
         max_scale: float = 2.0,
         min_scale: float = 0.5,
         scale_atoms: bool = True,
-        max_steps: int = 100,
         n_variable_cell_vectors: int = 3,
+        max_retries: int = 100,
+        rng: None | np.random.Generator = None,
     ):
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
         self.max_scale = max_scale
         self.min_scale = min_scale
         self.scale_atoms = scale_atoms
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
         self.cell_bounds = cell_bounds
         self.n_variable_cell_vectors = n_variable_cell_vectors
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         offspring = individual.copy()
         cell = offspring.get_cell()[:]  # type: ignore
 
-        random_factor = np.random.uniform(self.min_scale, self.max_scale)
+        random_factor = self._rng.uniform(self.min_scale, self.max_scale)
 
         # Select random cell vectors to scale
-        cell_indicees = np.random.choice(
+        cell_indicees = self._rng.choice(
             [0, 1, 2], self.n_variable_cell_vectors, replace=False
         )
         for i in cell_indicees:
@@ -54,32 +54,41 @@ class ScaleUnitCellMutation(Mutation):
 
         # If structure did not change, return None, to avoid false positives
         if offspring == individual:
-            self.logger.debug("Structure did not change.")
+            if self.logger:
+                self.logger.debug("Structure did not change.")
             return None
 
         # Check if the new cell is within the bounds
         if not self.cell_bounds.is_within_bounds(offspring.cell):
-            self.logger.debug("Structure is outside the bounds.")
+            if self.logger:
+                self.logger.debug("Structure is outside the bounds.")
             return None
 
         return offspring
 
 
 class StrainMutation(Mutation):
+    """Uses :attr:`_legacy_rng` internally."""
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
         n_variable_cell_vectors: int = 3,
         cell_bounds: CustomCellBounds | None = None,
         stddev: float = 0.7,
-    ) -> None:
-        self.closest_distances = closest_distances
+        max_retries: int = 100,
+        rng: None | np.random.Generator = None,
+    ):
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
+        self._legacy_rng = LegacyRNGAdapter(self._rng)
         self.n_variable_cell_vectors = n_variable_cell_vectors
         self.cell_bounds = cell_bounds
         self.max_steps = 1
         self.stddev = stddev
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         if self.cell_bounds is None:
             len_ang = individual.cell.cellpar()
             a = len_ang[0]
@@ -102,6 +111,7 @@ class StrainMutation(Mutation):
             cellbounds=cell_bounds,
             stddev=self.stddev,
             verbose=True,
+            rng=self._legacy_rng,  # type: ignore
         )
         ase_strain.update_scaling_volume([individual])
 
@@ -111,14 +121,19 @@ class StrainMutation(Mutation):
 
 
 class EnlargeMutation(Mutation):
+    """Deterministic"""
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
-        max_steps: int = 1,
-    ) -> None:
-        self.closest_distances = closest_distances
-        self.max_steps = max_steps
+        max_retries: int = 1,
+        rng: None | np.random.Generator = None,
+    ):
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
+
         self.cell_bounds = cell_bounds
 
     def __get_possible_new_cell(
@@ -143,7 +158,7 @@ class EnlargeMutation(Mutation):
         else:
             return Cell(possible_cell_vectors), possible_sides
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         offspring = individual
         cell = offspring.get_cell()
         cell_vectors = cell[:]  # type: ignore
@@ -166,80 +181,24 @@ class EnlargeMutation(Mutation):
 
 
 class NiggliReduceMutation(Mutation):
-    def __init__(
-        self, closest_distances: CustomClosestDistances, max_steps: int = 1
-    ) -> None:
-        self.closest_distances = closest_distances
-        self.max_steps = max_steps
+    """Deterministic"""
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         build.niggli_reduce(individual)
         return individual
 
 
 class MinimizeTiltMutation(Mutation):
-    def __init__(
-        self, closest_distances: CustomClosestDistances, max_steps: int = 1
-    ) -> None:
-        self.closest_distances = closest_distances
-        self.max_steps = max_steps
+    """Deterministic"""
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         build.minimize_tilt(individual)
         return individual
 
 
-class CutoutMutation(Mutation):
-    def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        cell_bounds: CustomCellBounds,
-        tolerance: float = 0.01,
-        max_steps: int = 50,
-    ) -> None:
-        self.tolerance = tolerance
-        self.closest_distances = closest_distances
-        self.cell_bounds = cell_bounds
-        self.max_steps = max_steps
-
-    def perform_mutation(self, individual: Individual) -> Individual | None:
-        if not self.cell_bounds.is_within_bounds(individual.cell):
-            return None
-
-        a_vec = (np.random.uniform(0.0, 0.8), 0, 0)
-        b_vec = (0, np.random.uniform(0.0, 0.8), 0)
-        if random.choice([True, False]):
-            c_vec = (0, 0, np.random.uniform(0.0, 0.8))
-        else:
-            c_vec = None
-
-        cutout_individual = build.cut(
-            individual,
-            a=a_vec,
-            b=b_vec,
-            c=c_vec,
-            clength=None,
-            tolerance=self.tolerance,
-        )
-
-        if self.cell_bounds.is_within_bounds(cutout_individual.cell):
-            if len(cutout_individual) <= 1:
-                return None
-            else:
-                return cutout_individual
-        else:
-            return None
-
-
 class RotationMutation(Mutation):
-    def __init__(
-        self, closest_distances: CustomClosestDistances, max_steps: int = 30
-    ) -> None:
-        self.closest_distances = closest_distances
-        self.max_steps = max_steps
-
-    def perform_mutation(self, individual: Individual) -> Individual | None:
-        v_rand = np.random.choice(["x", "y", "z"])
-        a_rand = np.random.uniform(0, 90)
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
+        v_rand = self._rng.choice(["x", "y", "z"])
+        a_rand = self._rng.uniform(0, 90)
         individual.rotate(a=a_rand, v=v_rand, rotate_cell=False)
         return individual

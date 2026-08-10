@@ -4,15 +4,14 @@ from typing import Any, Callable, Sequence
 
 from ase.db.core import Database
 from deap import tools
-from fucrimodo.core.modules import (
+from ...core.abstracts import (
     FitnessFunction,
-    Individual,
-    Population,
     PopulationSelection,
     Stage,
 )
+from ...core import Individual, Population
 
-from .break_conditions import BreakCondition
+from ..break_conditions import BreakCondition
 from .crossovers import Crossover
 from .genetic_algorithm import GeneticAlgorithm
 from .mutations import Mutation
@@ -52,13 +51,13 @@ class GAStage(Stage):
             save_n_structures=save_n_structures,
         )
 
-        fitness_funcs, fitness_weights = self.__seperate_object_weight_tuples(
+        fitness_funcs, fitness_weights = self._seperate_object_weight_tuples(
             fitness_functions
         )
-        cross_list, crossover_weights = self.__seperate_object_weight_tuples(
+        cross_list, crossover_weights = self._seperate_object_weight_tuples(
             crossover_list
         )
-        mut_list, mutation_weights = self.__seperate_object_weight_tuples(mutation_list)
+        mut_list, mutation_weights = self._seperate_object_weight_tuples(mutation_list)
 
         self.ga_runner = GeneticAlgorithm(
             fitness_functions=fitness_funcs,
@@ -91,7 +90,7 @@ class GAStage(Stage):
     def stop_event(self, value) -> None:
         self._stop_event = value
 
-    def __seperate_object_weight_tuples(
+    def _seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]
     ) -> tuple[list, tuple]:
         """
@@ -112,7 +111,7 @@ class GAStage(Stage):
 
         return objects, weights
 
-    def __save_hall_of_fame(
+    def _save_hall_of_fame(
         self,
         database: Database,
         hall_of_fame: tools.HallOfFame,
@@ -137,7 +136,7 @@ class GAStage(Stage):
 
             database.write(ind, key_value_pairs)
 
-    def __save_crossovers(self, save_dir: str):
+    def _save_crossovers(self, save_dir: str):
         """Saves the crossover logbook and information to a json file.
 
         The json file will contain the following information:
@@ -185,7 +184,7 @@ class GAStage(Stage):
         with open(file_path, "w") as f:
             json.dump(crossover_dict, f, indent=4)
 
-    def __save_mutations(self, save_dir: str):
+    def _save_mutations(self, save_dir: str):
         """Saves the mutation logbook and information to a json file.
 
         The json file will contain the following information:
@@ -231,7 +230,7 @@ class GAStage(Stage):
         with open(file_path, "w") as f:
             json.dump(mutation_dict, f, indent=4)
 
-    def __save_fitnesses(self, save_dir: str):
+    def _save_fitnesses(self, save_dir: str):
         """Saves the fitness logbook and information to a json file.
 
         The json file will contain the following information:
@@ -328,10 +327,10 @@ class GAStage(Stage):
         structures_db: Database,
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ):
-        self.__save_mutations(save_dir)
-        self.__save_crossovers(save_dir)
-        self.__save_fitnesses(save_dir)
-        self.__save_hall_of_fame(
+        self._save_mutations(save_dir)
+        self._save_crossovers(save_dir)
+        self._save_fitnesses(save_dir)
+        self._save_hall_of_fame(
             structures_db,
             self.hall_of_fame,
             self.ga_runner.fitness_functions,

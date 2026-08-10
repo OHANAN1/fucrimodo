@@ -1,100 +1,17 @@
-import random
-import numpy as np
+import logging
 from abc import ABC, abstractmethod
+
 import ase
+import numpy as np
+from ase import build
+from ase.build import stack
 from ase.cell import Cell
 from ase_ga.cutandsplicepairing import CutAndSplicePairing
-from ase.build import stack
-from numpy.typing import NDArray
-from ase import build
-from ase.geometry import get_distances
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
-from fucrimodo.customs.population_generator import convert_ase_atoms_to_individual
-from fucrimodo.core.modules import Individual
-import logging
 
-# ╔══════════════════════════════════════════════════════════╗
-# ║                    Utility functions                     ║
-# ╚══════════════════════════════════════════════════════════╝
-
-
-def atoms_in_individual_are_to_close(
-    positions: np.ndarray,
-    atomic_numbers: np.ndarray,
-    cell: Cell,
-    closest_distances: dict[tuple[int, int], float],
-    pbc: bool | list[bool] | np.ndarray = True,
-    n_neighbours_to_check: int = 10,
-) -> bool:
-    """
-    Returns True if atoms in individual are to close to each other.
-    """
-    n_atoms = len(atomic_numbers)
-
-    for i in range(n_atoms):
-        _, distances = get_distances(positions, positions[i], cell=cell, pbc=pbc)
-
-        closest_neighbours = np.argsort(distances, axis=0)[
-            1:n_neighbours_to_check
-        ].flatten()
-
-        for j in closest_neighbours:
-            if i == j:
-                continue
-
-            atomic_n_i: int = atomic_numbers[i]
-            atomic_n_j: int = atomic_numbers[j]  # type: ignore
-
-            min_allowed_distance = closest_distances[(atomic_n_i, atomic_n_j)]
-            current_distance = distances[j]
-
-            if current_distance < min_allowed_distance:
-                return True
-
-    return False
-
-
-def adjust_atoms_positions(
-    positions: NDArray[np.float64],
-    atomic_numbers: NDArray[np.int64],
-    cell: Cell,
-    closest_distances: dict,
-    pbc: bool | list[bool] | np.ndarray = True,
-    n_neighbours_to_check: int = 10,
-) -> None:
-    """
-    Adjusts atoms positions in the individual to ensure minimum distances are
-    maintained.
-    """
-    n_atoms = len(atomic_numbers)
-    atomic_numbers = atomic_numbers.tolist()
-
-    for i in range(n_atoms):
-        _, distances = get_distances(positions, positions[i], cell=cell, pbc=pbc)
-
-        closest_neighbours = np.argsort(distances, axis=0)[
-            1:n_neighbours_to_check
-        ].flatten()
-
-        for j in closest_neighbours.tolist():
-            if i == j:
-                continue
-
-            atomic_n_i = atomic_numbers[i]
-            atomic_n_j = atomic_numbers[j]
-
-            min_allowed_distance = closest_distances[(atomic_n_i, atomic_n_j)]
-            current_distance = distances[j]
-
-            if current_distance < min_allowed_distance:
-                direction = positions[j] - positions[i]
-                direction /= np.linalg.norm(direction)
-
-                correction = direction * (min_allowed_distance - current_distance)
-                positions[i] -= correction
-                positions[j] += correction
-
+from ...core import Individual
+from ...core.utils import CustomCellBounds, CustomClosestDistances
+from ..utils import convert_ase_atoms_to_individual
+from ..utils import LegacyRNGAdapter
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                 Abstract Crossover Class                 ║
@@ -106,17 +23,27 @@ class Crossover(ABC):
     Here we define all attributes and methods that we need
     for _every_ crossover. The Crossover class will copy the parents,
     so that the original population is never changed.
+
+    Please always initialize the super class in children, so rng, max retries and closest distances is set.
+    For random operation please use the :attr:`_rng`.
     """
 
-    def __init__(self, closest_distances: CustomClosestDistances):
+    def __init__(
+        self,
+        closest_distances: CustomClosestDistances,
+        max_retries: int = 1,
+        rng: np.random.Generator | None = None,
+    ):
+        if not rng:
+            rng = np.random.default_rng()
+        self._rng = rng
         self.closest_distances = closest_distances
+        self.max_retries = max_retries
 
     @property
-    def logger(self) -> logging.Logger:
+    def logger(self) -> logging.Logger | None:
         if not hasattr(self, "_logger"):
-            raise AttributeError(
-                f"{self.__class__.__name__}: No logger set. Please set a logger."
-            )
+            return None
         return self._logger
 
     @logger.setter
@@ -137,7 +64,7 @@ class Crossover(ABC):
         variables_str = variables_str[:-2]
         return f"{class_name}({variables_str})"
 
-    def individual_is_valid_object(self, individual: Individual) -> bool:
+    def _individual_is_valid_object(self, individual: Individual) -> bool:
         """
         Tests if the individual is a valid Individual object.
         """
@@ -161,12 +88,13 @@ class Crossover(ABC):
 
         return True
 
-    def individual_is_physical(self, individual: Individual) -> bool:
+    def _individual_is_physical(self, individual: Individual) -> bool:
         """
         Tests if the individual is physical.
         """
-        if individual.get_volume() < 1.0:
-            return False
+        if individual.cell:
+            if individual.get_volume() < 1.0:
+                return False
 
         if self.closest_distances.atoms_are_too_close(individual):
             return False
@@ -174,12 +102,15 @@ class Crossover(ABC):
         return True
 
     @abstractmethod
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
         """
         This is the methode where the specific crossover is performed.
         No checks are done here, only the crossover.
+
+        If None is returned for one of the individuals the :meth:`crossover`
+        will return a copy of the original individual.
         """
         pass
 
@@ -192,10 +123,8 @@ class Crossover(ABC):
         Returns the two offsprings and a boolean if the crossover was successful.
         True if successful, False if not.
         """
-        self.logger.debug("Performing {}.".format(self.__class__.__name__))
-
-        if not hasattr(self, "max_steps") or self.max_steps == 0:
-            self.max_steps = 1
+        if self.logger:
+            self.logger.debug("Performing {}.".format(self.__class__.__name__))
 
         offspring_1 = None
         offspring_2 = None
@@ -205,114 +134,74 @@ class Crossover(ABC):
 
         keep_offspring = False
         step = 0
-        for step in range(self.max_steps):
+        for step in range(self.max_retries):
+
             offspring_1 = parent1.copy()
             offspring_2 = parent2.copy()
 
-            try:
-                offspring_1, offspring_2 = self.perform_crossover(
-                    offspring_1, offspring_2
-                )
-
-            except Exception as e:
-                self.logger.error(
-                    "{}: Unknown Error. No crossover possible. {}".format(
-                        self.__class__.__name__, e
-                    )
-                )
-                keep_offspring = False
-                continue
+            offspring_1, offspring_2 = self._perform_crossover(offspring_1, offspring_2)
 
             if offspring_1 is None or offspring_2 is None:
                 keep_offspring = False
                 continue
-            else:
-                try:
-                    offspring_1.wrap()
-                    offspring_2.wrap()
-                except Exception as e:
-                    self.logger.error(
-                        "{}: Unknown Error in wrapping. {}".format(
-                            self.__class__.__name__, e
-                        )
-                    )
-                    keep_offspring = False
-                    continue
 
-            try:
-                offspring_1_is_valid = self.individual_is_valid_object(offspring_1)
-                offspring_2_is_valid = self.individual_is_valid_object(offspring_2)
-            except Exception as e:
-                self.logger.error(
-                    "{}: Unknown Error in individual_is_valid_object. {}".format(
-                        self.__class__.__name__, e
+            offspring_1.wrap()
+            offspring_2.wrap()
+
+            # Check if all params for ase atoms obj are fullfilled
+            of_1_is_valid = self._individual_is_valid_object(offspring_1)
+            of_2_is_valid = self._individual_is_valid_object(offspring_2)
+            offspring_is_valid = of_1_is_valid and of_2_is_valid
+            if not offspring_is_valid:
+                if self.logger:
+                    self.logger.warning(
+                        f"{self.__class__.__name__}: Offspring is not a valid object."
+                        + f"\nOffspring: {offspring_1} or {offspring_2}"
                     )
-                )
                 keep_offspring = False
                 continue
 
-            try:
-                offspring_1_is_physical = self.individual_is_physical(offspring_1)
-                offspring_2_is_physical = self.individual_is_physical(offspring_2)
-            except Exception as e:
-                self.logger.error(
-                    "{}: Unknown Error in individual_is_physical. {}".format(
-                        self.__class__.__name__, e
+            # Check if minimum physical requirements are met
+            of_1_is_physical = self._individual_is_physical(offspring_1)
+            of_2_is_physical = self._individual_is_physical(offspring_2)
+            offspring_is_physical = of_1_is_physical and of_2_is_physical
+            if not offspring_is_physical:
+                if self.logger:
+                    self.logger.warning(
+                        f"{self.__class__.__name__}: Offspring is not a physically feasable."
+                        + f"\nOffspring: {offspring_1} or {offspring_2}"
                     )
-                )
                 keep_offspring = False
                 continue
 
-            if not offspring_1_is_valid or not offspring_2_is_valid:
-                self.logger.warning(
-                    "{}: Offspring is not a valid object.".format(
-                        self.__class__.__name__
-                    )
-                    + f"\nOffspring: {offspring_1} or {offspring_2}"
-                )
-                keep_offspring = False
+            keep_offspring = True
 
-            elif not offspring_1_is_physical or not offspring_2_is_physical:
-                keep_offspring = False
+        if keep_offspring and offspring_1 and offspring_2:
+            offspring_1.wrap()
+            offspring_2.wrap()
 
-            else:
-                keep_offspring = True
-                break
+            offspring_1_cell = offspring_1.get_cell()
+            offspring_2_cell = offspring_2.get_cell()
 
-        try:
+            # replace all Atoms in parent with offspring
+            # Lables and attributes stay the same
+            del parent1[:]
+            parent1.extend(offspring_1)
+            parent1.set_cell(offspring_1_cell)
+            parent1.set_pbc(par1_pbc)
 
-            if keep_offspring and offspring_1 is not None and offspring_2 is not None:
-                offspring_1.wrap()
-                offspring_2.wrap()
+            del parent2[:]
+            parent2.extend(offspring_2)
+            parent2.set_cell(offspring_2_cell)
+            parent2.set_pbc(par2_pbc)
 
-                offspring_1_cell = offspring_1.get_cell()
-                offspring_2_cell = offspring_2.get_cell()
-
-                # replace all Atoms in parent with offspring
-                # Lables and attributes stay the same
-                del parent1[:]
-                parent1.extend(offspring_1)
-                parent1.set_cell(offspring_1_cell)
-                parent1.set_pbc(par1_pbc)
-
-                del parent2[:]
-                parent2.extend(offspring_2)
-                parent2.set_cell(offspring_2_cell)
-                parent2.set_pbc(par2_pbc)
-
+            if self.logger:
                 self.logger.debug("Done! After {} steps.".format(step + 1))
-                return (parent1, parent2, True)
+            return (parent1, parent2, True)
 
-            else:
+        else:
+            if self.logger:
                 self.logger.debug("Crossover failed.")
-                return (parent1, parent2, False)
-
-        except Exception as e:
-            self.logger.error(
-                "{}: Unknown Error. Couldnt return offspring. {}".format(
-                    self.__class__.__name__, e
-                )
-            )
             return (parent1, parent2, False)
 
 
@@ -326,13 +215,15 @@ class UnitCellCrossover(Crossover):
         self,
         closest_distances: CustomClosestDistances,
         scale_atoms: bool = True,
-        max_steps: int = 10,
+        max_retries: int = 10,
+        rng: None | np.random.Generator = None,
     ):
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
         self.scale_atoms = scale_atoms
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
 
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
@@ -346,13 +237,13 @@ class UnitCellCrossover(Crossover):
             return (None, None)
 
         cell_v1 = [cell1[0], cell2[0]]
-        np.random.shuffle(cell_v1)
+        self._rng.shuffle(cell_v1)
 
         cell_v2 = [cell1[1], cell2[1]]
-        np.random.shuffle(cell_v2)
+        self._rng.shuffle(cell_v2)
 
         cell_v3 = [cell1[2], cell2[2]]
-        np.random.shuffle(cell_v3)
+        self._rng.shuffle(cell_v3)
 
         new_cell1 = Cell([cell_v1[0], cell_v2[0], cell_v3[0]])
 
@@ -370,18 +261,20 @@ class StackCellsCrossover(Crossover):
         closest_distances: CustomClosestDistances,
         cell_bounds: CustomCellBounds,
         scale_atoms: bool = True,
-        max_steps: int = 10,
+        max_retries: int = 10,
+        rng: None | np.random.Generator = None,
     ):
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
         self.scale_atoms = scale_atoms
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
         self.cell_bounds = cell_bounds
 
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
-        axis = random.randint(0, 2)
+        axis = self._rng.integers(0, 2)
 
         cell1 = parent1.get_cell()[:]  # type: ignore
         cell2 = parent2.get_cell()[:]  # type: ignore
@@ -391,8 +284,8 @@ class StackCellsCrossover(Crossover):
         if not self.cell_bounds.is_within_bounds(new_cell):
             return (None, None)
 
-        offspring1 = stack(parent1, parent2, axis=axis, cell=new_cell)
-        offspring2 = stack(parent2, parent1, axis=axis, cell=new_cell)
+        offspring1 = stack(parent1, parent2, axis=axis, cell=new_cell, maxstrain=None)  # type: ignore
+        offspring2 = stack(parent2, parent1, axis=axis, cell=new_cell, maxstrain=None)  # type: ignore
 
         if isinstance(offspring1, Individual) and isinstance(offspring2, Individual):
             return (offspring1, offspring2)
@@ -401,16 +294,7 @@ class StackCellsCrossover(Crossover):
 
 
 class OnePointElementCrossover(Crossover):
-
-    def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        max_steps: int = 10,
-    ):
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
-
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
@@ -418,7 +302,7 @@ class OnePointElementCrossover(Crossover):
         min_length = min(len(parent1), len(parent2))
 
         # If one of the parents has only one element, crossover is not possible
-        if min_length < 2:
+        if min_length <= 1:
             return (None, None)
 
         # Get atomic numbers of both parents
@@ -432,7 +316,10 @@ class OnePointElementCrossover(Crossover):
         # Get random index where to split the atomic numbers
         # Must be smaller then the minimum length to avoid to
         # many atoms in the offspring
-        cut_index = random.randint(0, min_length - 1)
+        if min_length <= 1:
+            cut_index = min_length
+        else:
+            cut_index = self._rng.integers(1, min_length)
 
         # Get the cut of atomic numbers of the opposite parents and
         # concatenate them to get the new atomic numbers
@@ -455,16 +342,7 @@ class OnePointElementCrossover(Crossover):
 
 
 class OnePointPositionCrossover(Crossover):
-
-    def __init__(
-        self,
-        closest_distances: CustomClosestDistances,
-        max_steps: int = 10,
-    ):
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
-
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
@@ -482,7 +360,10 @@ class OnePointPositionCrossover(Crossover):
         # Get random index where to split the atomic numbers
         # Must be smaller then the minimum length to avoid to
         # many atoms in the offspring
-        cut_index = random.randint(0, min_length - 1)
+        if min_length <= 1:
+            cut_index = min_length
+        else:
+            cut_index = self._rng.integers(1, min_length)
 
         # Get the cut of atomic numbers of the opposite parents and
         # concatenate them to get the new atomic numbers
@@ -507,16 +388,19 @@ class CutAndSpliceCrossover(Crossover):
         cell_bounds: CustomCellBounds,
         n_top: int | str = "all",
         number_of_variable_cell_vectors: int = 0,
-        max_steps: int = 1,
+        max_retries: int = 10,
+        rng: None | np.random.Generator = None,
     ):
-        self.max_steps = max_steps
-        self.closest_distances = closest_distances
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
+
         self.cell_bounds = cell_bounds
         self.n_top = n_top
         self.cell_bounds = cell_bounds
         self.number_of_variable_cell_vectors = number_of_variable_cell_vectors
 
-    def perform_crossover(
+    def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
         if self.n_top == "all":
@@ -559,6 +443,8 @@ class CutAndSpliceCrossover(Crossover):
             n_top=n_top,
             cellbounds=self.cell_bounds,
             number_of_variable_cell_vectors=self.number_of_variable_cell_vectors,
+            # Use the old api throught the adapter
+            rng=LegacyRNGAdapter(self._rng),  # type: ignore
         )
 
         # Create the first offspring
@@ -580,19 +466,3 @@ class CutAndSpliceCrossover(Crossover):
             convert_ase_atoms_to_individual(offspring_1),
             convert_ase_atoms_to_individual(offspring_2),
         )
-
-
-class DoNothingCrossover(Crossover):
-    """
-    This Crossover just returns copies of the parents.
-    Use crossover_probability in genetic algorithm rather than this
-    class to turn off crossover.
-    """
-
-    def __init__(self):
-        pass
-
-    def perform_crossover(
-        self, parent1: Individual, parent2: Individual
-    ) -> tuple[Individual, Individual] | tuple[None, None]:
-        return (None, None)

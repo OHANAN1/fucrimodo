@@ -1,8 +1,9 @@
-# TODO: Fix weird error
+# TODO: Fix weird error <- Wow, idk
 import matid
+import numpy as np
 
-from fucrimodo.core.modules import Individual
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+from ....core import Individual
+from ....core.utils import CustomClosestDistances
 
 from .abstract import Mutation
 
@@ -35,15 +36,18 @@ class GetConventionalCellMutation(Mutation):
         symmetry_tol: float | None = 1e-5,
         max_volume_increase: float = 1.2,
         max_volume_decrease: float = 0.8,
-        max_steps: int = 1,
+        max_retries: int = 100,
+        rng: None | np.random.Generator = None,
     ):
-        self.max_steps = max_steps
+        super().__init__(
+            closest_distances=closest_distances, max_retries=max_retries, rng=rng
+        )
+
         self.symmetry_tol = symmetry_tol
-        self.closest_distances = closest_distances
         self.max_volume_increase = max_volume_increase
         self.max_volume_decrease = max_volume_decrease
 
-    def perform_mutation(self, individual: Individual) -> Individual | None:
+    def _perform_mutation(self, individual: Individual) -> Individual | None:
         # Get the original volume
         original_volume = individual.get_volume()
 
