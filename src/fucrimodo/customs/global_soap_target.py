@@ -1,9 +1,11 @@
+from typing import Literal
 import warnings
 
 import ase
 import numpy as np
 from dscribe.descriptors import SOAP
-from numpy.typing import NDArray
+from ase.data import chemical_symbols
+from fucrimodo.core import Individual
 
 
 class GlobalSOAP:
@@ -21,7 +23,7 @@ class GlobalSOAP:
         n_max: int,
         l_max: int,
         species: list[str] | list[int],
-        average: str = "inner",
+        average: Literal["inner", "outer"] = "inner",
         sigma: float = 1.0,
         periodic: bool = True,
     ) -> None:
@@ -38,22 +40,17 @@ class GlobalSOAP:
         self.periodic = periodic
         self.average = average
 
-        # Only temporary solution to make species always a list of strings
-        # I need to figure out how to handle this better
-        if all(isinstance(s, int) for s in species):
-            from ase.data import chemical_symbols
-
-            str_species = [chemical_symbols[s] for s in species]
-            self._species = list(set(str_species))
-        elif all(isinstance(s, str) for s in species):
-            str_species = []
-            for s in species:
-                if not isinstance(s, str):
-                    raise ValueError("Species must be a list of strings or integers")
+        # Convert the int species to string species
+        str_species: list[str] = []
+        for s in species:
+            if isinstance(s, int):
+                str_species.append(chemical_symbols[s])
+            elif isinstance(s, str):
                 str_species.append(s)
-            self._species = list(set(str_species))
-        else:
-            raise ValueError("Species must be a list of strings or integers")
+            else:
+                raise ValueError("Species must be a list of strings or integers")
+
+        self._species = str_species
 
         self._dscribe_soap = SOAP(
             r_cut=r_cut,
@@ -133,12 +130,13 @@ class GlobalSOAP:
 
     def create(
         self,
-        system: list[ase.Atoms] | ase.Atoms,
+        system: list[Individual] | Individual,
         n_jobs=1,
         only_physical_cores=False,
         verbose=False,
     ) -> list[np.ndarray]:
-        if isinstance(system, ase.Atoms):
+        """Always returns list of features"""
+        if isinstance(system, Individual):
             if not self.__is_valid(system):
                 raise ValueError("Invalid input. Check warnings for details.")
         else:
@@ -152,8 +150,71 @@ class GlobalSOAP:
                 only_physical_cores=only_physical_cores,
                 verbose=verbose,
             )
-            if len(system) == 1:
+            if type(system) is not list:
+                return [results]  # type: ignore
+            elif type(system) is list and len(system) == 1:
                 return [results]  # type: ignore
             return results  # type: ignore
         except Exception as e:
             raise ValueError(f"Error in creating SOAP: {e}")
+
+    def get_present_species(
+        self,
+        feature_vector: np.ndarray,
+        sort_by_appearance: bool = True,
+    ) -> list[str]:
+        """Return only those species that contribute to the soap.
+
+        This means all species that have values != 0 in their corresponding
+        slice of the whole feature vector.
+
+        :param soap_obj: The soap object that was used to create the
+            target features.
+        :param target_features: The target soap features.
+        :param sort_by_appearance: If set to True, the method tries to guess
+            the approximate composition of the target structure by calculating the
+            total number of features for each species. The output is then sorted
+            by the number of features in descending order.
+
+        :return: A list of species that have features in the target soap.
+            If sort_by_appearance is set to True, the list is sorted by the
+            number of features in descending order. (The most prominent species
+            is at index 0.)
+        """
+        # Ensure that the analysis is only done once for each species
+        unique_soap_obj_species = list(set(self.species))
+
+        # Loop over all unique species in the soap object
+        species_with_features: list[str] = []
+        feature_sum_per_species: list[float] = []
+        for single_specie in unique_soap_obj_species:
+            # Get the slice obj for the part of the feature vector that
+            # corresponds to the current species
+            species_slice = self.get_location((single_specie, single_specie))
+
+            # Calculate the sum of absolute values of the feature vector
+            feature_vec_abs_sum = float(np.sum(np.abs(feature_vector[species_slice])))
+
+            # If the sum is zero, the species has no features in the provided
+            # feature vector
+            if feature_vec_abs_sum == 0:
+                print(f"Species {single_specie} has no features in descriptor.")
+                # continue to the next species so it is not added to the list
+                # of species with features
+                continue
+
+            else:
+                # Add the species to the list of species with features
+                species_with_features.append(single_specie)
+                feature_sum_per_species.append(feature_vec_abs_sum)
+
+        # If the sort_by_appearance flag is set to True, sort the species
+        # by the number of features
+        if sort_by_appearance:
+            sort_indices = np.argsort(feature_sum_per_species)
+
+            # Reverse the sort order, so that it is from high to low
+            sort_indices = sort_indices[::-1]
+            species_with_features = [species_with_features[i] for i in sort_indices]
+
+        return species_with_features

@@ -85,7 +85,7 @@ def _assign_features_to_individuals(
 class SoapRbfSimilarityFitness(FitnessFunction):
     def __init__(
         self,
-        target_soap_features: np.ndarray,
+        target_soap_features: list[np.ndarray] | np.ndarray,
         soap_object: GlobalSOAP,
         rbf_gamma: float = 0.1,
         db_title: str | None = None,
@@ -93,7 +93,11 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         n_jobs: int = 1,
     ):
         super().__init__(db_title=db_title)
-        self.target_soap_features = target_soap_features
+        if type(target_soap_features) is np.ndarray:
+            self.target_soap_features_list = [target_soap_features]
+        else:
+            self.target_soap_features_list = target_soap_features
+        assert len(self.target_soap_features_list) == 1
         self.soap_obj = soap_object
         self.round_result = round_result
         self.rbf_gamma = rbf_gamma
@@ -104,7 +108,7 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         feature_vector_list: list[np.ndarray],
     ) -> np.ndarray:
         similarity_matrix = rbf_kernel(
-            feature_vector_list, [self.target_soap_features], gamma=self.rbf_gamma
+            feature_vector_list, self.target_soap_features_list, gamma=self.rbf_gamma
         )
         return similarity_matrix.flatten()
 
@@ -159,7 +163,7 @@ class SoapRbfSimilarityFitness(FitnessFunction):
 class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
     def __init__(
         self,
-        target_soap_features: np.ndarray,
+        target_soap_features: np.ndarray | list[np.ndarray],
         soap_object: GlobalSOAP,
         species: tuple[str, str],
         rbf_gamma: float = 0.1,
@@ -168,7 +172,12 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
         n_jobs: int = 1,
     ):
         super().__init__(db_title=db_title)
-        self.target_soap_features = target_soap_features
+
+        if type(target_soap_features) is np.ndarray:
+            self.target_soap_features_list = [target_soap_features]
+        else:
+            self.target_soap_features_list = target_soap_features
+        assert len(self.target_soap_features_list) == 1
         self.soap_obj = soap_object
         self.round_result = round_result
         self.rbf_gamma = rbf_gamma
@@ -183,7 +192,7 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
 
         similarity_matrix = rbf_kernel(
             [v[species_slice] for v in feature_vector_list],
-            [self.target_soap_features[species_slice]],
+            [self.target_soap_features_list[0][species_slice]],
             gamma=self.rbf_gamma,
         )
         return similarity_matrix.flatten()

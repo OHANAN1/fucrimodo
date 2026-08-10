@@ -1,4 +1,5 @@
 from .individual import Individual
+from typing import Self
 
 
 class Population:
@@ -51,3 +52,12 @@ class Population:
 
     def __len__(self) -> int:
         return len(self._individuals)
+
+    def __copy__(self) -> Self:
+        """Note: This also copies the :attr:`generation`. If you want to reset use `Population.generation = 0`"""
+        new_pop = self.__class__([ind.copy() for ind in self.individuals])
+        new_pop.generation = self.generation
+        return new_pop
+
+    def copy(self) -> Self:
+        return self.__copy__()

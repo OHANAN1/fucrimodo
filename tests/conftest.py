@@ -216,6 +216,7 @@ def mutation_reproducability_assessment():
             ind, success = mut.mutate(individual.copy())
             gen_inds.append(ind)
             successes.append(success)
+            assert all(ind.pbc == individual.pbc)
             if success:
                 assert ind != individual
 

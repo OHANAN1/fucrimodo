@@ -1,5 +1,4 @@
 import logging
-import random
 from collections.abc import Iterable
 from logging import Logger
 from multiprocessing import Pool
@@ -166,8 +165,7 @@ class RandomSampleCrystalPopulation(PopulationGenerator):
         self.possible_space_groups = self._get_possible_space_groups(n_atoms)
 
         # Get species present in soap, sorted by their estimated apperance
-        self.present_species = global_soap_target.utils.get_present_species(
-            soap_obj=soap_obj,
+        self.present_species = soap_obj.get_present_species(
             feature_vector=target_features,
             sort_by_appearance=True,
         )

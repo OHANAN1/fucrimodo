@@ -1,6 +1,7 @@
 import json
 import os
 from typing import Any, Callable, Sequence
+import numpy as np
 
 from ase.db.core import Database
 from deap import tools
@@ -32,6 +33,7 @@ class GAStage(Stage):
         parent_ratio: float = 0.5,
         description: str = "",
         save_n_structures: int = 10,
+        rng: None | np.random.Generator = None,
     ):
         super().__init__(name, description)
 
@@ -73,6 +75,7 @@ class GAStage(Stage):
             parent_selection=parent_selection,
             parent_ratio=parent_ratio,
             save_n_best_individuals=save_n_structures,
+            rng=rng,
         )
 
     @property
@@ -159,7 +162,7 @@ class GAStage(Stage):
             "names": [
                 cross.__class__.__name__ for cross in self.ga_runner.crossover_list
             ],
-            "weights": list(self.ga_runner.crossover_weights),
+            "weights": list(self.ga_runner.norm_crossover_weights),
             "reprs": [cross.__repr__() for cross in self.ga_runner.crossover_list],
             "hashes": [cross.__hash__() for cross in self.ga_runner.crossover_list],
             "results": [],
@@ -205,7 +208,7 @@ class GAStage(Stage):
         # Set up a dictionary to store mutation information and results
         mutation_dict = {
             "names": [mut.__class__.__name__ for mut in self.ga_runner.mutation_list],
-            "weights": list(self.ga_runner.mutation_weights),
+            "weights": list(self.ga_runner.norm_mutation_weights),
             "reprs": [mut.__repr__() for mut in self.ga_runner.mutation_list],
             "hashes": [mut.__hash__() for mut in self.ga_runner.mutation_list],
             "results": [],
@@ -337,11 +340,11 @@ class GAStage(Stage):
             global_statistics_dict,
         )
 
-    def with_same_config(self) -> Stage:
+    def with_same_config(self, rng: None | np.random.Generator = None) -> Stage:
         """New GAStage with identical configuration and no accumulated run state.
 
         Note: References to initial objects stay the same and no deep copy is performed.
         If any of the objects cannot handle this, please manually create copy.
         """
-        new = GAStage(**self._cfg)  # type: ignore
+        new = GAStage(**self._cfg, rng=rng)  # type: ignore
         return new

@@ -2,6 +2,8 @@ from collections.abc import Sequence
 
 import ase
 import numpy as np
+import re
+from io import StringIO
 
 from ..core.abstracts import FitnessFunction
 from ..core import Individual
@@ -114,3 +116,66 @@ class LegacyRNGAdapter:
     def __getattr__(self, name):
         # Forward anything else to the Generator
         return getattr(self._rng, name)
+
+
+def get_target_individual_from_additional_notes(
+    additional_notes: str,
+) -> Individual:
+    """Load the target structure from the additional notes of the input file.
+
+    It is assumed that the target structure is stored in the additional notes
+    as a CIF string. The CIF string is extracted from the additional notes
+    using a regex pattern. The CIF string is then loaded into an ASE Atoms
+    object.
+    """
+    regex = r"CIF:(.*)"
+    match = re.search(regex, additional_notes)
+    if match:
+        # If there is a match, return the volume
+        cif_string = str(match.group(1))
+    else:
+        raise ValueError(
+            f"Could not find the pattern in the additional notes"
+            f" with the regex pattern {regex}. \n"
+            f"Additional notes: {additional_notes}"
+        )
+
+    cif_string = cif_string.replace("NEWLINE", "\n")
+    cif_string = cif_string.replace("QUOTATION_MARK", '"')
+    with StringIO(cif_string) as f:
+        from ase.io import read
+
+        target_structure = read(f, format="cif")
+
+    assert (
+        type(target_structure) is ase.Atoms
+    ), "Please verify that CIF-string really is ase.Atoms object!"
+
+    target_individual = convert_ase_atoms_to_individual(target_structure)
+
+    return target_individual
+
+
+def get_n_atoms_from_additional_notes(
+    additional_notes: str,
+) -> int:
+    """Load the target structure from the additional notes of the input file.
+
+    It is assumed that the target structure is stored in the additional notes
+    as a CIF string. The CIF string is extracted from the additional notes
+    using a regex pattern. The CIF string is then loaded into an ASE Atoms
+    object.
+    """
+    regex = r"Number of atoms:(.*)"
+    match = re.search(regex, additional_notes)
+    if match:
+        # If there is a match, return the volume
+        n_atoms = int(match.group(1))
+    else:
+        raise ValueError(
+            f"Could not find the pattern in the additional notes"
+            f" with the regex pattern {regex}. \n"
+            f"Additional notes: {additional_notes}"
+        )
+
+    return n_atoms

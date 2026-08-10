@@ -8,8 +8,12 @@ from ..break_conditions import BreakCondition
 from typing import Any, Sequence
 from deap import tools
 import numpy as np
-import random
 import logging
+
+
+def norm_weights(weights) -> np.ndarray:
+    weights = np.array(weights)
+    return weights / weights.sum()
 
 
 class GeneticAlgorithm:
@@ -28,25 +32,32 @@ class GeneticAlgorithm:
         parent_ratio: float,
         survivor_selection: PopulationSelection,
         save_n_best_individuals: int = 10,
+        rng: None | np.random.Generator = None,
     ):
+        if not rng:
+            rng = np.random.default_rng()
+        self._rng = rng
+
         self.fitness_functions = fitness_functions
-        self.fitness_weights = fitness_weights
         self.crossover_list = crossover_list
-        self.crossover_weights = crossover_weights
         self.mutation_list = mutation_list
-        self.mutation_weights = mutation_weights
         self.mutation_probability = mutation_probability
         self.crossover_probability = crossover_probability
         self.break_condition = break_condition
         self.parent_selection = parent_selection
         self.survivor_selection = survivor_selection
+        self.fitness_weights = fitness_weights
         self._hall_of_fame = tools.HallOfFame(save_n_best_individuals)
         self.parent_ratio = parent_ratio
 
+        # Normalize weights so I can use numpy choice properly
+        self.norm_crossover_weights = norm_weights(crossover_weights)
+        self.norm_mutation_weights = norm_weights(mutation_weights)
+
     @property
-    def logger(self) -> logging.Logger:
+    def logger(self) -> logging.Logger | None:
         if not hasattr(self, "_logger"):
-            raise AttributeError("No logger set. Please set a logger.")
+            return None
         return self._logger
 
     @logger.setter
@@ -79,7 +90,7 @@ class GeneticAlgorithm:
             ]
             if len(fitness_names) != len(set(fitness_names)):
                 raise ValueError(
-                    "Please set unique db_titles for the fitness functions."
+                    "Please set a unique db_titles for each fitness function."
                 )
 
             for i, name in enumerate(fitness_names):
@@ -101,6 +112,7 @@ class GeneticAlgorithm:
 
     @property
     def fitness_logbook(self) -> tools.Logbook:
+        """Note: since the initial population will also be evaluated the total lenght will be n_generations + 1!"""
         if not hasattr(self, "_fitness_log"):
             self._fitness_log = tools.Logbook()
 
@@ -183,9 +195,9 @@ class GeneticAlgorithm:
             successful and the hash of the crossover to identify which one was
             used.
         """
-        selected_crossover = random.choices(
-            self.crossover_list, weights=self.crossover_weights
-        )[0]
+        selected_crossover = self.crossover_list[
+            self._rng.choice(len(self.crossover_list), p=self.norm_crossover_weights)
+        ]
 
         return selected_crossover.crossover(parent1, parent2) + (
             selected_crossover.__hash__(),
@@ -200,18 +212,11 @@ class GeneticAlgorithm:
             was successful and the hash of the mutation to identify which
             one was used.
         """
-
-        selected_mutation = random.choices(
-            self.mutation_list, weights=self.mutation_weights
-        )[0]
+        selected_mutation = self.mutation_list[
+            self._rng.choice(len(self.mutation_list), p=self.norm_mutation_weights)
+        ]
 
         return selected_mutation.mutate(individual) + (selected_mutation.__hash__(),)
-
-    def __evaluate_individual(self, individual: Individual) -> tuple[float, ...]:
-        fitness_tuple = ()
-        for fitness_function in self.fitness_functions:
-            fitness_tuple += (fitness_function.evaluate_individual(individual),)
-        return fitness_tuple
 
     def __evaluate_individuals(
         self, individuals: list[Individual]
@@ -284,16 +289,16 @@ class GeneticAlgorithm:
         fitness_record = self.fitness_stats.compile(population.individuals)
         self.fitness_logbook.record(gen=gen, nevals=nevals, **fitness_record)
 
-        if global_stats is not None and global_log is not None:
-            global_record = global_stats.compile(population.individuals)
-            # Record the global statistics. Use the stage_id to identify the stage
-            # and the generation of the population to track the total generation
-            # and not only the generation of the stage.
-            global_log.record(
-                gen=population.generation, stage_id=stage_id, **global_record
-            )
-        else:
-            global_record = None
+        global_record = None
+        if gen > 0:
+            if global_stats is not None and global_log is not None:
+                global_record = global_stats.compile(population.individuals)
+                # Record the global statistics. Use the stage_id to identify the stage
+                # and the generation of the population to track the total generation
+                # and not only the generation of the stage.
+                global_log.record(
+                    gen=population.generation, stage_id=stage_id, **global_record
+                )
 
         self.hall_of_fame.update(population.individuals)
 
@@ -319,7 +324,7 @@ class GeneticAlgorithm:
             offspring[i].info["cross_info"] = [None, True]
 
             # Perform crossover with given probability
-            if random.random() < self.crossover_probability:
+            if self._rng.random() < self.crossover_probability:
                 offspring[i - 1], offspring[i], success_bool, crossover_hash = (
                     self.__perform_crossover(offspring[i - 1], offspring[i])
                 )
@@ -344,7 +349,7 @@ class GeneticAlgorithm:
             offspring[i].info["mut_info"] = [None, True]
 
             # Perform mutation with given probability
-            if random.random() < self.mutation_probability:
+            if self._rng.random() < self.mutation_probability:
                 offspring[i], success_bool, mutation_hash = self.__perform_mutation(
                     offspring[i]
                 )
@@ -367,7 +372,8 @@ class GeneticAlgorithm:
             if mut_info[1] == False or cross_info[1] == False:
                 modified_offspring.append(offspring[i])
 
-        self.logger.debug("Modified {} individuals".format(len(modified_offspring)))
+        if self.logger:
+            self.logger.debug("Modified {} individuals".format(len(modified_offspring)))
 
         return modified_offspring
 
@@ -471,7 +477,7 @@ class GeneticAlgorithm:
         # Resets the and deletes the info attribute of each individual.
         # Adds the fitness weights of the current stage to each individual.
         for ind in population.individuals:
-            ind.fitness_weights = self.fitness_weights
+            ind.fitness.weights = self.fitness_weights
             ind.reset()
             ind.info = {}
 
@@ -493,7 +499,10 @@ class GeneticAlgorithm:
         that have a logger attribute. This is useful to have a consistent
         logging behavior in the stage.
         """
-        self.logger.debug("Attaching logger to the mutations and crossovers of the GA.")
+        if self.logger:
+            self.logger.debug(
+                "Attaching logger to the mutations and crossovers of the GA."
+            )
         for obj in [
             *self.crossover_list,
             *self.mutation_list,
@@ -512,7 +521,8 @@ class GeneticAlgorithm:
         population_size = population.size
 
         # Attach the logger to all objects of the stage
-        self.__attach_logger_to_mut_and_cross(self.logger)
+        if self.logger:
+            self.__attach_logger_to_mut_and_cross(self.logger)
 
         # Initialize the evolution process
         self.__initialize_evolution(
@@ -524,9 +534,10 @@ class GeneticAlgorithm:
 
         # Start logging the stream. Avoid that the stream is printed to
         # multiple lines and breaks the formatting.
-        initial_stream = str(global_log.stream).split("\n")
-        for line in initial_stream:
-            self.logger.info(line)
+        if self.logger and len(global_log) >= 1:
+            initial_stream = str(global_log.stream).split("\n")
+            for line in initial_stream:
+                self.logger.info(line)
 
         self._generation = 0
         while not self.break_condition.check(
@@ -536,14 +547,16 @@ class GeneticAlgorithm:
             self._generation += 1
 
             # ── Run the evolution process ────────────────────────────────────
-            self.logger.debug(f"Evolving Gen: {self._generation}")
-            self.logger.debug(f"Population size: {population.size}")
+            if self.logger:
+                self.logger.debug(f"Evolving Gen: {self._generation}")
+                self.logger.debug(f"Population size: {population.size}")
 
             # ── Select Parents ───────────────────────────────────────────────
             parents = self.parent_selection.select(
                 population.individuals, int(population_size * self.parent_ratio)
             )
-            self.logger.debug("Selected {} parents".format(len(parents)))
+            if self.logger:
+                self.logger.debug("Selected {} parents".format(len(parents)))
 
             # ── Create Offspring ─────────────────────────────────────────────
             offspring = self.__create_offspring(parents)
@@ -556,13 +569,15 @@ class GeneticAlgorithm:
             for ind in offspring:
                 if ind not in population_pool:
                     population_pool.append(ind)
-            self.logger.debug("Created population pool")
+            if self.logger:
+                self.logger.debug("Created population pool")
 
             # Select survivors from the old population and offspring
             new_population = self.survivor_selection.select(
                 population_pool, population_size
             )
-            self.logger.debug("Selected {} survivors".format(len(new_population)))
+            if self.logger:
+                self.logger.debug("Selected {} survivors".format(len(new_population)))
 
             # Check which offsprings were also selected as survivors
             self.__track_successful_modifications(
@@ -584,7 +599,8 @@ class GeneticAlgorithm:
                 stage_id=stage_id,
             )
 
-            self.logger.info(global_log.stream)
+            if self.logger:
+                self.logger.info(global_log.stream)
 
             if stop_event is not None:
                 assert hasattr(stop_event, "is_set"), (
@@ -592,9 +608,11 @@ class GeneticAlgorithm:
                     "Only set multiprocessing.Event or threading.Event."
                 )
                 if stop_event.is_set():
-                    self.logger.info("Received stop signal.")
+                    if self.logger:
+                        self.logger.info("Received stop signal.")
                     break
 
-        self.logger.debug("Finished genetic algorithm.")
+        if self.logger:
+            self.logger.debug("Finished genetic algorithm.")
 
         return population
