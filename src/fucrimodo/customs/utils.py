@@ -15,15 +15,32 @@ from .global_soap_target import GlobalSOAP
 def get_soap_similarity_fitness_list(
     target_soap_features: np.ndarray,
     soap_object: GlobalSOAP,
-    rbf_gammas: Sequence[float | int] = [1.0, 0.1, 0.01],
-    function_titles: list[str] = [
+    rbf_gammas: Sequence[float | int] = (1.0, 0.1, 0.01),
+    function_titles: Sequence[str] = (
         "soap_similarity_strong",
         "soap_similarity_mid",
         "soap_similarity_weak",
-    ],
+    ),
     round_result: None | int = None,
     n_jobs: int = 1,
 ) -> list[FitnessFunction]:
+    """Create a list of SOAP RBF similarity fitness functions.
+
+    Build one :class:`SoapRbfSimilarityFitness` instance for each value in
+    ``rbf_gammas``, pairing it with the corresponding title from
+    ``function_titles``.
+
+    :param target_soap_features: Target SOAP feature vector to compare against.
+    :param soap_object: SOAP descriptor object used to compute candidate features.
+    :param rbf_gammas: Sequence of RBF gamma values, one per fitness function.
+    :param function_titles: Titles for the generated fitness functions.
+    :param round_result: Number of decimal places to round results to,
+        or ``None`` for no rounding.
+    :param n_jobs: Number of parallel jobs passed to each fitness function.
+    :returns: List of configured SOAP RBF similarity fitness functions.
+    :raises AssertionError: If ``len(function_titles)`` does not equal
+        ``len(rbf_gammas)``.
+    """
 
     assert len(function_titles) == len(
         rbf_gammas
@@ -54,14 +71,38 @@ def get_species_specific_soap_sim_fitness_list(
     round_result: None | int = None,
     n_jobs: int = 1,
 ) -> list[FitnessFunction]:
+    """Create species-pair-specific SOAP RBF similarity fitness functions.
+
+    Build a :class:`SpeciesSpecificSoapRbfSimFitness` instance for every
+    unique pair of species (including self-pairs), using the same RBF gamma
+    for all functions.
+    Unique database titles will be automatically generated based on the
+    species pair.
+
+    :param target_soap_features: Target SOAP feature vector to compare against.
+    :param species: List of species identifiers, given as atomic numbers
+        (``int``) or chemical symbols (``str``).
+    :param soap_object: SOAP descriptor object used to compute candidate features.
+    :param rbf_gamma: RBF gamma value shared by all generated fitness functions.
+    :param function_title: Base title used to build the database title for
+        each species pair.
+    :param round_result: Number of decimal places to round results to,
+        or ``None`` for no rounding.
+    :param n_jobs: Number of parallel jobs passed to each fitness function.
+
+    :returns: List of species-pair SOAP RBF similarity fitness functions.
+
+        >('>
+                           >('>
+    """
     from ase.data import chemical_symbols
 
     # Convert the soap species to chemical symbols
-    soap_species_sym = []
+    species_str = []
     for s in species:
         if type(s) == int:
             s = chemical_symbols[s]
-        soap_species_sym.append(s)
+        species_str.append(s)
 
     # Set up the fitness functions:
     species_specific_fitnesses = []
@@ -70,8 +111,8 @@ def get_species_specific_soap_sim_fitness_list(
             soap_fit_spec = ff.SpeciesSpecificSoapRbfSimFitness(
                 target_soap_features=target_soap_features,
                 soap_object=soap_object,
-                species=(soap_species_sym[i], soap_species_sym[j]),
-                db_title="{}_{}_{}".format(function_title, species[i], species[j]),
+                species=(species_str[i], species_str[j]),
+                db_title=f"{function_title}_{species_str[i]}_{species_str[j]}",
                 rbf_gamma=rbf_gamma,
                 round_result=round_result,
                 n_jobs=n_jobs,
@@ -81,19 +122,23 @@ def get_species_specific_soap_sim_fitness_list(
     return species_specific_fitnesses
 
 
-def convert_ase_atoms_to_individual(atoms: ase.Atoms) -> Individual:
-    return Individual(
-        positions=atoms.get_positions(),
-        cell=atoms.get_cell(),
-        pbc=atoms.pbc,
-        symbols=atoms.get_chemical_symbols(),
-    )
-
-
 class LegacyRNGAdapter:
-    """Wrap a numpy.random.Generator so it looks like np.random.RandomState.
+    """Wrap a :class:`numpy.random.Generator` to emulate ``np.random.RandomState``.
 
-    This can be used whenever the legacy np.random api needs to be used.
+    This adapter forwards the most common ``RandomState`` methods
+    (:meth:`random`, :meth:`choice`, :meth:`normal`, :meth:`randint`) to the
+    underlying generator and delegates any other attribute lookups to it as
+    well.
+
+    .. note::
+
+        This is a best-effort adapter. Some ``RandomState`` methods (e.g.
+        ``rand``, ``randn``, ``seed``, ``random_sample``) are not available on
+        a :class:`numpy.random.Generator` and will raise
+        :exc:`AttributeError` if called.
+
+    :param rng: The NumPy random generator to wrap.
+    :type rng: :class:`numpy.random.Generator`
     """
 
     def __init__(self, rng: np.random.Generator):
@@ -151,7 +196,7 @@ def get_target_individual_from_additional_notes(
         type(target_structure) is ase.Atoms
     ), "Please verify that CIF-string really is ase.Atoms object!"
 
-    target_individual = convert_ase_atoms_to_individual(target_structure)
+    target_individual = Individual.from_ase(target_structure)
 
     return target_individual
 
@@ -161,10 +206,8 @@ def get_n_atoms_from_additional_notes(
 ) -> int:
     """Load the target structure from the additional notes of the input file.
 
-    It is assumed that the target structure is stored in the additional notes
-    as a CIF string. The CIF string is extracted from the additional notes
-    using a regex pattern. The CIF string is then loaded into an ASE Atoms
-    object.
+    It is assumed that the number of atoms is stored as 'Number of atoms: ...'
+    in the additional notes string.
     """
     regex = r"Number of atoms:(.*)"
     match = re.search(regex, additional_notes)

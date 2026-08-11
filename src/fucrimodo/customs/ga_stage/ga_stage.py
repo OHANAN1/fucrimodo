@@ -19,6 +19,34 @@ from .mutations import Mutation
 
 
 class GAStage(Stage):
+    """Stage that runs a genetic algorithm as part of a multi stage optimization.
+
+    This stage wraps a :class:`GeneticAlgorithm` runner and exposes the
+    configuration needed to recreate it. It handles executing the GA,
+    saving per-generation logs for crossovers, mutations and fitness
+    functions, and storing the hall of fame to a database.
+
+    :param name: Name of the stage.
+    :param fitness_functions: Fitness functions or weighted
+        ``(function, weight)`` tuples.
+    :param crossover_list: Crossover operators or weighted
+        ``(operator, weight)`` tuples.
+    :param mutation_list: Mutation operators or weighted
+        ``(operator, weight)`` tuples.
+    :param mutation_probability: Probability of applying a mutation to an
+        individual.
+    :param crossover_probability: Probability of applying a crossover to a
+        pair of parents.
+    :param break_condition: Condition that determines when the GA stops.
+    :param parent_selection: Selection strategy used to pick parents.
+    :param survivor_selection: Selection strategy used to pick survivors.
+    :param parent_ratio: Fraction of the population used as parents.
+    :param description: Optional human-readable description.
+    :param save_n_structures: Number of best individuals to keep in the hall of
+        fame.
+    :param rng: Optional random number generator.
+    """
+
     def __init__(
         self,
         name: str,
@@ -96,11 +124,14 @@ class GAStage(Stage):
     def _seperate_object_weight_tuples(
         self, value: Sequence[Any | tuple[object, float]]
     ) -> tuple[list, tuple]:
-        """
-        Seperates the objects and the weights in the tuple list.
-        If the sequence entry is not a tuple, the weight is set to 1.
+        """Separate objects from their optional weights.
 
-        :return: tuple of the objects as a list and the weights as a tuple.
+        Each entry in ``value`` is either an object or a ``(object, weight)``
+        tuple. Entries without an explicit weight receive a default weight of
+        1.0.
+
+        :param value: Sequence of objects or ``(object, weight)`` tuples.
+        :return: Tuple containing the list of objects and the tuple of weights.
         """
         objects = []
         weights = ()
@@ -121,8 +152,17 @@ class GAStage(Stage):
         fitness_functions: Sequence[FitnessFunction],
         global_stats_dict: dict[str, Callable] | None = None,
     ) -> None:
-        """Saves the hall of fame to the database and adds the fitness to
-        each individual.
+        """Save the hall of fame individuals to the database.
+
+        Writes each individual together with its fitness values and optional
+        global statistics. The ``stage_id`` of this stage is attached to every
+        record.
+
+        :param database: Database used to store the individuals.
+        :param hall_of_fame: Hall of fame containing the best individuals.
+        :param fitness_functions: Fitness functions whose values are stored.
+        :param global_stats_dict: Optional mapping of statistic names to
+            callables that compute a value from an individual.
         """
         for ind in hall_of_fame:
             key_value_pairs = {"stage_id": self.id}
@@ -144,16 +184,16 @@ class GAStage(Stage):
 
         The json file will contain the following information:
 
-        - 'names': The names of the crossovers
-        - 'weights': The weights of the crossovers
-        - 'reprs': The representations of the crossovers
-        - 'hashes': The hashes of the crossovers
-        - 'results': A list of dictionaries containing the following information:
+        * 'names': The names of the crossovers
+        * 'weights': The weights of the crossovers
+        * 'reprs': The representations of the crossovers
+        * 'hashes': The hashes of the crossovers
+        * 'results': A list of dictionaries containing the following information:
 
-            - 'gen': The generation number
-            - 'called': The number of times the crossover was called
-            - 'failed': The number of times the crossover failed
-            - 'survivor': The number of times the offspring was selected as a survivor
+            * 'gen': The generation number
+            * 'called': The number of times the crossover was called
+            * 'failed': The number of times the crossover failed
+            * 'survivor': The number of times the offspring was selected as a survivor
 
         :param save_dir: The directory to save the file to.
         """
@@ -192,16 +232,16 @@ class GAStage(Stage):
 
         The json file will contain the following information:
 
-        - 'names': The names of the mutations
-        - 'weights': The weights of the mutations
-        - 'reprs': The representations of the mutations
-        - 'hashes': The hashes of the mutations
-        - 'results': A list of dictionaries containing the following information:
+        * 'names': The names of the mutations
+        * 'weights': The weights of the mutations
+        * 'reprs': The representations of the mutations
+        * 'hashes': The hashes of the mutations
+        * 'results': A list of dictionaries containing the following information:
 
-            - 'gen': The generation number
-            - 'called': The number of times the mutation was called
-            - 'failed': The number of times the mutation failed
-            - 'survivor': The number of times the mutant was selected as a survivor
+            * 'gen': The generation number
+            * 'called': The number of times the mutation was called
+            * 'failed': The number of times the mutation failed
+            * 'survivor': The number of times the mutant was selected as a survivor
 
         :param save_dir: The directory to save the file to.
         """
@@ -238,18 +278,18 @@ class GAStage(Stage):
 
         The json file will contain the following information:
 
-        - 'names': The names of the fitness functions
-        - 'weights': The weights of the fitness functions
-        - 'reprs': The representations of the fitness functions
-        - 'titles': The `db_title` of the fitness functions
-        - 'hashes': The hashes of the fitness functions
-        - 'results': A list of dictionaries containing the following information:
+        * 'names': The names of the fitness functions
+        * 'weights': The weights of the fitness functions
+        * 'reprs': The representations of the fitness functions
+        * 'titles': The `db_title` of the fitness functions
+        * 'hashes': The hashes of the fitness functions
+        * 'results': A list of dictionaries containing the following information:
 
-            - 'gen': The generation number
-            - 'min': The minimum fitness value
-            - 'max': The maximum fitness value
-            - 'avg': The average fitness value
-            - 'std': The standard deviation of the fitness values
+            * 'gen': The generation number
+            * 'min': The minimum fitness value
+            * 'max': The maximum fitness value
+            * 'avg': The average fitness value
+            * 'std': The standard deviation of the fitness values
 
         :param save_dir: The directory to save the file to.
         """
@@ -287,6 +327,16 @@ class GAStage(Stage):
 
     @property
     def info_dict(self) -> dict:
+        """Return a dictionary with summary information about the GA run.
+
+        The number of generations is only meaningful after :meth:`run` has
+        been called.
+
+        :return: Dictionary containing string representations of the break
+            condition, parent selection, survivor selection, the parent ratio,
+            and the number of generations.
+        """
+
         info_dict = {}
         info_dict["break_condition"] = self.ga_runner.break_condition.__repr__()
         # Get the current number of generations. Needs to be called after the
@@ -304,6 +354,17 @@ class GAStage(Stage):
         global_log: tools.Logbook,
         global_stats: tools.MultiStatistics | None,
     ) -> Population:
+        """Run the genetic algorithm on the given population.
+
+        Attaches the stage logger to the GA runner, executes the GA, and stores
+        the resulting logbooks and hall of fame on this stage instance.
+
+        :param population: Population to evolve.
+        :param global_log: Global logbook to which the GA run contributes.
+        :param global_stats: Optional global multi-statistics tracker.
+        :return: The evolved population.
+        :raises AssertionError: If the stage id has not been set before running.
+        """
         assert hasattr(self, "id"), "Stage ID not set."
 
         # Attach the logger to the ga_runner
@@ -330,6 +391,16 @@ class GAStage(Stage):
         structures_db: Database,
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
     ):
+        """Save all GA results to disk and database.
+
+        Writes crossover, mutation, and fitness logbooks as JSON files in
+        ``save_dir`` and persists the hall of fame to ``structures_db``.
+
+        :param save_dir: Directory where JSON log files are written.
+        :param structures_db: Database where hall of fame individuals are stored.
+        :param global_statistics_dict: Optional mapping of statistic names to
+            functions that compute values for each saved individual.
+        """
         self._save_mutations(save_dir)
         self._save_crossovers(save_dir)
         self._save_fitnesses(save_dir)
@@ -341,10 +412,13 @@ class GAStage(Stage):
         )
 
     def with_same_config(self, rng: None | np.random.Generator = None) -> Stage:
-        """New GAStage with identical configuration and no accumulated run state.
+        """Create a new GAStage with the same configuration as this one.
 
-        Note: References to initial objects stay the same and no deep copy is performed.
-        If any of the objects cannot handle this, please manually create copy.
+        The new stage has no accumulated run state. References to the original
+        configuration objects are shared; no deep copy is performed.
+
+        :param rng: Optional random number generator for the new stage.
+        :return: A new :class:`GAStage` instance.
         """
         new = GAStage(**self._cfg, rng=rng)  # type: ignore
         return new

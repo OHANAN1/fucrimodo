@@ -15,6 +15,7 @@ def reproducability_assesment(
     par1: Individual,
     par2: Individual,
     cross: Crossover,
+    check_only_1=True,
 ):
 
     original_state = cross._rng.bit_generator.state
@@ -22,6 +23,7 @@ def reproducability_assesment(
     # run multiple tests
     c1_structures = []
     c2_structures = []
+    required_steps_list = []
     successes = []
     for _ in range(5):
         c1, c2, success = cross.crossover(par1.copy(), par2.copy())
@@ -31,8 +33,14 @@ def reproducability_assesment(
         if success:
             assert c1 != par1 or c2 != par2
 
+        required_steps_list.append(cross.required_steps)
+
     # Check if there was at least one success
     assert any(successes)
+
+    # Check that some mutations took more than one step
+    if check_only_1:
+        assert any(s > 1 for s in required_steps_list)
 
     # Check reproducability
     # Restore original big generator state
@@ -254,6 +262,26 @@ class TestOnePointElementCrossover:
             successes.append(success)
         assert not any(successes)
 
+        rng = np.random.default_rng(42)
+
+        # Test normal crossover
+        cross = OnePointElementCrossover(
+            closest_distances=closest_distances,
+            max_retries=10,
+            rng=np.random.default_rng(42),
+        )
+
+        new_ind = ind_molecule.copy()
+        numbers = new_ind.numbers
+        numbers[0] = 8
+        numbers[1] = 8
+        new_ind.set_atomic_numbers(numbers)
+
+        # TODO: Test it later, keep it open now, so I remember
+        reproducability_assesment(
+            par1=ind_molecule, par2=new_ind, cross=cross, check_only_1=False
+        )
+
 
 class TestOnePointPositionCrossover:
 
@@ -279,7 +307,9 @@ class TestOnePointPositionCrossover:
         pos[2] -= 0.3
         changed_ind.set_positions(pos)
 
-        reproducability_assesment(par1=ind_molecule, par2=changed_ind, cross=cross)
+        reproducability_assesment(
+            par1=ind_molecule, par2=changed_ind, cross=cross, check_only_1=False
+        )
 
         # Test with different length structures
         two_atomic_ind = Individual(["He", "He"], [[0, 0, 0], [2, 0, 0]])
@@ -315,7 +345,7 @@ class TestCutAndSpliceCrossover:
         cross = CutAndSpliceCrossover(
             cell_bounds=cell_bounds,
             closest_distances=closest_distances,
-            max_retries=10,
+            max_retries=1,
             n_top="all",
             number_of_variable_cell_vectors=3,
             rng=rng,
@@ -329,4 +359,6 @@ class TestCutAndSpliceCrossover:
         pos[0] += 0.5
         new_ind.set_positions(pos)
 
-        reproducability_assesment(par1=ind_crystal, par2=new_ind, cross=cross)
+        reproducability_assesment(
+            par1=ind_crystal, par2=new_ind, cross=cross, check_only_1=False
+        )

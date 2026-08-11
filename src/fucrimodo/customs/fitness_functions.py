@@ -1,14 +1,31 @@
 import numpy as np
-import ase
 from ase.geometry import get_distances
 from sklearn.metrics.pairwise import rbf_kernel
-from .global_soap_target import GlobalSOAP
+
+from ..core import Individual
 from ..core.abstracts import FitnessFunction
 from ..core.utils import CustomClosestDistances
-from ..core import Individual
+from .global_soap_target import GlobalSOAP
 
 
 class PhysicalityFitness(FitnessFunction):
+    """Fitness that rewards physically plausible atomic structures.
+
+    Penalizes pairwise interatomic distances that are shorter than the minimum
+    allowed distances for the corresponding element pair. The penalty is zero
+    when all distances are above their thresholds; it grows as atoms get closer
+    than allowed. The final fitness is computed as the exponential of the
+    negative total penalty, yielding a value in the range ``(0, 1]``.
+
+    :param closest_distances: Object providing the minimum allowed distance
+        for each pair of atomic numbers. Idea: Use a stricter closest
+        distances here than for the mutations/crossovers, this way structures
+        with too close atoms can be generated but punished. This way unexpected
+        new materials can be found.  (`Fishes with faces who come out of the sea
+        cause tsunamis.` ~ Toki)
+    :param db_title: Optional title for the structures database.
+    """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -17,25 +34,10 @@ class PhysicalityFitness(FitnessFunction):
         super().__init__(db_title=db_title)
         self.closest_distances = closest_distances
 
-    def __calculate_normalized_atom_distance_fitness(
-        self,
-        structure: ase.Atoms,
-    ) -> float:
-        """
-        The Bigger the better.
-        Calculates the distances of all atoms in the structure.
-        If the distance between two atoms is bigger or equal to the
-        min_allowed_dist the fitness is increased by 1.
-
-        The minimal distance between two atoms is calculated by the
-        covalent radii of the atoms with the closest_distances_generator
-        function from ase_ga.utilities.
-
-        Nomalized by N(N-1)/2.
-        """
-        positions = structure.get_positions()
-        atomic_numbers = structure.get_atomic_numbers()
-        cell = structure.get_cell()
+    def evaluate_individual(self, individual: Individual) -> float:
+        positions = individual.get_positions()
+        atomic_numbers = individual.get_atomic_numbers()
+        cell = individual.get_cell()
 
         _, distances = get_distances(p1=positions, cell=cell, pbc=True)
 
@@ -54,21 +56,16 @@ class PhysicalityFitness(FitnessFunction):
 
         return fitness
 
-    def evaluate_individual(self, individual: Individual) -> float:
-        return self.__calculate_normalized_atom_distance_fitness(
-            structure=individual,
-        )
-
     def __repr__(self) -> str:
         r_str = "PhysicalityFitness()"
         return r_str
 
 
-# Utilitie for fitness functions that use the similarity
+# Utility for fitness functions that use the similarity
 def _assign_features_to_individuals(
     soap_obj: GlobalSOAP, individuals: list[Individual], n_jobs
 ):
-    """Assigns the features to the individuals if they are not already set."""
+    """Calculates and assigns features to the individuals if they are not already set."""
     # Collect individuals without features
     individuals_without_features = []
     for ind in individuals:
@@ -83,9 +80,32 @@ def _assign_features_to_individuals(
 
 
 class SoapRbfSimilarityFitness(FitnessFunction):
+    """Fitness based on RBF similarity to target SOAP features.
+
+    Evaluates individuals by comparing their SOAP feature vectors to the target
+    SOAP features using the radial basis function (RBF) kernel. Higher
+    similarity to the target yields a higher fitness value.  Note: During the
+    evaluation the features stored in the :attr:`Individual.features` will be
+    used if present. If not present they are calculated and assigned with the
+    :attr:`soap_obj`.
+
+    :param target_soap_features: Target SOAP feature vector to compare
+        against.
+    :param soap_object: :class:`GlobalSOAP` instance used to compute SOAP
+        feature vectors for individuals that do not already have features
+        assigned.
+    :param rbf_gamma: Gamma parameter for the RBF kernel. Controls the
+        width of the Gaussian similarity function. Default is ``0.1``.
+    :param db_title: Optional title for the structures database.
+    :param round_result: Optional number of decimal places to round the
+        fitness values to. If ``None``, no rounding is applied.
+    :param n_jobs: Number of parallel jobs to use when computing SOAP
+        features for individuals. Default is ``1``.
+    """
+
     def __init__(
         self,
-        target_soap_features: list[np.ndarray] | np.ndarray,
+        target_soap_features: np.ndarray,
         soap_object: GlobalSOAP,
         rbf_gamma: float = 0.1,
         db_title: str | None = None,
@@ -93,11 +113,7 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         n_jobs: int = 1,
     ):
         super().__init__(db_title=db_title)
-        if type(target_soap_features) is np.ndarray:
-            self.target_soap_features_list = [target_soap_features]
-        else:
-            self.target_soap_features_list = target_soap_features
-        assert len(self.target_soap_features_list) == 1
+        self.target_soap_features = target_soap_features
         self.soap_obj = soap_object
         self.round_result = round_result
         self.rbf_gamma = rbf_gamma
@@ -108,7 +124,7 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         feature_vector_list: list[np.ndarray],
     ) -> np.ndarray:
         similarity_matrix = rbf_kernel(
-            feature_vector_list, self.target_soap_features_list, gamma=self.rbf_gamma
+            feature_vector_list, [self.target_soap_features], gamma=self.rbf_gamma
         )
         return similarity_matrix.flatten()
 
@@ -116,19 +132,6 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         return self.evaluate_individuals([individual])[0]
 
     def evaluate_individuals(self, individuals: list[Individual]) -> list[float]:
-        """Evaluate a similarity fitness for a list of individuals.
-
-        Uses the :attr:`Individual.features` attribute to calculate the fitness.
-        If not set calculates the features with the :attr:`GlobalSOAP` object
-        for all individuals without features in parallel.
-
-        :param individuals: List of individuals to evaluate.
-
-        :returns: List of fitness values for each individual.
-
-        :raises ValueError: If the features could not be assigned to the
-            individuals or the fitness could not be calculated.
-        """
         # Assign the features to the individuals if they are not set already
         _assign_features_to_individuals(
             soap_obj=self.soap_obj,
@@ -148,7 +151,7 @@ class SoapRbfSimilarityFitness(FitnessFunction):
         # Use the feature vector to calculate the fitnesses/similarities
         fitnesses = self._get_similarities_to_target(feature_vector_list=features)
 
-        if self.round_result is not None:
+        if self.round_result:
             return [round(f, self.round_result) for f in fitnesses]
         else:
             return fitnesses.tolist()
@@ -161,9 +164,35 @@ class SoapRbfSimilarityFitness(FitnessFunction):
 
 
 class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
+    """Fitness based on species-specific RBF similarity to target SOAP features.
+
+    Evaluates individuals by comparing only the species-pair-specific segment of
+    their SOAP feature vectors to the corresponding segment of a target SOAP
+    feature vector. The comparison is performed using the radial basis function
+    (RBF) kernel. Higher similarity to the target yields a higher fitness value.
+
+    The relevant segment of the SOAP vector is determined by the
+    :attr:`species` pair and extracted via the :meth:`GlobalSOAP.get_location`
+    method of the provided SOAP object.
+
+    :param target_soap_features: Target SOAP feature vector to compare against.
+    :param soap_object: :class:`GlobalSOAP` instance used to compute SOAP
+        feature vectors for individuals that do not already have features
+        assigned, and to locate the species-specific slice of the SOAP vector.
+    :param species: Tuple of two chemical species whose SOAP interaction block
+        should be used for the similarity calculation.
+    :param rbf_gamma: Gamma parameter for the RBF kernel. Controls the
+        width of the Gaussian similarity function. Default is ``0.1``.
+    :param db_title: Optional title for the structures database.
+    :param round_result: Optional number of decimal places to round the
+        fitness values to. If ``None``, no rounding is applied.
+    :param n_jobs: Number of parallel jobs to use when computing SOAP
+        features for individuals. Default is ``1``.
+    """
+
     def __init__(
         self,
-        target_soap_features: np.ndarray | list[np.ndarray],
+        target_soap_features: np.ndarray,
         soap_object: GlobalSOAP,
         species: tuple[str, str],
         rbf_gamma: float = 0.1,
@@ -173,11 +202,7 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
     ):
         super().__init__(db_title=db_title)
 
-        if type(target_soap_features) is np.ndarray:
-            self.target_soap_features_list = [target_soap_features]
-        else:
-            self.target_soap_features_list = target_soap_features
-        assert len(self.target_soap_features_list) == 1
+        self.target_soap_features = target_soap_features
         self.soap_obj = soap_object
         self.round_result = round_result
         self.rbf_gamma = rbf_gamma
@@ -192,7 +217,7 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
 
         similarity_matrix = rbf_kernel(
             [v[species_slice] for v in feature_vector_list],
-            [self.target_soap_features_list[0][species_slice]],
+            [self.target_soap_features[species_slice]],
             gamma=self.rbf_gamma,
         )
         return similarity_matrix.flatten()
@@ -201,19 +226,6 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
         return self.evaluate_individuals([individual])[0]
 
     def evaluate_individuals(self, individuals: list[Individual]) -> list[float]:
-        """Evaluate a similarity fitness for a list of individuals.
-
-        Uses the :attr:`Individual.features` attribute to calculate the fitness.
-        If not set calculates the features with the :attr:`GlobalSOAP` object
-        for all individuals without features in parallel.
-
-        :param individuals: List of individuals to evaluate.
-
-        :returns: List of fitness values for each individual.
-
-        :raises ValueError: If the features could not be assigned to the
-            individuals or the fitness could not be calculated.
-        """
         # Assign the features to the individuals if they are not set already
         _assign_features_to_individuals(
             soap_obj=self.soap_obj,
@@ -233,7 +245,7 @@ class SpeciesSpecificSoapRbfSimFitness(FitnessFunction):
         # Use the feature vector to calculate the fitnesses/similarities
         fitnesses = self._get_rbf_sim_for_species(feature_vector_list=features)
 
-        if self.round_result is not None:
+        if self.round_result:
             return [round(f, self.round_result) for f in fitnesses]
         else:
             return fitnesses.tolist()

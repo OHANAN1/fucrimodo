@@ -1,4 +1,17 @@
-# TODO: Fix weird error <- Wow, idk
+# TODO: Fix weird error
+#       ^- Wow, nobody wants to read such a thing...
+#           I forgot the bug, so here is a seahorse:
+#
+#       \/)/)
+#     _'  oo(_.-.
+#   /'.     .---'
+# /'-./    (
+# )     ; __\
+# \_.'\ : __|
+#      )  _/
+#     (  (,.
+#   mrf'-.-'
+#
 import matid
 import numpy as np
 
@@ -9,25 +22,39 @@ from .abstract import Mutation
 
 
 class GetConventionalCellMutation(Mutation):
-    """Tries to change the individual to its conventional cell.
+    """
+    Convert an individual to its conventional cell using symmetry analysis.
 
-    This mutation is based on the `matid` :class:`SymmetryAnalyzer` class.
-    It will try to convert the individual to its conventional cell by
-    performing a symmetry analysis.
-    The cell size and atomic positions will be changed accordingly.
+    This mutation is based on the ``matid.SymmetryAnalyzer`` class. It
+    performs a symmetry analysis on the individual and constructs a new
+    individual with the conventional cell, atomic positions, and atomic
+    numbers.
 
-    :param closest_distances: The closest distances object.
-    :param symmetry_tol: The symmetry tolerance to be used in the symmetry
-        analysis.
-    :param max_volume_increase: The maximum volume increase allowed when
-        converting the cell to the conventional cell.
-    :param max_volume_decrease: The maximum volume decrease allowed when
-        converting the cell to the conventional cell.
-    :param max_steps: The maximum number of times the mutation should be
-        retried when it failed.
-        Not recommended to increase this value above 1 since the mutation
-        is deterministic and will return the same result.
+    The mutation is deterministic, so retrying it will produce the same
+    result.
 
+    For more info refer to the `MatID Documentation
+    <https://singroup.github.io/matid/index.html>`__.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param symmetry_tol: Tolerance used in the symmetry analysis. Defaults
+        to ``1e-5``.
+    :type symmetry_tol: float | None
+    :param max_volume_increase: Maximum allowed volume increase relative
+        to the original cell. Defaults to ``1.2``.
+    :type max_volume_increase: float
+    :param max_volume_decrease: Maximum allowed volume decrease relative
+        to the original cell. Defaults to ``0.8``.
+    :type max_volume_decrease: float
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Not recommended to increase above ``1`` since the
+        mutation is deterministic. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     def __init__(

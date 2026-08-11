@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, overload
 import warnings
 
 import ase
@@ -6,15 +6,33 @@ import numpy as np
 from dscribe.descriptors import SOAP
 from ase.data import chemical_symbols
 from fucrimodo.core import Individual
+from numpy.typing import NDArray
 
 
 class GlobalSOAP:
-    """Wrapper for `dscribe.descriptors.SOAP`.
+    """Wrapper for :class:`dscribe.descriptors.SOAP` that produces global SOAP descriptors.
 
-    This wrapper is implemented to make it clearer, what the object returns. Additionally adds some QoL features:
-    1. Species attribute accept chemical symbols and numbers.
-    2. Call GlobalSOAP.get_init_params() to get dict of params used for __init__.
-    3. On GlobaSOAP.create(...) automatically checks if atoms object is valid and can be calculated properly.
+    This wrapper adds quality-of-life features over the base SOAP class:
+
+    * ``species`` accepts both chemical symbols and atomic numbers.
+    * :meth:`get_init_params` returns the parameters used to instantiate the class.
+    * :meth:`create` validates the input structure before computing the descriptor.
+      and is stricter with the return shape.
+    * :meth:`get_present_species` return the species that truely contribute to a given
+      SOAP feature vector.
+
+
+    For more info see the `DScribe documentation <https://singroup.github.io/dscribe/latest/tutorials/descriptors/soap.html>`__.
+
+    :param r_cut: Cutoff radius for the local environment.
+    :param n_max: Number of radial basis functions.
+    :param l_max: Maximum degree of spherical harmonics.
+    :param species: List of chemical symbols or atomic numbers to include.
+    :param average: Averaging mode for the global descriptor. Must be ``"inner"`` or ``"outer"``.
+    :param sigma: Width of the Gaussian basis functions.
+    :param periodic: Whether the structures are treated as periodic.
+
+    :raises AssertionError: If ``average`` is ``"off"``.
     """
 
     def __init__(
@@ -56,7 +74,7 @@ class GlobalSOAP:
             r_cut=r_cut,
             n_max=n_max,
             l_max=l_max,
-            species=species,
+            species=self._species,
             sigma=sigma,
             periodic=periodic,
             average=average,
@@ -69,14 +87,10 @@ class GlobalSOAP:
         return self._species
 
     def get_init_params(self) -> dict:
-        """
-        Returns a dictionary with parameters that where used to set up the
-        class.
+        """Return the parameters used to initialise this wrapper.
 
-        Example:
-
-        soap_params = global_soap.get_init_params()
-        global_soap_copy = GlobalSOAP(**soap_params)
+        :return: Dictionary of initialisation parameters that can be passed to
+            :class:`GlobalSOAP` to recreate the object.
         """
         return {
             "r_cut": self.r_cut,
@@ -123,64 +137,37 @@ class GlobalSOAP:
         return True
 
     def get_number_of_features(self) -> int:
+        """Return the number of features in the SOAP descriptor."""
         return self._dscribe_soap.get_number_of_features()
 
     def get_location(self, species: tuple) -> slice:
+        """Return the slice locating the features for the given species pair.
+
+        :param species: Tuple of species defining the requested feature block.
+
+        :return: Slice object indexing the feature block in the descriptor.
+        """
         return self._dscribe_soap.get_location(species)
-
-    def create(
-        self,
-        system: list[Individual] | Individual,
-        n_jobs=1,
-        only_physical_cores=False,
-        verbose=False,
-    ) -> list[np.ndarray]:
-        """Always returns list of features"""
-        if isinstance(system, Individual):
-            if not self.__is_valid(system):
-                raise ValueError("Invalid input. Check warnings for details.")
-        else:
-            if not all(self.__is_valid(structure) for structure in system):
-                raise ValueError("Invalid input. Check warnings for details.")
-
-        try:
-            results = self._dscribe_soap.create(
-                system=system,
-                n_jobs=n_jobs,
-                only_physical_cores=only_physical_cores,
-                verbose=verbose,
-            )
-            if type(system) is not list:
-                return [results]  # type: ignore
-            elif type(system) is list and len(system) == 1:
-                return [results]  # type: ignore
-            return results  # type: ignore
-        except Exception as e:
-            raise ValueError(f"Error in creating SOAP: {e}")
 
     def get_present_species(
         self,
         feature_vector: np.ndarray,
         sort_by_appearance: bool = True,
     ) -> list[str]:
-        """Return only those species that contribute to the soap.
+        """Return the species that contribute to the given SOAP feature vector.
 
-        This means all species that have values != 0 in their corresponding
-        slice of the whole feature vector.
+        A species is considered present if the sum of absolute values in its
+        corresponding feature slice is non-zero.
 
-        :param soap_obj: The soap object that was used to create the
-            target features.
-        :param target_features: The target soap features.
-        :param sort_by_appearance: If set to True, the method tries to guess
-            the approximate composition of the target structure by calculating the
-            total number of features for each species. The output is then sorted
-            by the number of features in descending order.
+        :param feature_vector: SOAP descriptor to analyse.
+        :param sort_by_appearance: If ``True``, sort the returned species by their
+            total feature contribution in descending order. This is not equal to
+            their contribution in their original structure, but it can be used
+            as an estimate.
 
-        :return: A list of species that have features in the target soap.
-            If sort_by_appearance is set to True, the list is sorted by the
-            number of features in descending order. (The most prominent species
-            is at index 0.)
+        :return: List of species that have non-zero features.
         """
+
         # Ensure that the analysis is only done once for each species
         unique_soap_obj_species = list(set(self.species))
 
@@ -218,3 +205,66 @@ class GlobalSOAP:
             species_with_features = [species_with_features[i] for i in sort_indices]
 
         return species_with_features
+
+    # Overloads for better type hinting
+    @overload
+    def create(
+        self,
+        system: Individual,
+        n_jobs: int = 1,
+        only_physical_cores: bool = False,
+        verbose: bool = False,
+    ) -> NDArray[np.float64]: ...
+
+    # Overloads for better type hinting
+    @overload
+    def create(
+        self,
+        system: list[Individual],
+        n_jobs: int = 1,
+        only_physical_cores: bool = False,
+        verbose: bool = False,
+    ) -> list[NDArray[np.float64]]: ...
+
+    def create(
+        self,
+        system: list[Individual] | Individual,
+        n_jobs=1,
+        only_physical_cores=False,
+        verbose=False,
+    ) -> list[NDArray[np.float64]] | NDArray[np.float64]:
+        """Create the global SOAP descriptor for one or more structures.
+
+        Validates the input before delegating to the underlying SOAP descriptor.
+
+        :param system: Single structure or list of structures to describe.
+        :param n_jobs: Number of parallel jobs.
+        :param only_physical_cores: Use only physical CPU cores.
+        :param verbose: Print verbose output.
+
+        :return: SOAP descriptor array, or a list of arrays if multiple structures were provided.
+
+        :raises ValueError: If any input structure is invalid or SOAP creation fails.
+        """
+
+        if isinstance(system, Individual):
+            if not self.__is_valid(system):
+                raise ValueError("Invalid input. Check warnings for details.")
+        else:
+            if not all(self.__is_valid(structure) for structure in system):
+                raise ValueError("Invalid input. Check warnings for details.")
+
+        try:
+            results = self._dscribe_soap.create(
+                system=system,
+                n_jobs=n_jobs,
+                only_physical_cores=only_physical_cores,
+                verbose=verbose,
+            )
+            if type(system) is Individual or type(system) is ase.Atoms:
+                return results  # type: ignore
+            elif type(system) is list and len(system) == 1:
+                return [results]  # type: ignore
+            return results  # type: ignore
+        except Exception as e:
+            raise ValueError(f"Error in creating SOAP: {e}")

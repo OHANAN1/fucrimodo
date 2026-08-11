@@ -17,6 +17,55 @@ def norm_weights(weights) -> np.ndarray:
 
 
 class GeneticAlgorithm:
+    """Run a single-stage genetic algorithm.
+
+    This class wires together parent selection, crossover, mutation,
+    fitness evaluation, survivor selection and logging. It tracks per-fitness
+    statistics, operator performance and a hall of fame using DEAP's
+    ``tools`` infrastructure.
+
+    :param fitness_functions: Sequence of fitness functions. Each function must
+        provide a ``db_title`` attribute and an ``evaluate_individuals`` method.
+    :param fitness_weights: Weights assigned to each fitness function. The
+        ordering must match ``fitness_functions``.
+    :param crossover_list: Sequence of crossover operators. Each operator must
+        provide a ``crossover`` method and be hashable.
+    :param crossover_weights: Relative weights used to randomly choose a
+        crossover operator. Must match ``crossover_list`` in length.
+    :param mutation_list: Sequence of mutation operators. Each operator must
+        provide a ``mutate`` method and be hashable.
+    :param mutation_weights: Relative weights used to randomly choose a
+        mutation operator. Must match ``mutation_list`` in length.
+    :param mutation_probability: Probability (0..1) of applying mutation to an
+        individual after crossover.
+    :param crossover_probability: Probability (0..1) of applying crossover to a
+        pair of adjacent individuals.
+    :param break_condition: Object whose ``check(population, state)`` method
+        returns ``True`` when the evolution should stop.
+    :param parent_selection: Selection operator used to pick parents from the
+        current population.
+    :param parent_ratio: Fraction of the population size that is selected as
+        parents.
+    :param survivor_selection: Selection operator used to pick the next
+        generation from the combined parent and offspring pool.
+    :param save_n_best_individuals: Number of top individuals to retain in the
+        hall of fame. Defaults to 10.
+    :param rng: Numpy random generator. If ``None``, ``np.random.default_rng()``
+        is used.
+
+    :ivar fitness_functions: The configured fitness functions.
+    :ivar crossover_list: The configured crossover operators.
+    :ivar mutation_list: The configured mutation operators.
+    :ivar mutation_probability: Mutation probability.
+    :ivar crossover_probability: Crossover probability.
+    :ivar break_condition: The configured break condition.
+    :ivar parent_selection: The configured parent selection operator.
+    :ivar survivor_selection: The configured survivor selection operator.
+    :ivar fitness_weights: Raw fitness weights.
+    :ivar parent_ratio: Parent ratio.
+    :ivar hall_of_fame: DEAP ``HallOfFame`` retaining the best individuals.
+    """
+
     def __init__(
         self,
         fitness_functions: Sequence[FitnessFunction],
@@ -344,7 +393,7 @@ class GeneticAlgorithm:
             offspring[-1].info["cross_info"] = [None, True]
 
         for i in range(len(offspring)):
-            # Reset info about mutation, use None and False to have a consistent
+            # Reset info about mutation, use None and True to have a consistent
             # data type, so it can be checked if the mutation was used
             offspring[i].info["mut_info"] = [None, True]
 
@@ -517,6 +566,24 @@ class GeneticAlgorithm:
         global_log: tools.Logbook,
         stop_event: Any = None,
     ) -> Population:
+        """Run the genetic algorithm on the given population.
+
+        Evaluates the initial population, then iterates through selection,
+        crossover, mutation, evaluation and survivor selection until the
+        break condition is met or ``stop_event`` is set.
+
+        :param population: Population to evolve. Its ``individuals`` list is
+            updated in place.
+        :param stage_id: Identifier of the current stage, used when recording
+            global statistics.
+        :param global_stats: Optional DEAP ``MultiStatistics`` object for
+            global statistics. Only recorded from generation 1 onwards.
+        :param global_log: DEAP ``Logbook`` used to record global statistics.
+        :param stop_event: Optional object with an ``is_set()`` method (e.g.
+            ``threading.Event`` or ``multiprocessing.Event``). When set, the
+            loop exits early.
+        :return: The evolved population.
+        """
         # Store the initial population size
         population_size = population.size
 

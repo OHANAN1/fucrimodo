@@ -15,7 +15,7 @@ class BreakCondition(ABC):
         """Method to check if the break condition is fullfilled.
 
         :params population: Population for which the break condition should be checked.
-        :params info: Used to pass additional that are needed to check the condition.
+        :params info: Used to pass additional info that are needed to check the condition.
             (e.g. generation number)
 
         :returns: True if break condition is fulfilled and False if not.

@@ -3,7 +3,10 @@ from fucrimodo.core import Population
 
 
 class NeverBreak(BreakCondition):
-    """Never break the algorithm."""
+    """Never break the algorithm.
+
+    (`You can't be busy - you're five!` ~ Kôichi)
+    """
 
     def check(self, population: Population, info: dict | None = None) -> bool:
         return False
@@ -13,17 +16,18 @@ class NeverBreak(BreakCondition):
 
 
 class MultipleAndBreak(BreakCondition):
-    """Check if the condition of all of the provided `break_conditions` is fullfilled."""
+    """Break condition that triggers when all provided break conditions are fulfilled.
+
+    :param break_conditions: List of break conditions to evaluate with a logical AND.
+    """
 
     def __init__(self, break_conditions: list):
         self.break_conditions = break_conditions
 
     def check(self, population: Population, info: dict | None = None) -> bool:
         return all(
-            [
-                break_condition.check(population, info)
-                for break_condition in self.break_conditions
-            ]
+            break_condition.check(population, info)
+            for break_condition in self.break_conditions
         )
 
     def __repr__(self):
@@ -37,17 +41,18 @@ class MultipleAndBreak(BreakCondition):
 
 
 class MultipleOrBreak(BreakCondition):
-    """Check if the condition of either one of the provided `break_conditions` is fullfilled."""
+    """Break condition that triggers when any of the provided conditions triggers.
+
+    :param break_conditions: List of break conditions to evaluate with a logical OR.
+    """
 
     def __init__(self, break_conditions: list):
         self.break_conditions = break_conditions
 
     def check(self, population: Population, info: dict | None = None) -> bool:
         return any(
-            [
-                break_condition.check(population, info)
-                for break_condition in self.break_conditions
-            ]
+            break_condition.check(population, info)
+            for break_condition in self.break_conditions
         )
 
     def __repr__(self):
@@ -61,7 +66,11 @@ class MultipleOrBreak(BreakCondition):
 
 
 class NotBreak(BreakCondition):
-    """Check if the condition of the provided `break_conditions` is not fullfilled."""
+    """Break condition that negates another break condition.
+
+    :param break_condition: Break condition whose result should be inverted.
+    :type break_condition: BreakCondition
+    """
 
     def __init__(self, break_condition: BreakCondition):
         self.break_condition = break_condition
@@ -74,7 +83,16 @@ class NotBreak(BreakCondition):
 
 
 class MaxFitnessBreak(BreakCondition):
-    """Break the algorithm if the fitness at index `fitness_index` of one of the individuals is above the `fitness_threshold`."""
+    """Break condition that triggers when the maximum fitness value is at or above a threshold.
+
+    The maximum is computed over all individuals for the fitness value at
+    ``fitness_index``.
+
+    :param fitness_index: Index of the fitness value to inspect in each individual.
+    :type fitness_index: int
+    :param fitness_threshold: Threshold the maximum fitness must reach or exceed.
+    :type fitness_threshold: float
+    """
 
     def __init__(self, fitness_index: int, fitness_threshold: float):
         self.fitness_threshold = fitness_threshold
@@ -92,7 +110,14 @@ class MaxFitnessBreak(BreakCondition):
 
 
 class MinFitnessBreak(BreakCondition):
-    """Break the algorithm if the fitness at index `fitness_index` of one of the individuals is below the `fitness_threshold`."""
+    """Break condition that triggers when the minimum fitness value is at or below a threshold.
+
+    The minimum is computed over all individuals for the fitness value at
+    ``fitness_index``.
+
+    :param fitness_index: Index of the fitness value to inspect in each individual.
+    :param fitness_threshold: Threshold the minimum fitness must not fall below.
+    """
 
     def __init__(self, fitness_index: int, fitness_threshold: float):
         self.fitness_threshold = fitness_threshold
@@ -110,24 +135,24 @@ class MinFitnessBreak(BreakCondition):
 
 
 class GenerationBreak(BreakCondition):
-    """Checks if the current generation is above the generation_limit.
+    """Break condition that triggers when the generation index reaches the limit.
 
-    Please provide the current generation index with the key 'generation_index'
-    in the `info` dictionary of the `check` method.
+    .. note::
+
+        The caller must supply the current generation index via ``info["generation_index"]``
+        when calling :meth:`check`.
+
+    :param generation_limit: Maximum generation index allowed before the condition triggers.
     """
 
     def __init__(self, generation_limit: int):
         self.generation_limit = generation_limit
 
     def check(self, population: Population, info: dict | None = None) -> bool:
-        """Method to check if the current generation is above the generation_limit.
-
-        :params info: Please provide the current generation index with the key 'generation_index'.
-        """
         assert (
             info
             and ("generation_index" in info.keys())
-            and (type(info["generation_index"]) is (int or float))
+            and isinstance(info["generation_index"], (int, float))
         ), "Please provide generation_index, through the info dict for this break condition to work."
 
         return info["generation_index"] >= self.generation_limit

@@ -1,6 +1,6 @@
-=======================
-Fucrimodo Core Overview
-=======================
+==============
+Fucrimodo Core
+==============
 
 .. currentmodule:: fucrimodo.core
 

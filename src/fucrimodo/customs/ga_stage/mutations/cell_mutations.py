@@ -5,14 +5,45 @@ from ase.cell import Cell
 
 from ....core import Individual
 from ....core.utils import CustomCellBounds, CustomClosestDistances
-from ...utils import LegacyRNGAdapter
 
 from .abstract import Mutation
 
 
 class ScaleUnitCellMutation(Mutation):
     """
-    Scales the unit cell by a random factor.
+    Mutate an individual by scaling its unit cell vectors.
+
+    A single random scaling factor is drawn uniformly from
+    ``[min_scale, max_scale]`` and applied to
+    ``n_variable_cell_vectors`` randomly selected cell vectors. Atomic
+    positions are scaled together with the cell when ``scale_atoms`` is
+    ``True``.
+
+    (`Ponyo, make the candle bigger!` ~ Sosuke)
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param cell_bounds: Allowed bounds for the mutated cell.
+    :type cell_bounds: CustomCellBounds
+    :param max_scale: Upper bound of the uniform scaling factor
+        distribution. Defaults to ``2.0``.
+    :type max_scale: float
+    :param min_scale: Lower bound of the uniform scaling factor
+        distribution. Defaults to ``0.5``.
+    :type min_scale: float
+    :param scale_atoms: Whether to scale atomic coordinates together with
+        the cell vectors. Defaults to ``True``.
+    :type scale_atoms: bool
+    :param n_variable_cell_vectors: Number of cell vectors to scale,
+        chosen without replacement from ``[0, 1, 2]``. Defaults to ``3``.
+    :type n_variable_cell_vectors: int
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     def __init__(
@@ -68,7 +99,34 @@ class ScaleUnitCellMutation(Mutation):
 
 
 class StrainMutation(Mutation):
-    """Uses :attr:`_legacy_rng` internally."""
+    """
+    Mutate an individual by applying a strain mutation.
+
+    This wraps the ASE GA ``StrainMutation`` and uses a legacy RNG adapter
+    internally to provide the required random number generator interface.
+
+    More info in the `ase_ga repo <https://github.com/dtu-energy/ase-ga>`__.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param n_variable_cell_vectors: Number of cell vectors that may be
+        changed by the mutation. Defaults to ``3``.
+    :type n_variable_cell_vectors: int
+    :param cell_bounds: Allowed bounds for the cell parameters. If
+        ``None``, bounds are derived from the parent cell by allowing
+        ``±1.0`` Angstrom for ``a``, ``b`` and ``c``. Defaults to ``None``.
+    :type cell_bounds: CustomCellBounds | None
+    :param stddev: Standard deviation of the strain distribution. Defaults
+        to ``0.7``.
+    :type stddev: float
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
+    """
 
     def __init__(
         self,
@@ -82,7 +140,6 @@ class StrainMutation(Mutation):
         super().__init__(
             closest_distances=closest_distances, max_retries=max_retries, rng=rng
         )
-        self._legacy_rng = LegacyRNGAdapter(self._rng)
         self.n_variable_cell_vectors = n_variable_cell_vectors
         self.cell_bounds = cell_bounds
         self.max_steps = 1
@@ -121,7 +178,25 @@ class StrainMutation(Mutation):
 
 
 class EnlargeMutation(Mutation):
-    """Deterministic"""
+    """
+    Deterministically enlarge the unit cell by doubling allowed cell vectors.
+
+    For each cell vector, the mutation checks whether doubling that vector
+    keeps the cell within ``cell_bounds``. All allowed vectors are doubled
+    simultaneously and the structure is repeated to fill the new cell.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param cell_bounds: Allowed bounds for the resulting cell.
+    :type cell_bounds: CustomCellBounds
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``1``.
+    :type max_retries: int
+    :param rng: Random number generator passed to the base class.
+        Defaults to ``None``.
+    :type rng: None | np.random.Generator
+    """
 
     def __init__(
         self,
@@ -181,7 +256,22 @@ class EnlargeMutation(Mutation):
 
 
 class NiggliReduceMutation(Mutation):
-    """Deterministic"""
+    """
+    Deterministically reduce the individual's cell to its Niggli form.
+
+    Applies ``build.niggli_reduce`` to the individual in place and returns
+    the same object.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``1``.
+    :type max_retries: int
+    :param rng: Random number generator passed to the base class.
+        Defaults to ``None``.
+    :type rng: None | np.random.Generator
+    """
 
     def _perform_mutation(self, individual: Individual) -> Individual | None:
         build.niggli_reduce(individual)
@@ -189,7 +279,22 @@ class NiggliReduceMutation(Mutation):
 
 
 class MinimizeTiltMutation(Mutation):
-    """Deterministic"""
+    """
+    Deterministically minimize the tilt of the individual's cell.
+
+    Applies ``build.minimize_tilt`` to the individual in place and returns
+    the same object.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``1``.
+    :type max_retries: int
+    :param rng: Random number generator passed to the base class.
+        Defaults to ``None``.
+    :type rng: None | np.random.Generator
+    """
 
     def _perform_mutation(self, individual: Individual) -> Individual | None:
         build.minimize_tilt(individual)
@@ -197,8 +302,25 @@ class MinimizeTiltMutation(Mutation):
 
 
 class RotationMutation(Mutation):
+    """
+    Rotate the individual by a random angle around a random Cartesian axis.
+
+    The rotation angle is drawn uniformly from ``[0, 90]`` degrees and the
+    axis is chosen uniformly from ``x``, ``y`` or ``z``. The cell itself is
+    not rotated.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``1``.
+    :type max_retries: int
+    :param rng: Random number generator passed to the base class.
+        Defaults to ``None``.
+    :type rng: None | np.random.Generator
+    """
+
     def _perform_mutation(self, individual: Individual) -> Individual | None:
         v_rand = self._rng.choice(["x", "y", "z"])
         a_rand = self._rng.uniform(0, 90)
         individual.rotate(a=a_rand, v=v_rand, rotate_cell=False)
-        return individual

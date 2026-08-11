@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable, Literal
 
 import numpy as np
 from deap import tools
@@ -10,6 +10,15 @@ from ..core.abstracts import (
 
 
 class RandomSelection(PopulationSelection):
+    """Select individuals uniformly at random from a population.
+
+    Selection is performed with replacement, so the same individual may
+    appear multiple times in the returned list.
+
+    :param rng: Random number generator. If ``None``, a new default
+        generator is created.
+    """
+
     def __init__(
         self,
         rng: np.random.Generator | None = None,
@@ -27,15 +36,15 @@ class RandomSelection(PopulationSelection):
 
 
 class TournamentSelection(PopulationSelection):
-    """Selects a population using the tournament selection algorithm.
+    """Select individuals using tournament selection.
 
-    Wrapper around the DEAP tournament selection algorithm. More information
-    about the algorithm can be found in the DEAP documentation:
-    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selTournament`
+    Each selected individual is determined by sampling
+    ``tournament_size`` aspirants uniformly at random from the population
+    (with replacement) and choosing the one with the highest fitness.
 
-    :param k: The number of individuals to select. Either integer for total
-        number or float for percentage of the population.
-    :param tournsize: The number of individuals participating in each tournament.
+    :param tournament_size: Number of individuals in each tournament.
+    :param rng: Random number generator. If ``None``, a new default
+        generator is created.
     """
 
     def __init__(
@@ -54,15 +63,6 @@ class TournamentSelection(PopulationSelection):
         return f"TournamentSelection(tournament_size={self._tournament_size})"
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Selects a population using the tournament selection.
-
-        :param individuals: A list of individuals to select from. The
-            individual must have the :class:`FitnessStorage` class at
-            :attr:`Individual.fitness` to be used in the tounament selection.
-        :param n: The number of individuals to select.
-
-        :return: A list of individuals selected using the tounament selection.
-        """
         chosen = []
         for _ in range(n):
             aspirants = self._random_selection.select(
@@ -73,59 +73,87 @@ class TournamentSelection(PopulationSelection):
 
 
 class NSGA2Selection(PopulationSelection):
-    """Selects a population using the NSGA-II algorithm.
+    """Select individuals using the NSGA-II multi-objective selection algorithm.
 
-    Wrapper around the DEAP NSGA-II algorithm. More information about the
-    algorithm can be found in the DEAP documentation:
-    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selNSGA2`
+    This is a wrapper around :func:`deap.tools.selNSGA2`. The selector
+    performs non-dominated sorting on the input individuals and uses
+    crowding distance to pick ``n`` diverse, Pareto-optimal individuals.
 
-    :param nondominated_sorting: The method used for non-dominated sorting.
-        Options are 'standard' and 'log'. See DEAP documentation for more
-        information.
+    The :attr:`nondominated_sorting` attribute controls the non-dominated
+    sorting algorithm:
+
+    - ``'standard'`` (default): Deb's Fast Non-Dominated Sorting approach,
+      with time complexity O(M N^2) where M is the number of
+      objectives and N is the number of individuals.
+    - ``'log'``: Fortin et al.'s Generalized Reduced Run-Time Complexity
+      Non-Dominated Sorting algorithm, which can be faster for large
+      populations.
+
+    See the `DEAP docs
+    <https://deap.readthedocs.io/en/master/api/tools.html>`__ for more details.
+
+    :param nondominated_sorting: Non-dominated sorting algorithm to use.
+        Must be either ``'standard'`` or ``'log'``. Defaults to ``'standard'``.
+    :type nondominated_sorting: str
+
+    :raises ValueError: If ``nondominated_sorting`` is not ``'standard'``
+        or ``'log'``.
     """
 
     def __init__(
         self,
-        nondominated_sorting: str = "standard",
+        nondominated_sorting: Literal["log", "standard"] = "standard",
     ):
+        if not nondominated_sorting in ["log", "standard"]:
+            raise ValueError(
+                "Only 'standard' and 'log' is allowed for param 'nondominated_sorting'!"
+            )
         self._nondominated_sorting = nondominated_sorting
 
     def __repr__(self) -> str:
         return f"NSGA2Selection(nondominated_sorting={self._nondominated_sorting})"
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """Selects a population using the NSGA-II algorithm.
-
-        :param individuals: A list of individuals to select from. The
-            individual must have the :class:`FitnessStorage` class at
-            :attr:`Individual.fitness` to be used in the NSGA-II algorithm.
-        :param n: The number of individuals to select.
-
-        :return: A list of individuals selected using the NSGA-II algorithm.
-            Sorted by the NSGA-II algorithm from best to worst.
-        """
-        # Perform NSGA-II selection.
-        individuals = tools.selNSGA2(individuals, k=n, nd=self._nondominated_sorting)
-
-        return individuals
+        return tools.selNSGA2(individuals, k=n, nd=self._nondominated_sorting)
 
 
 class TournamentDCDSelection(PopulationSelection):
-    """Selects a population using the tournament selection algorithm with DCD.
+    """Select individuals using tournament selection based on dominance and crowding distance.
 
-    Wrapper around the DEAP tournament selection algorithm with DCD. More
-    information about the algorithm can be found in the DEAP documentation:
-    `https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.selTournamentDCD`
+    This is a reimplementation of DEAP's ``selTournamentDCD`` that uses an
+    explicit :class:`numpy.random.Generator` instead of Python's global random
+    module. The algorithm selects individuals by repeatedly running pairwise
+    tournaments between groups from two independent shuffles of the population.
+    In each tournament, the winner is determined by:
 
-    :param sort_by: A function that sorts the selected individuals. The
-        function should take an individual as input and return a value to
-        sort by. If None, the selected individuals are not sorted.
+    1. Pareto dominance: the individual whose fitness dominates the other wins.
+    2. Crowding distance: if neither dominates, the individual with the larger
+       crowding distance wins.
+    3. Random tie-break: if both have the same crowding distance, one is chosen
+       at random.
+
+    The population automatically gets the crowding distances assigned via DEAP's
+    :func:`deap.tools.emo.assignCrowdingDist`. After it the parameter is deleted.
+
+    See the `DEAP docs
+    <https://deap.readthedocs.io/en/master/api/tools.html>`__ for more details.
+
+    :param sort_by: Key function used to sort the selected individuals after
+        selection. If ``None``, the selected individuals are returned in the
+        order they were chosen. Defaults to sorting by fitness values.
+    :param rng: Random number generator. If ``None``, a new default generator
+        is created.
+
+    :raises ValueError: If ``n < 4`` or ``n > len(individuals)``.
+    :raises ValueError: If ``n == len(individuals)`` and ``n`` is not divisible
+        by four.
+    :raises AssertionError: If the population has fewer than 4 individuals.
     """
 
     def __init__(
         self,
+        sort_by: Callable[[Individual], Any] | None = lambda x: x.fitness.values,
         rng: np.random.Generator | None = None,
-        sort_by: Callable[[Individual], float] | None = lambda x: x.fitness.values,
     ):
         if rng is None:
             rng = np.random.default_rng()
@@ -181,25 +209,18 @@ class TournamentDCDSelection(PopulationSelection):
         return chosen
 
     def select(self, individuals: list[Individual], n: int) -> list[Individual]:
-        """
-
-
-        :raises ValueError: if n is smaller than 4
-        :raises AssertionError: if number of individuals is smaller than 4
-        """
         assert len(individuals) >= 4
 
-        # Assign crowding distance to each individual, as expected by the
-        # selTournamentDCD function
+        # Assign crowding distance to each individual
         tools.emo.assignCrowdingDist(individuals)
 
         # Select individuals using the selTournamentDCD function
         chosen = self._np_selTournamentDCD(individuals=individuals, n=n)
 
-        # Reset the crowding distance of the selected individuals
+        # Remove the crowding distance of the selected individuals
         for individual in chosen:
-            if hasattr(individual, "crowding_dist"):
-                del individual.crowding_dist
+            if hasattr(individual.fitness, "crowding_dist"):
+                del individual.fitness.crowding_dist
 
         if self.sort_by is not None:
             chosen.sort(

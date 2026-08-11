@@ -2,15 +2,42 @@ import numpy as np
 
 from ....core import Individual
 from ....core.utils import CustomClosestDistances
-from ...utils import LegacyRNGAdapter
 
 from .abstract import Mutation
 
 
 class MultipleMutations(Mutation):
-    """Uses :attr:`_legacy_rng` internally. But changing :attr:`_rng` changes both!
+    """
+    Apply multiple mutations sequentially to an individual.
 
-    ensures that the mutations use the same rng automatically
+    A subset of the provided mutations is selected and applied in order.
+    The selection order is randomized when ``random_order`` is ``True``.
+    Mutations are sampled without replacement by default, meaning each
+    mutation is used at most once per application.
+
+    The RNG of each sub-mutation is synchronized with this object's RNG
+    before every application, so all mutations share the same random state.
+
+    :param mutations: List of mutations to apply.
+    :type mutations: list[Mutation]
+    :param closest_distances: Minimum allowed interatomic distances used
+        for validation.
+    :type closest_distances: CustomClosestDistances
+    :param number_of_mutations: Number of mutations to apply, or the string
+        ``"all"`` to apply all of them. Defaults to ``"all"``.
+    :type number_of_mutations: int | str
+    :param random_order: Whether to randomize the order of mutations
+        before selection. Defaults to ``True``.
+    :type random_order: bool
+    :param can_occure_multiple_times: Whether the same mutation may be
+        selected multiple times. Defaults to ``False``.
+    :type can_occure_multiple_times: bool
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     def __init__(
@@ -31,7 +58,7 @@ class MultipleMutations(Mutation):
         self.mutations = mutations
         self.closest_distances = closest_distances
         self.can_occure_multiple_times = can_occure_multiple_times
-        self.max_retries = 1
+        self.max_retries = max_retries
 
         if isinstance(number_of_mutations, str) and number_of_mutations == "all":
             self.number_of_mutations: int = len(self.mutations)

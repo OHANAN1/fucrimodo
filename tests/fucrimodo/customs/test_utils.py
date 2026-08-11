@@ -1,11 +1,10 @@
-import pytest
 import numpy as np
 import ase
 from fucrimodo.customs.utils import (
     get_soap_similarity_fitness_list,
     get_species_specific_soap_sim_fitness_list,
-    convert_ase_atoms_to_individual,
 )
+from fucrimodo.core import Individual
 from fucrimodo.customs.fitness_functions import (
     SoapRbfSimilarityFitness,
     SpeciesSpecificSoapRbfSimFitness,
@@ -27,9 +26,7 @@ def test_get_soap_similarity_fitness_list(periodic_soap_obj):
     assert fitness_list[0].db_title == "test"
     assert fitness_list[0].n_jobs == 5
     assert fitness_list[0].round_result == 6
-    assert np.allclose(
-        fitness_list[0].target_soap_features_list[0], np.array([1, 2, 3])
-    )
+    assert np.allclose(fitness_list[0].target_soap_features, np.array([1, 2, 3]))
 
     fitness_list = get_soap_similarity_fitness_list(
         target_soap_features=np.array([1, 2, 3]),
@@ -78,19 +75,17 @@ def test_get_species_specific_soap_sim_fitness_list(periodic_soap_obj):
     assert fitness_list[2].db_title == "test_Cl_Cl"
     assert fitness_list[0].n_jobs == 5
     assert fitness_list[0].round_result == 6
-    assert np.allclose(
-        fitness_list[0].target_soap_features_list[0], np.array([1, 2, 3])
-    )
+    assert np.allclose(fitness_list[0].target_soap_features, np.array([1, 2, 3]))
 
 
 def test_convert_ase_atoms_to_individual():
     ase_atoms = ase.Atoms()
-    ind = convert_ase_atoms_to_individual(ase_atoms)
+    ind = Individual.from_ase(ase_atoms)
     # __eq__ method of ase atoms will still work
     assert ase_atoms == ind
 
     ase_atoms = ase.Atoms(
         ["H", "He"], [[0, 0, 0], [1, 1, 1]], cell=[1, 1, 1], pbc=[True, False, True]
     )
-    ind = convert_ase_atoms_to_individual(ase_atoms)
+    ind = Individual.from_ase(ase_atoms)
     assert ase_atoms == ind

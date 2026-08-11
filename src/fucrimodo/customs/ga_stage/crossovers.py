@@ -58,6 +58,7 @@ class Crossover(ABC):
         if not rng:
             rng = np.random.default_rng()
         self._rng = rng
+
         self.closest_distances = closest_distances
         self.max_retries = max_retries
 

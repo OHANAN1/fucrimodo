@@ -7,15 +7,32 @@ import numpy as np
 
 class RattleMutation(Mutation):
     """
-    Moves len(atoms) - n_top atoms in a random directions.
-    The maximal movement is defined by max_movement.
-    This is then limited by the closest distance between atoms.
-    The closest distance is calculated by the
-    ase_ga.utilities.closest_distances_generator.
+    Randomly displace a subset of atoms.
 
-    The bool shuffle_when_n_top determines if the atoms are shuffled
-    if n_top is not "all". If False, always the first n_top atoms are moved.
+    ``n_top`` atoms are selected without replacement and their positions
+    are perturbed by a normally distributed displacement with standard
+    deviation ``rattle_strength``. The displacement is applied through
+    ``set_positions``, so any ASE constraints on the individual are
+    respected.
 
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param n_top: Number of atoms to rattle, or the string ``"all"`` to
+        rattle all atoms. Defaults to ``"all"``.
+    :type n_top: int | str
+    :param rattle_strength: Standard deviation of the Gaussian displacement
+        in Angstrom. Defaults to ``0.8``.
+    :type rattle_strength: float
+    :param rattle_prop: Probability that a selected atom is actually rattled.
+        Defaults to ``0.5``.
+    :type rattle_prop: float
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     def __init__(
@@ -50,10 +67,18 @@ class RattleMutation(Mutation):
 
         positions = individual.get_positions().copy()
         indicees_to_rattle = self._rng.choice(len(individual), n_top, replace=False)
+
+        mutated = False
         for i in indicees_to_rattle:
-            positions[i] = positions[i] + self._rng.normal(
-                scale=self.rattle_strength, size=positions[i].shape
-            )
+            if self._rng.random() < self.rattle_prop:
+                positions[i] = positions[i] + self._rng.normal(
+                    scale=self.rattle_strength, size=positions[i].shape
+                )
+                mutated = True
+
+        # If no atom was rattled, the mutation did nothing
+        if not mutated:
+            return None
 
         # Set the positions of the individual
         # This also respects the constraints set
@@ -69,7 +94,24 @@ class RattleMutation(Mutation):
 
 class MirrorMutation(Mutation):
     """
-    Mirrors the individual along a random axis.
+    Mirror the individual along a random axis.
+
+    This wraps the ASE ``MirrorMutation``. The mutation is applied to the
+    top ``n_top`` atoms of the structure.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param n_top: Number of atoms from the top of the structure to consider
+        for mirroring, or the string ``"all"`` to use all atoms. Defaults
+        to ``"all"``.
+    :type n_top: int | str
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``100``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     def __init__(

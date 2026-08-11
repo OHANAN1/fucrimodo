@@ -9,11 +9,27 @@ import numpy as np
 
 class ReplaceAtomsMutation(Mutation):
     """
-    Replace a random atom with an random atom species in the soap object.
-    Atom has to be in the soap object species.
+    Replace atoms in an individual with random species from a given pool.
 
-    Use soap_object.species to get the possible elements.
-    Be aware! max_retries is counted as :arg:`max_retries_factor`. Max_retries will be factor*n_atoms in individual.
+    For each atom to replace, a random atom is selected and its atomic
+    number is changed to a different species from ``possible_elements``.
+    The replacement is applied in place.
+
+    :param possible_elements: List of element symbols that may be used as
+        replacement species.
+    :type possible_elements: list[str]
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param n_atoms_to_replace: Number of atoms to replace per mutation.
+        Defaults to ``1``.
+    :type n_atoms_to_replace: int
+    :param max_retries: Factor used to compute the actual number of retries
+        as ``max_retries * n_atoms``. Defaults to ``2``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
     """
 
     # NOTE: Maybe use the ase RandomElementMutation
@@ -66,8 +82,30 @@ class ReplaceAtomsMutation(Mutation):
 
 
 class PermutationMutation(Mutation):
-    """Uses ase atoms mutation PermutationMutation
-    Uses :attr:`_legacy_rng` internally."""
+    """
+    Swap positions of atoms with different species.
+
+    This wraps the ASE ``PermutationMutation`` and uses a legacy RNG
+    adapter internally to provide the required random number generator
+    interface.
+
+    :param closest_distances: Minimum allowed interatomic distances used
+        to validate the mutated structure.
+    :type closest_distances: CustomClosestDistances
+    :param n_top: Number of atoms from the top of the structure to consider
+        for permutation, or the string ``"all"`` to use all atoms. Defaults
+        to ``"all"``.
+    :type n_top: int | str
+    :param prob: Probability of attempting a permutation. Defaults to
+        ``0.5``.
+    :type prob: float
+    :param max_retries: Maximum number of attempts to produce a valid
+        mutation. Defaults to ``1``.
+    :type max_retries: int
+    :param rng: Random number generator. If ``None``, the base class
+        creates one.
+    :type rng: None | np.random.Generator
+    """
 
     def __init__(
         self,

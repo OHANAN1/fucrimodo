@@ -204,3 +204,10 @@ class TestIndividual:
         assert atoms.features is None
         assert not atoms.fitness.valid
         assert atoms.creation_time > old_time
+
+    def test_from_ase_atoms(self, atoms):
+        # Empty atoms
+        atoms = ase.Atoms()
+
+        ind = Individual.from_ase(atoms)
+        assert ind == atoms

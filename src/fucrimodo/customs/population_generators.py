@@ -12,8 +12,6 @@ from ..core.abstracts import PopulationGenerator, FitnessFunction
 from ..core.utils import CustomClosestDistances
 from .global_soap_target import GlobalSOAP
 from . import population_selections
-from . import global_soap_target
-from .utils import convert_ase_atoms_to_individual
 from pyxtal import pyxtal
 from pyxtal.symmetry import Group
 from pyxtal.tolerance import Tol_matrix
@@ -33,7 +31,28 @@ def create_random_crystal(
     seed: int = 42,
     sort_composition_descending: bool = True,
 ) -> ase.Atoms | None:
-    """Worker function to create a random structure."""
+    """Worker function to create a random crystal structure with a valid composition and space group.
+
+    Randomly distributes ``n_atoms`` across ``present_species`` and samples a
+    3D space group from ``possible_space_groups`` until a compatible combination
+    is found. The resulting structure is converted to :class:`ase.Atoms` and
+    checked against the closest-distance constraints.
+
+    :param present_species: Chemical species to include in the crystal.
+    :param n_atoms: Total number of atoms in the crystal.
+    :param closest_distances: Distance constraints used for the tolerance matrix
+        and the final too-close check.
+    :param possible_space_groups: Allowed space group numbers. Defaults to all
+        230 3D space groups (1-230).
+    :param logger: Optional logger for debug/info/error messages.
+    :param n_tries_composition: Maximum number of composition/space group
+        attempts before giving up.
+    :param seed: Random seed for reproducibility.
+    :param sort_composition_descending: If ``True``, sort the atom counts per
+        species in descending order before generation.
+    :returns: A valid :class:`ase.Atoms` object with periodic boundary conditions,
+        or ``None`` if generation failed or atoms are too close.
+    """
     # Set the random seed for reproducibility
     rng = np.random.default_rng(seed)
 
@@ -61,14 +80,14 @@ def create_random_crystal(
             index_to_add = rng.integers(0, n_present_species)
             n_atoms_per_species[index_to_add] += 1
 
-            space_group = rng.choice(list(possible_space_groups))
-
         if sort_composition_descending:
             # Sort the composition in descending order.
             # This can be useful if the present species are sorted in
             # descending order of their guessed appearance in the
             # target features.
             n_atoms_per_species = sorted(n_atoms_per_species, reverse=True)
+
+        space_group = rng.choice(list(possible_space_groups))
 
         # Check if the space group is compatible with the number of atoms
         compatible, _ = Group(space_group, dim=3).check_compatible(n_atoms_per_species)
@@ -130,6 +149,37 @@ def create_random_crystal(
 
 
 class RandomSampleCrystalPopulation(PopulationGenerator):
+    """Generate an initial population by randomly sampling crystal structures.
+
+    This generator creates ``n_samples`` random crystals using the allowed
+    space groups for the given number of atoms, converts the valid ones to
+    :class:`Individual` objects, assigns fitness values, and finally selects
+    ``n`` individuals using NSGA-II selection. If fewer than ``n`` individuals
+    can be produced, the returned list is extended by randomly copying
+    existing individuals.
+
+    :param soap_obj: SOAP descriptor object used to guide the sampling.
+    :param target_features: Target feature vector to guide the sampling.
+    :param closest_distances: Closest-distance constraints used during crystal
+        generation.
+    :param n_atoms: Number of atoms per generated crystal.
+    :param fitness_functions: Fitness function(s) to evaluate. Can be a single
+        :class:`FitnessFunction` or a sequence of functions, optionally paired
+        with weights.
+    :param n_samples: Number of random crystals to sample, defaults to 1000.
+        Note: A high sample number leads to a more diverse population. This is
+        desirable. (`The creation of a single [crystal] comes from a huge number
+        of fragments and chaos` ~ Hayao Miyazaki)
+    :param n_jobs: Number of parallel jobs for crystal generation, defaults to 1.
+    :param exclude_space_groups: Space groups to skip, defaults to ``[215, 195]``.
+        These two space groups are omitted since they have caused a lot of
+        problems in the past.
+    :param logger: Optional logger.
+    :param rng: Optional random number generator. If ``None``, a new default
+        generator is created.
+
+    """
+
     def __init__(
         self,
         soap_obj: GlobalSOAP,
@@ -145,6 +195,7 @@ class RandomSampleCrystalPopulation(PopulationGenerator):
             215,
             195,
         ],  # Exclude 215 and 195, since they somehow cause problems
+        # TODO: Check how they can be readded
         logger: None | Logger = None,
         rng: None | np.random.Generator = None,
     ):
@@ -253,7 +304,7 @@ class RandomSampleCrystalPopulation(PopulationGenerator):
         # Convert the crystals to individuals
         individuals = []
         for crystal in random_crystals:
-            ind = convert_ase_atoms_to_individual(crystal)
+            ind = Individual.from_ase(crystal)
             individuals.append(ind)
 
         if self.logger:
@@ -276,7 +327,7 @@ class RandomSampleCrystalPopulation(PopulationGenerator):
                     "individuals. Extending population."
                 )
             extended_inds = individuals
-            while len(extended_inds) <= n:
+            while len(extended_inds) < n:
                 idx = self._rng.choice(range(len(extended_inds)))
                 extended_inds.append(extended_inds[idx].copy())
 

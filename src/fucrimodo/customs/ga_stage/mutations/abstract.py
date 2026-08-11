@@ -13,13 +13,33 @@ from copy import deepcopy
 
 
 class Mutation(ABC):
-    """
-    Here we define all attributes and methods that we need
-    for _every_ mutation.
+    """Abstract base class for all mutations acting on an ASE-based ``Individual``.
 
-    Please initiate the super class always with closest_dist, max_retries and rng.
+    The public entry point :meth:`mutate` handles retry logic, validation, and
+    in-place replacement of the parent when a valid and physically feasible
+    offspring is produced.
 
-    Note that legacy_rng also needs to be considered for some mutations
+    .. note::
+        Subclasses must call ``super().__init__(...)`` so that
+        :attr:`_rng`, :attr:`_legacy_rng`, :attr:`max_retries`, and :attr:`closest_distances`
+        are initialized correctly.
+
+    :param closest_distances: Object that checks whether atoms in an individual
+        are too close to each other.
+    :param max_retries: Maximum number of attempts to create a valid offspring.
+        Defaults to ``1``.
+    :param rng: NumPy random number generator. If ``None``, a new default
+        generator is created.
+
+    :ivar closest_distances: Distance checker used to validate physical
+        feasibility of offspring.
+    :vartype closest_distances: CustomClosestDistances
+    :ivar max_retries: Maximum number of mutation attempts.
+    :vartype max_retries: int
+    :ivar _rng: Internal NumPy random number generator.
+    :vartype _rng: numpy.random.Generator
+    :ivar _legacy_rng: Legacy-style RNG adapter wrapping :attr:`_rng`.
+    :vartype _legacy_rng: fucrimodo.customs.utils.LegacyRNGAdapter
     """
 
     def __init__(
@@ -38,6 +58,11 @@ class Mutation(ABC):
 
     @property
     def logger(self) -> logging.Logger | None:
+        """
+        Logger used by this mutation instance.
+
+        :return: The logger, or ``None`` if none was assigned.
+        """
         if not hasattr(self, "_logger"):
             return None
         return self._logger
@@ -48,6 +73,11 @@ class Mutation(ABC):
 
     @property
     def rng(self) -> np.random.Generator:
+        """
+        NumPy random number generator used by this mutation instance.
+
+        :return: The random number generator.
+        """
         return self._rng
 
     def __repr__(self):
@@ -63,9 +93,16 @@ class Mutation(ABC):
         variables_str = variables_str[:-2]
         return f"{class_name}({variables_str})"
 
-    def individual_is_valid_object(self, individual: Individual) -> bool:
+    def _individual_is_valid_object(self, individual: Individual) -> bool:
         """
-        Tests if the individual is a valid Individual object.
+        Check whether ``individual`` is a well-formed ``Individual`` object.
+
+        Checks that the object is an ``Individual``, is non-empty, contains only
+        ``ase.Atom`` objects, and has no NaN values in positions, cell, or atomic
+        numbers.
+
+        :param individual: The individual to validate.
+        :return: ``True`` if the individual is a valid object, ``False`` otherwise.
         """
         if not isinstance(individual, Individual):
             return False
@@ -87,9 +124,16 @@ class Mutation(ABC):
 
         return True
 
-    def individual_is_physical(self, individual: Individual) -> bool:
+    def _individual_is_physical(self, individual: Individual) -> bool:
         """
-        Tests if the individual is physical.
+        Check whether ``individual`` represents a physically feasible structure.
+
+        Rejects individuals whose cell volume is below ``1.0`` (if a cell exists)
+        and individuals whose atoms are too close according to
+        ``closest_distances``.
+
+        :param individual: The individual to check.
+        :return: ``True`` if the individual is physical, ``False`` otherwise.
         """
         if individual.cell:
             if individual.get_volume() < 1.0:
@@ -103,16 +147,49 @@ class Mutation(ABC):
     @abstractmethod
     def _perform_mutation(self, individual: Individual) -> Individual | None:
         """
-        Should calculate the offspring from parent, depending on mutation type.
-        If this was not possible, return None.
+        Apply the mutation to ``individual`` and return the offspring.
+
+        Perform the actual mutation operation.
+
+        This method receives one individual and modify it.
+        Returning ``None`` for either the individual is
+        interpreted as a failed mutation attempt.
+
+        No validity or physical checks are performed here; those are handled
+        by :meth:`mutate`.
+
+        :param individual: The parent individual to mutate. It is already a copy
+            owned by :meth:`mutate`.
+        :return: The mutated offspring, or ``None`` if the mutation could not be
+            performed.
         """
         pass
 
     def mutate(self, individual: Individual) -> tuple[Individual, bool]:
-        """
-        Should calculate the offspring from parent, depending on mutation type.
-        Returns the offspring and a boolean if the mutation was successful.
-        True if successful, False if not.
+        r"""
+        Try to mutate ``individual`` up to ``max_retries`` times.
+
+        On success, the parent ``individual`` is updated in place with the offspring
+        atoms, cell, constraints, and original periodic boundary conditions, and
+        the method returns the updated individual and ``True``. On failure, the
+        original individual and ``False`` are returned.
+
+        .. note::
+            The returned individuals links to the original individual.
+
+        :param individual: The parent individual to mutate.
+
+        :return: A tuple of ``(individual, success)`` where ``success`` is ``True``
+            if a valid and physical offspring was produced.
+
+        .. code-block:: text
+
+                            O  o
+                       _\_   o
+             >('>   \\/  o\ .
+                    //\___=
+                       ''
+
         """
         if self.logger:
             self.logger.debug("Performing {}.".format(self.__class__.__name__))
@@ -138,9 +215,9 @@ class Mutation(ABC):
 
             offspring.wrap()
 
-            offspring_is_valid = self.individual_is_valid_object(offspring)
+            offspring_is_valid = self._individual_is_valid_object(offspring)
 
-            offspring_is_physical = self.individual_is_physical(offspring)
+            offspring_is_physical = self._individual_is_physical(offspring)
 
             if not offspring_is_valid:
                 if self.logger:

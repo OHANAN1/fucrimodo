@@ -3,6 +3,7 @@ from operator import mul, truediv
 import sys
 import numpy as np
 import datetime
+from typing import Self
 
 
 class FitnessStorage(object):
@@ -233,3 +234,18 @@ class Individual(ase.Atoms):
         self._features = None
         self._creation_time = datetime.datetime.now()
         del self.fitness.values
+
+    @classmethod
+    def from_ase(cls, atoms: ase.Atoms) -> Self:
+        """Create an :class:`Individual` from an ASE :class:`ase.Atoms` object.
+
+        :param atoms: The ASE :class:`ase.Atoms` object to convert.
+        :return: A new :class:`Individual` populated with positions, cell,
+            periodic boundary conditions, and chemical symbols.
+        """
+        return cls(
+            positions=atoms.get_positions().copy(),
+            cell=atoms.get_cell().copy(),
+            pbc=atoms.pbc.copy(),
+            symbols=atoms.get_chemical_symbols().copy(),
+        )
