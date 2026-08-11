@@ -10,7 +10,6 @@ from ase_ga.cutandsplicepairing import CutAndSplicePairing
 
 from ...core import Individual
 from ...core.utils import CustomCellBounds, CustomClosestDistances
-from ..utils import convert_ase_atoms_to_individual
 from ..utils import LegacyRNGAdapter
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -19,13 +18,35 @@ from ..utils import LegacyRNGAdapter
 
 
 class Crossover(ABC):
-    """
-    Here we define all attributes and methods that we need
-    for _every_ crossover. The Crossover class will copy the parents,
-    so that the original population is never changed.
+    """Abstract base class for all crossover operators.
 
-    Please always initialize the super class in children, so rng, max retries and closest distances is set.
-    For random operation please use the :attr:`_rng`.
+    This class defines the common interface and shared utilities used by
+    every concrete crossover implementation. It handles retry logic,
+    validation of offspring objects, and restoration of periodic
+    boundary conditions.
+
+    A subclass only needs to implement :meth:`_perform_crossover`. The
+    public :meth:`crossover` method then repeatedly calls it, checks the
+    resulting offspring, and returns the final result together with a
+    success flag.
+
+    .. note::
+        Subclasses must call ``super().__init__(...)`` so that
+        :attr:`_rng`, :attr:`max_retries`, and :attr:`closest_distances`
+        are initialized correctly.
+
+    :param closest_distances: Validator used to check whether atoms in an
+        offspring are unphysically close.
+    :param max_retries: Number of times a failed crossover attempt is
+        retried before giving up. Defaults to ``1``.
+    :param rng: Random number generator used for stochastic operations.
+        If ``None``, ``np.random.default_rng()`` is used.
+
+    :ivar _rng: Random number generator available to subclasses.
+    :ivar closest_distances: Closest-distance validator.
+    :ivar max_retries: Maximum number of crossover retries.
+    :ivar required_steps: Number of attempts used in the last call to
+        :meth:`crossover`. Set after each call.
     """
 
     def __init__(
@@ -40,17 +61,11 @@ class Crossover(ABC):
         self.closest_distances = closest_distances
         self.max_retries = max_retries
 
-    @property
-    def logger(self) -> logging.Logger | None:
-        if not hasattr(self, "_logger"):
-            return None
-        return self._logger
-
-    @logger.setter
-    def logger(self, value):
-        self._logger = value
-
     def __repr__(self):
+        """Return a compact string representation of the operator.
+
+        Excludes ``closest_distances`` and ``cell_bounds`` from the output.
+        """
         class_name = self.__class__.__name__
         variables = vars(self)
 
@@ -64,9 +79,31 @@ class Crossover(ABC):
         variables_str = variables_str[:-2]
         return f"{class_name}({variables_str})"
 
-    def _individual_is_valid_object(self, individual: Individual) -> bool:
+    @property
+    def logger(self) -> logging.Logger | None:
+        """Optional logger for debug and warning messages.
+
+        :return: The logger if one has been set, otherwise ``None``.
+        :rtype: logging.Logger | None
         """
-        Tests if the individual is a valid Individual object.
+        if not hasattr(self, "_logger"):
+            return None
+        return self._logger
+
+    @logger.setter
+    def logger(self, value):
+        """Set the logger used by this crossover operator."""
+        self._logger = value
+
+    def _individual_is_valid_object(self, individual: Individual) -> bool:
+        """Check whether ``individual`` is a usable :class:`Individual`.
+
+        An individual is considered valid when it is an :class:`Individual`
+        instance, contains at least one :class:`ase.Atom`, and none of its
+        positions, cell vectors, or atomic numbers are ``NaN``.
+
+        :param individual: Structure to validate.
+        :return: ``True`` if the individual is valid, ``False`` otherwise.
         """
         if not isinstance(individual, Individual):
             return False
@@ -89,8 +126,16 @@ class Crossover(ABC):
         return True
 
     def _individual_is_physical(self, individual: Individual) -> bool:
-        """
-        Tests if the individual is physical.
+        """Check whether ``individual`` satisfies basic physical constraints.
+
+        Returns ``False`` if the cell volume is smaller than ``1.0`` (chosen
+        based of experience) or if any pair of atoms is closer than the allowed
+        distances defined by :attr:`closest_distances`.
+
+        :param individual: Structure to validate.
+        :type individual: Individual
+        :return: ``True`` if the individual is physical, ``False`` otherwise.
+        :rtype: bool
         """
         if individual.cell:
             if individual.get_volume() < 1.0:
@@ -105,23 +150,49 @@ class Crossover(ABC):
     def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
-        """
-        This is the methode where the specific crossover is performed.
-        No checks are done here, only the crossover.
+        """Perform the actual crossover operation.
 
-        If None is returned for one of the individuals the :meth:`crossover`
-        will return a copy of the original individual.
+        This method receives copies of the two parents and must return two
+        offspring individuals. Returning ``None`` for either offspring is
+        interpreted as a failed crossover attempt.
+
+        No validity or physical checks are performed here; those are handled
+        by :meth:`crossover`.
+
+        :param parent1: Copy of the first parent.
+        :type parent1: Individual
+        :param parent2: Copy of the second parent.
+        :type parent2: Individual
+        :return: Two offspring individuals, or ``(None, None)`` on failure.
+        :rtype: tuple[Individual, Individual] | tuple[None, None]
         """
         pass
 
     def crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual, bool]:
-        """
-        Should calculate the offsprings from parents,
-        depending on crossover type.
-        Returns the two offsprings and a boolean if the crossover was successful.
-        True if successful, False if not.
+        """Generate two offspring from ``parent1`` and ``parent2``.
+
+        The crossover is attempted up to :attr:`max_retries` times. Each
+        attempt creates fresh copies of the parents, applies
+        :meth:`_perform_crossover`, and validates the resulting offspring.
+        If a valid and physical pair is produced, it is returned with
+        ``True``. Otherwise, copies of the original parents are returned
+        with ``False``.
+
+        .. note::
+            The returned individuals are always copies and reset. Parents remain
+            untouched.
+
+        (`Respect your father!` ~ Fujimoto)
+
+        :param parent1: First parent individual.
+        :type parent1: Individual
+        :param parent2: Second parent individual.
+        :type parent2: Individual
+
+        :return: A tuple containing the two offspring and a success flag.
+        :rtype: tuple[Individual, Individual, bool]
         """
         if self.logger:
             self.logger.debug("Performing {}.".format(self.__class__.__name__))
@@ -137,13 +208,18 @@ class Crossover(ABC):
         for step in range(self.max_retries):
 
             offspring_1 = parent1.copy()
+            offspring_1.reset()
             offspring_2 = parent2.copy()
+            offspring_2.reset()
 
             offspring_1, offspring_2 = self._perform_crossover(offspring_1, offspring_2)
 
             if offspring_1 is None or offspring_2 is None:
                 keep_offspring = False
                 continue
+
+            offspring_1.set_pbc(par1_pbc)
+            offspring_2.set_pbc(par2_pbc)
 
             offspring_1.wrap()
             offspring_2.wrap()
@@ -175,34 +251,23 @@ class Crossover(ABC):
                 continue
 
             keep_offspring = True
+            break
+
+        self.required_steps = step
 
         if keep_offspring and offspring_1 and offspring_2:
-            offspring_1.wrap()
-            offspring_2.wrap()
-
-            offspring_1_cell = offspring_1.get_cell()
-            offspring_2_cell = offspring_2.get_cell()
-
-            # replace all Atoms in parent with offspring
-            # Lables and attributes stay the same
-            del parent1[:]
-            parent1.extend(offspring_1)
-            parent1.set_cell(offspring_1_cell)
-            parent1.set_pbc(par1_pbc)
-
-            del parent2[:]
-            parent2.extend(offspring_2)
-            parent2.set_cell(offspring_2_cell)
-            parent2.set_pbc(par2_pbc)
-
             if self.logger:
                 self.logger.debug("Done! After {} steps.".format(step + 1))
-            return (parent1, parent2, True)
-
+            return (offspring_1, offspring_2, True)
         else:
+            # Generate copies of parents and reset them
+            offspring_1 = parent1.copy()
+            offspring_1.reset()
+            offspring_2 = parent2.copy()
+            offspring_2.reset()
             if self.logger:
                 self.logger.debug("Crossover failed.")
-            return (parent1, parent2, False)
+            return (offspring_1, offspring_2, False)
 
 
 # ╔══════════════════════════════════════════════════════════╗
@@ -211,6 +276,27 @@ class Crossover(ABC):
 
 
 class UnitCellCrossover(Crossover):
+    """
+    Crossover operator that mixes unit-cell vectors between two parents.
+
+    For each of the three cell vectors, one vector is randomly drawn from
+    either parent and combined into two new unit cells. Atomic positions
+    can be scaled together with the new cell via ``scale_atoms``.
+
+    :param closest_distances: Closest-distance constraints used by the
+        base crossover class.
+    :type closest_distances: CustomClosestDistances
+    :param scale_atoms: If ``True``, scale atomic positions when applying
+        the new cell. Defaults to ``True``.
+    :type scale_atoms: bool
+    :param max_retries: Maximum number of retries allowed by the base
+        crossover class. Defaults to ``10``.
+    :type max_retries: int
+    :param rng: Random number generator used to shuffle cell vectors. If
+        ``None``, the base class handles default initialization.
+    :type rng: None | np.random.Generator
+    """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -256,6 +342,29 @@ class UnitCellCrossover(Crossover):
 
 
 class StackCellsCrossover(Crossover):
+    """Crossover operator that stacks two parent cells along a random axis.
+
+    The selected cell vector is replaced by the sum of the corresponding
+    vectors from both parents, producing a combined cell. The resulting
+    cell is checked against ``cell_bounds`` before the atomic structures
+    are stacked along the same axis.
+
+    :param closest_distances: Closest-distance constraints used by the
+        base crossover class.
+    :type closest_distances: CustomClosestDistances
+    :param cell_bounds: Bounds used to validate the stacked cell.
+    :type cell_bounds: CustomCellBounds
+    :param scale_atoms: If ``True``, scale atomic positions when applying
+        the new cell. Defaults to ``True``.
+    :type scale_atoms: bool
+    :param max_retries: Maximum number of retries allowed by the base
+        crossover class. Defaults to ``10``.
+    :type max_retries: int
+    :param rng: Random number generator used to select the stacking axis.
+        If ``None``, the base class handles default initialization.
+    :type rng: None | np.random.Generator
+    """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -274,7 +383,7 @@ class StackCellsCrossover(Crossover):
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
 
-        axis = self._rng.integers(0, 2)
+        axis = self._rng.integers(0, 3)
 
         cell1 = parent1.get_cell()[:]  # type: ignore
         cell2 = parent2.get_cell()[:]  # type: ignore
@@ -294,6 +403,26 @@ class StackCellsCrossover(Crossover):
 
 
 class OnePointElementCrossover(Crossover):
+    """One-point crossover operator that exchanges atomic numbers between parents.
+
+    A random cut index is chosen along the atom list. The offspring inherit
+    atomic numbers from one parent up to the cut and from the other parent
+    beyond it. Positions are kept from the respective parent copy and wrapped.
+
+    Crossover is aborted if either parent has fewer than two atoms or if both
+    parents contain only a single element type.
+
+    :param closest_distances: Closest-distance constraints used by the
+        base crossover class.
+    :type closest_distances: CustomClosestDistances
+    :param max_retries: Maximum number of retries allowed by the base
+        crossover class. Defaults to ``10``.
+    :type max_retries: int
+    :param rng: Random number generator used to select the stacking axis.
+        If ``None``, the base class handles default initialization.
+    :type rng: None | np.random.Generator
+    """
+
     def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
@@ -316,10 +445,7 @@ class OnePointElementCrossover(Crossover):
         # Get random index where to split the atomic numbers
         # Must be smaller then the minimum length to avoid to
         # many atoms in the offspring
-        if min_length <= 1:
-            cut_index = min_length
-        else:
-            cut_index = self._rng.integers(1, min_length)
+        cut_index = self._rng.integers(1, min_length)
 
         # Get the cut of atomic numbers of the opposite parents and
         # concatenate them to get the new atomic numbers
@@ -342,6 +468,27 @@ class OnePointElementCrossover(Crossover):
 
 
 class OnePointPositionCrossover(Crossover):
+    """One-point crossover operator that exchanges atomic positions between parents.
+
+    A random cut index is chosen along the atom list. Each offspring keeps the
+    atomic numbers of one parent copy, but receives positions from the other
+    parent before the cut and from its own parent after the cut. Positions are
+    wrapped into the cell afterwards.
+
+    Crossover is aborted if either parent has fewer than two atoms.
+
+    :param closest_distances: Closest-distance constraints used by the
+        base crossover class.
+    :type closest_distances: CustomClosestDistances
+    :param max_retries: Maximum number of retries allowed by the base
+        crossover class. Defaults to ``10``.
+    :type max_retries: int
+    :param rng: Random number generator used to select the stacking axis.
+        If ``None``, the base class handles default initialization.
+    :type rng: None | np.random.Generator
+
+    """
+
     def _perform_crossover(
         self, parent1: Individual, parent2: Individual
     ) -> tuple[Individual, Individual] | tuple[None, None]:
@@ -360,10 +507,7 @@ class OnePointPositionCrossover(Crossover):
         # Get random index where to split the atomic numbers
         # Must be smaller then the minimum length to avoid to
         # many atoms in the offspring
-        if min_length <= 1:
-            cut_index = min_length
-        else:
-            cut_index = self._rng.integers(1, min_length)
+        cut_index = self._rng.integers(1, min_length)
 
         # Get the cut of atomic numbers of the opposite parents and
         # concatenate them to get the new atomic numbers
@@ -382,6 +526,38 @@ class OnePointPositionCrossover(Crossover):
 
 
 class CutAndSpliceCrossover(Crossover):
+    """
+    Cut-and-splice crossover operator based on ASE_GA's CutAndSplicePairing.
+
+    This operator cuts two parent structures along a random plane and
+    splices their top parts together to create two offspring. Parents are
+    sorted by atomic number and must share the same stoichiometry, the
+    same number of atoms, and contain at least two atoms. Non-variable
+    cell vectors must match between the two parents.
+
+    More info in `ase_ga repo <https://github.com/dtu-energy/ase-ga>`__.
+
+    :param closest_distances: Closest-distance constraints used by the
+        pairing operator and the base crossover class.
+    :type closest_distances: CustomClosestDistances
+    :param cell_bounds: Bounds used to validate the generated offspring
+        cell.
+    :type cell_bounds: CustomCellBounds
+    :param n_top: Number of top atoms to include in the crossover, or
+        ``"all"`` to use all atoms. Defaults to ``"all"``.
+    :type n_top: int | str
+    :param number_of_variable_cell_vectors: Number of cell vectors that
+        are allowed to differ between parents. The remaining vectors must
+        match. Defaults to ``0``.
+    :type number_of_variable_cell_vectors: int
+    :param max_retries: Maximum number of retries allowed by the base
+        crossover class. Defaults to ``10``.
+    :type max_retries: int
+    :param rng: Random number generator used by the pairing operator. If
+        ``None``, the base class handles default initialization.
+    :type rng: None | np.random.Generator
+    """
+
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
@@ -397,7 +573,6 @@ class CutAndSpliceCrossover(Crossover):
 
         self.cell_bounds = cell_bounds
         self.n_top = n_top
-        self.cell_bounds = cell_bounds
         self.number_of_variable_cell_vectors = number_of_variable_cell_vectors
 
     def _perform_crossover(
@@ -463,6 +638,6 @@ class CutAndSpliceCrossover(Crossover):
 
         # If both offspring are valid, return them
         return (
-            convert_ase_atoms_to_individual(offspring_1),
-            convert_ase_atoms_to_individual(offspring_2),
+            Individual.from_ase(offspring_1),
+            Individual.from_ase(offspring_2),
         )
