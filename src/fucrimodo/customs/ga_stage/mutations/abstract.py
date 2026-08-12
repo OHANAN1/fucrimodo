@@ -136,7 +136,7 @@ class Mutation(ABC):
         :param individual: The individual to check.
         :return: ``True`` if the individual is physical, ``False`` otherwise.
         """
-        if individual.cell:
+        if not np.all(individual.cell == 0):
             if individual.get_volume() < 1.0:
                 return False
 
@@ -214,12 +214,7 @@ class Mutation(ABC):
                 keep_offspring = False
                 continue
 
-            offspring.wrap()
-
             offspring_is_valid = self._individual_is_valid_object(offspring)
-
-            offspring_is_physical = self._individual_is_physical(offspring)
-
             if not offspring_is_valid:
                 if self.logger:
                     self.logger.warn(
@@ -227,18 +222,22 @@ class Mutation(ABC):
                         + f"\nOffspring: {offspring}"
                     )
                 keep_offspring = False
+                continue
 
-            elif not offspring_is_physical:
+            offspring.wrap()
+
+            offspring_is_physical = self._individual_is_physical(offspring)
+            if not offspring_is_physical:
                 if self.logger:
                     self.logger.debug(
                         f"{self.__class__.__name__}: Offspring is not a physically feasible."
                         + f"\nOffspring: {offspring}"
                     )
                 keep_offspring = False
+                continue
 
-            else:
-                keep_offspring = True
-                break
+            keep_offspring = True
+            break
 
         if keep_offspring and offspring is not None:
             offspring.wrap()
