@@ -138,7 +138,7 @@ class Crossover(ABC):
         :return: ``True`` if the individual is physical, ``False`` otherwise.
         :rtype: bool
         """
-        if individual.cell:
+        if not np.all(individual.cell == 0):
             if individual.get_volume() < 1.0:
                 return False
 
@@ -219,12 +219,6 @@ class Crossover(ABC):
                 keep_offspring = False
                 continue
 
-            offspring_1.set_pbc(par1_pbc)
-            offspring_2.set_pbc(par2_pbc)
-
-            offspring_1.wrap()
-            offspring_2.wrap()
-
             # Check if all params for ase atoms obj are fullfilled
             of_1_is_valid = self._individual_is_valid_object(offspring_1)
             of_2_is_valid = self._individual_is_valid_object(offspring_2)
@@ -237,6 +231,15 @@ class Crossover(ABC):
                     )
                 keep_offspring = False
                 continue
+
+            offspring_1.set_pbc(par1_pbc)
+            offspring_2.set_pbc(par2_pbc)
+
+            try:
+                offspring_1.wrap()
+                offspring_2.wrap()
+            except:
+                breakpoint()
 
             # Check if minimum physical requirements are met
             of_1_is_physical = self._individual_is_physical(offspring_1)
@@ -302,7 +305,7 @@ class UnitCellCrossover(Crossover):
         self,
         closest_distances: CustomClosestDistances,
         scale_atoms: bool = True,
-        max_retries: int = 10,
+        max_retries: int = 20,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(
@@ -323,18 +326,16 @@ class UnitCellCrossover(Crossover):
         if np.all(cell1 == cell2):
             return (None, None)
 
-        cell_v1 = [cell1[0], cell2[0]]
-        self._rng.shuffle(cell_v1)
-
-        cell_v2 = [cell1[1], cell2[1]]
-        self._rng.shuffle(cell_v2)
-
-        cell_v3 = [cell1[2], cell2[2]]
-        self._rng.shuffle(cell_v3)
+        cell_v1 = self._rng.permutation([cell1[0], cell2[0]])
+        cell_v2 = self._rng.permutation([cell1[1], cell2[1]])
+        cell_v3 = self._rng.permutation([cell1[2], cell2[2]])
 
         new_cell1 = Cell([cell_v1[0], cell_v2[0], cell_v3[0]])
-
         new_cell2 = Cell([cell_v1[1], cell_v2[1], cell_v3[1]])
+
+        # If volume of one cell gets too small
+        if new_cell1.volume < 1e-3 or new_cell2.volume < 1e-3:
+            return (None, None)
 
         offspring1.set_cell(new_cell1, scale_atoms=self.scale_atoms)
         offspring2.set_cell(new_cell2, scale_atoms=self.scale_atoms)
