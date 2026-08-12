@@ -1,0 +1,19 @@
+{
+    "name": "None_id_368",
+    "description": "Last commit msg of lab: b'Bigger cellbounds and longer localization stage.\\n\\n'",
+    "start_time": "2025-07-19 21:08:03",
+    "end_time": "2025-07-19 21:55:31",
+    "total_runtime": "0:47:28.167248",
+    "stage_history": {
+        "ID": [
+            1,
+            2,
+            3
+        ],
+        "relative_save_path": [
+            "stage_1",
+            "stage_2",
+            "stage_3"
+        ]
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "break_condition": "( gen >= 1000 or f[0] >= 0.99 )",
+    "n_generations": 37,
+    "parent_selection": "TournamentSelection(tournsize=5)",
+    "parent_ratio": 0.8,
+    "survivor_selection": "NSGA2Selection(nondominated_sorting=standard)",
+    "id": 3,
+    "type": "GAStage",
+    "name": "Fine Optimization GA 0",
+    "description": "",
+    "start_time": "2025-07-19 21:55:12",
+    "end_time": "2025-07-19 21:55:31",
+    "total_runtime": "0:00:19.569418"
+}
