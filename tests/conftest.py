@@ -240,3 +240,8 @@ def mutation_reproducability_assessment():
             assert any(res_changed)
 
     return assess
+
+
+@pytest.fixture
+def run_data_path():
+    return os.path.join("data", "Run_id_368")

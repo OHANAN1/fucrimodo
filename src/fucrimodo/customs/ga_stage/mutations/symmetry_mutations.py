@@ -50,7 +50,8 @@ class GetConventionalCellMutation(Mutation):
     :type max_volume_decrease: float
     :param max_retries: Maximum number of attempts to produce a valid
         mutation. Not recommended to increase above ``1`` since the
-        mutation is deterministic. Defaults to ``100``.
+        mutation is deterministic. Defaults to ``1``. More doesnt make
+        sence, since the mutation is deterministic!
     :type max_retries: int
     :param rng: Random number generator. If ``None``, the base class
         creates one.
@@ -63,13 +64,12 @@ class GetConventionalCellMutation(Mutation):
         symmetry_tol: float | None = 1e-5,
         max_volume_increase: float = 1.2,
         max_volume_decrease: float = 0.8,
-        max_retries: int = 100,
+        max_retries: int = 1,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(
             closest_distances=closest_distances, max_retries=max_retries, rng=rng
         )
-
         self.symmetry_tol = symmetry_tol
         self.max_volume_increase = max_volume_increase
         self.max_volume_decrease = max_volume_decrease

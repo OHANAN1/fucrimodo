@@ -43,10 +43,12 @@ TODO: Add installation with virtual env
    :maxdepth: 1
    :caption: Contents:
 
-   modules/core/index
-   modules/analysis/index
-   modules/customs/index
-   modules/cli/index
+   about
+   getting_started/index
+   tutorials/index
+   fucrimodo/index
+   citation
+
 
 Indices and tables
 ==================

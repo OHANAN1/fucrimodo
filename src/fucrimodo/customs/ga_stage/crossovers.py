@@ -52,7 +52,7 @@ class Crossover(ABC):
     def __init__(
         self,
         closest_distances: CustomClosestDistances,
-        max_retries: int = 1,
+        max_retries: int = 10,
         rng: np.random.Generator | None = None,
     ):
         if not rng:
@@ -244,7 +244,7 @@ class Crossover(ABC):
             offspring_is_physical = of_1_is_physical and of_2_is_physical
             if not offspring_is_physical:
                 if self.logger:
-                    self.logger.warning(
+                    self.logger.debug(
                         f"{self.__class__.__name__}: Offspring is not a physically feasable."
                         + f"\nOffspring: {offspring_1} or {offspring_2}"
                     )
@@ -565,7 +565,7 @@ class CutAndSpliceCrossover(Crossover):
         cell_bounds: CustomCellBounds,
         n_top: int | str = "all",
         number_of_variable_cell_vectors: int = 0,
-        max_retries: int = 10,
+        max_retries: int = 1,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(

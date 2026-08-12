@@ -47,6 +47,7 @@ class Mutation(ABC):
         closest_distances: CustomClosestDistances,
         max_retries: int = 1,
         rng: None | np.random.Generator = None,
+        deterministic: bool = False,
     ):
         if not rng:
             rng = np.random.default_rng()
@@ -221,7 +222,7 @@ class Mutation(ABC):
 
             if not offspring_is_valid:
                 if self.logger:
-                    self.logger.warning(
+                    self.logger.warn(
                         f"{self.__class__.__name__}: Offspring is not a valid object."
                         + f"\nOffspring: {offspring}"
                     )
@@ -229,7 +230,7 @@ class Mutation(ABC):
 
             elif not offspring_is_physical:
                 if self.logger:
-                    self.logger.warning(
+                    self.logger.debug(
                         f"{self.__class__.__name__}: Offspring is not a physically feasible."
                         + f"\nOffspring: {offspring}"
                     )

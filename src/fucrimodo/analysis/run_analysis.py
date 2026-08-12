@@ -63,6 +63,15 @@ class RunData:
         return self._start_time
 
     @property
+    def start_time_ms(self) -> str:
+        if not hasattr(self, "_start_time_ms"):
+            try:
+                self._start_time = str(self._info_dict["start_time_ms"])
+            except KeyError:
+                self._start_time = "Not available."
+        return self._start_time
+
+    @property
     def end_time(self) -> str:
         if not hasattr(self, "_end_time"):
             try:

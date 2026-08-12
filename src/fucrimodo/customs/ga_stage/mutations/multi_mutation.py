@@ -47,7 +47,7 @@ class MultipleMutations(Mutation):
         number_of_mutations: int | str = "all",
         random_order: bool = True,
         can_occure_multiple_times: bool = False,
-        max_retries: int = 100,
+        max_retries: int = 10,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(

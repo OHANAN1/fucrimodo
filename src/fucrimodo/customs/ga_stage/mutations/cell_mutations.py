@@ -134,7 +134,7 @@ class StrainMutation(Mutation):
         n_variable_cell_vectors: int = 3,
         cell_bounds: CustomCellBounds | None = None,
         stddev: float = 0.7,
-        max_retries: int = 100,
+        max_retries: int = 1,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(
