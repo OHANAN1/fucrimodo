@@ -323,4 +323,5 @@ class RotationMutation(Mutation):
     def _perform_mutation(self, individual: Individual) -> Individual | None:
         v_rand = self._rng.choice(["x", "y", "z"])
         a_rand = self._rng.uniform(0, 90)
-        individual.rotate(a=a_rand, v=v_rand, rotate_cell=False)
+        individual.rotate(a=a_rand, v=v_rand, rotate_cell=True)
+        return individual
