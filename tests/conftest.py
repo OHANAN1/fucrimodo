@@ -36,7 +36,10 @@ def ind_crystal():
 
 @pytest.fixture
 def ind_slab():
-    """A simple Individual with two periodic boundaries to use across multiple tests."""
+    """A simple Individual with two periodic boundaries to use across multiple tests.
+
+    (`You must promise me something. You will never go back to the surface, yes?`~Fujimoto)
+    """
     return Individual(
         "H2",
         positions=[[0, 0, 5], [0, 0, 6]],
@@ -242,6 +245,36 @@ def mutation_reproducability_assessment():
     return assess
 
 
-@pytest.fixture
-def run_data_path():
-    return os.path.join("data", "Run_id_368")
+# @pytest.fixture
+# def run_data_path():
+#     return os.path.join("data", "results", "example_run")
+
+
+@pytest.fixture(scope="session")
+def run_data_path(tmp_path_factory):
+    """Generate run data once and reuse it for all tests.
+
+    If this is used in a test please mark the test as slow with
+    @pytest.mark.slow
+
+    """
+    save_dir = tmp_path_factory.mktemp("save_dir")
+    from fucrimodo.core import MultiStageSearch
+    from fucrimodo.utils import target_file_parser
+
+    target_file_path = os.path.join("data", "raw", "test_target_file.json")
+    soap_obj, target_features, additional_notes = target_file_parser.load_target_file(
+        target_file_path
+    )
+
+    multi_stage_search = MultiStageSearch(
+        save_dir=save_dir,
+        target_features=np.array(target_features),
+        descriptor_object=soap_obj,
+        descriptive_name="test_run",
+    )
+
+    from fucrimodo.utils.test_run_config import main
+
+    main(multi_stage_search=multi_stage_search, additional_notes=additional_notes)
+    return os.path.join(save_dir, "test_run")

@@ -1,4 +1,6 @@
-# Description: Main script for running the multi-stage search
+# This config is used during the pytest testing
+# It is similar to the one used in the paper but
+# parameters are set so it should run much faster
 
 import logging
 import os
@@ -34,21 +36,13 @@ warnings.filterwarnings("once")
 
 logging.getLogger()
 
-n_samples = 5000  # 5000
+n_samples = 50  # 5000
 n_gen_explore = 1000  # 1000
 n_gen_optimize = 500  # 500
 n_gen_exploit = 2000  # 2000
-N_IND = 500  # 500
+N_IND = 50  # 500
 n_iterations = 7  # 7
-
-# Check if the number of processes is set in the environment when
-# running on a cluster
-value = os.environ.get("SLURM_CPUS_PER_TASK", "Not set")
-if value != "Not set":
-    N_PARALLEL_STAGES = int(value)
-    N_JOBS = int(value)
-else:
-    N_JOBS = 5
+N_JOBS = 4
 
 
 def get_population_generator(
