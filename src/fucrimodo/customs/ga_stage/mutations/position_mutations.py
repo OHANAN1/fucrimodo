@@ -118,7 +118,7 @@ class MirrorMutation(Mutation):
         self,
         closest_distances: CustomClosestDistances,
         n_top: int | str = "all",
-        max_retries: int = 100,
+        max_retries: int = 1,
         rng: None | np.random.Generator = None,
     ):
         super().__init__(

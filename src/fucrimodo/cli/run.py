@@ -92,7 +92,7 @@ class Runner:
         if args.save_dir is not None:
             if not os.path.exists(args.save_dir):
                 print("The Path to the save-dir does not exist. Creating it.")
-                os.makedirs(args.save_dir)
+                os.makedirs(args.save_dir, exist_ok=True)
 
             self.save_dir = args.save_dir
         else:

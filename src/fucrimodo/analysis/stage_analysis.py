@@ -1,37 +1,62 @@
-import os
-import json
+from typing import Any, Callable, Literal
 import pandas as pd
-from matplotlib.axes import Axes
-import matplotlib.pyplot as plt
-import numpy as np
-from functools import partial
+import warnings
 
+from datetime import datetime
+
+from .utils import get_end_time_from_info, get_start_time_from_info, load_dict_from_file
+from ..customs.ga_stage.analysis import load_ga_stage_attributes
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                        Data Class                        ║
 # ╚══════════════════════════════════════════════════════════╝
 
-class StageData():
-    """Collects and structures the data that was collected during a given
-    stage.
 
-    :param stage_dir: Path to the directory where the stage was saved
+class StageData:
+    """Collect and structure data produced during a single stage.
 
-    :raises FileNotFoundError: One of the expected files was not found at 
-        path :data:`dir_path`. Expected files are 'info.json', 
-        'fitnesses.json', 'mutations.json', 'crossovers.json'.
-    :raises ValueError: If the expected files do not contain the expected
-        data.
+    Data is loaded from ``dir_path``. Stage-specific attributes are
+    produced by the loader registered for the stage's ``type`` in
+    ``stage_attribute_loader``. Custom stage types can be supported by
+    adding a suitable loader to that mapping. Loaders recieve the ``dir_path``
+    and the ``info_dict`` as arguments.
+
+    Atomic structures are not loaded here. To inspect them, use ASE database
+    tools on the ``structures.db`` file in the run directory, e.g.
+    ``ase db <path_to_db> -w`` for an interactive web view.
+
+    :param dir_path: Path to the directory where the stage was saved.
+    :param stage_attribute_loader: Mapping from stage type name to a callable
+        that accepts ``(dir_path, info_dict)`` and returns a dictionary of
+        stage-specific attributes. Defaults to
+        ``{"GAStage": load_ga_stage_attributes}``.
+
+    :raises FileNotFoundError: If ``info.json`` is missing from ``dir_path``.
+    :raises ValueError: If the stage type is not a key in
+        ``stage_attribute_loader``.
+    :raises AssertionError: If ``info.json`` does not contain a ``type`` entry.
     """
+
     def __init__(
-        self, 
+        self,
         dir_path: str,
+        stage_attribute_loader: dict[str, Callable[[str, dict], dict]] = {
+            "GAStage": load_ga_stage_attributes
+        },
     ) -> None:
         self._dir_path = dir_path
 
         # Load the info dict of the stage, it can then be used to get the
         # stage name, id, description, type and other data
-        self._info_dict = self.__load_dict_from_file("info.json")
+        self._info_dict = load_dict_from_file(dir_path, "info.json")
+
+        assert "type" in self._info_dict
+        if self.type not in stage_attribute_loader:
+            raise ValueError(
+                f"The stage stored at {dir_path} is not one of the accepted types. Please read the docs on how to add custom stage types."
+            )
+
+        self._stage_attribute_loader = stage_attribute_loader
 
     @property
     def dir_path(self) -> str:
@@ -40,57 +65,80 @@ class StageData():
 
     @property
     def name(self) -> str:
+        """Name of the stage."""
         return str(self._info_dict["name"])
 
     @property
     def description(self) -> str:
+        """Description of the stage."""
         return str(self._info_dict["description"])
 
     @property
-    def start_time(self) -> str:
+    def start_time(self) -> datetime:
+        """Start time of the stage.
+
+        :return: The stage start time as a :class:`datetime.datetime`.
+        :raises KeyError: If ``start_time`` is not present in the info dict.
+        """
         if not hasattr(self, "_start_time"):
-            try:
-                self._start_time = str(self._info_dict["start_time"])
-            except KeyError:
-                self._start_time = "Not available."
+            self._start_time = get_start_time_from_info(self._info_dict)
         return self._start_time
 
     @property
-    def end_time(self) -> str:
+    def end_time(self) -> datetime:
+        """End time of the stage.
+
+        :return: The stage end time as a :class:`datetime.datetime`.
+        :raises KeyError: If ``end_time`` is not present in the info dict.
+        """
         if not hasattr(self, "_end_time"):
-            try:
-                self._end_time = str(self._info_dict["end_time"])
-            except KeyError:
-                self._end_time = "Not available."
+            self._end_time = get_end_time_from_info(self._info_dict)
         return self._end_time
 
     @property
     def total_runtime(self) -> str:
+        """Total runtime of the run as a string, as defined in :attr:`info_dict`."""
         if not hasattr(self, "_total_runtime"):
             try:
                 self._total_runtime = str(self._info_dict["total_runtime"])
             except KeyError:
+                warnings.warn(
+                    "No total_runtime key found in the info.json file. Returning 'Not available.'."
+                )
                 self._total_runtime = "Not available."
         return self._total_runtime
 
     @property
+    def total_runtime_ms(self) -> int:
+        """Total runtime of the run in milliseconds.
+
+        Uses the ``total_runtime_ms`` entry from :attr:`info_dict` if available.
+
+        :return: The runtime in milliseconds, or ``0`` if the key is missing.
+        """
+        if not hasattr(self, "_total_runtime_ms"):
+            if "total_runtime_ms" in self._info_dict:
+                total_runtime_ms = int(self._info_dict["total_runtime_ms"])  # type: ignore
+            else:
+                warnings.warn(
+                    "No total_runtime_ms key found in the info.json file. Returning 0."
+                )
+                total_runtime_ms = 0
+
+            self._total_runtime_ms = total_runtime_ms
+
+        return self._total_runtime_ms
+
+    @property
     def id(self) -> int:
+        """Unique stage identifier from the info dict.
+
+        :return: The stage id as an integer.
+        :raises AssertionError: If the id is not an integer.
+        """
         # Ensure that the id is an integer
-        assert type(self._info_dict["id"]) == int, \
-            "The stage id is not an integer."
+        assert type(self._info_dict["id"]) == int, "The stage id is not an integer."
         return self._info_dict["id"]
-
-    @property
-    def parent_selection(self) -> str:
-        return str(self._info_dict["parent_selection"])
-
-    @property
-    def survivor_selection(self) -> str:
-        return str(self._info_dict["survivor_selection"])
-
-    @property
-    def break_condition(self) -> str:
-        return str(self._info_dict["break_condition"])
 
     @property
     def type(self) -> str:
@@ -99,12 +147,13 @@ class StageData():
     @property
     def n_generations(self) -> int:
         """Number of generations that the GAstage performed."""
-        assert type(self._info_dict["n_generations"]) == int, \
-            "The key 'n_generations' was not an integer." 
+        assert (
+            type(self._info_dict["n_generations"]) == int
+        ), "The key 'n_generations' was not an integer."
         return self._info_dict["n_generations"]
 
     @property
-    def fitnesses(self) -> pd.DataFrame:
+    def fitness_statistics(self) -> pd.DataFrame:
         """The fitness information and statistics that where tracked during the stage.
 
         A Dataframe with columns `names`, `weights`, `reprs`, `hashes` and
@@ -116,10 +165,11 @@ class StageData():
         # Check if the fitnesses where already loaded
         if not hasattr(self, "_fitnesses"):
             # Load the fitnesses dict from the fitnesses.json file
-            fit_dict = self.__load_dict_from_file("fitnesses.json")
+            fit_dict = load_dict_from_file(self.dir_path, "fitnesses.json")
 
-            assert type(fit_dict["results"]) == list, \
-                "The results entry in the fitnesses.json file is not a list."
+            assert (
+                type(fit_dict["results"]) == list
+            ), "The results entry in the fitnesses.json file is not a list."
 
             # Load each of the results entries in a Dataframe
             for i in range(len(fit_dict["results"])):
@@ -131,155 +181,27 @@ class StageData():
         return self._fitnesses
 
     @property
-    def mutations(self) -> pd.DataFrame:
-        """The mutation information and statistics that where tracked during the stage.
+    def stage_attributes(self) -> dict:
+        """Stage-specific attributes loaded by the registered stage loader.
 
-        A pandas dataframe with keys `names`, `weights`, `reprs`, `hashes` and
-        `results`.
-        Each row corresponds to a specific mutation operator.
-        The results entry is a Dataframe with columns `called`, `failed`,
-        `survivor` and `gen`.
+        :return: Dictionary of attributes returned by the loader for this
+            stage's type.
+        :raises KeyError: If no loader is registered for this stage's type.
         """
-        # Check if the mutations where already loaded
-        if not hasattr(self, "_mutations"):
-            # Get the dict from the mutations.json file
-            mut_dict = self.__load_dict_from_file("mutations.json")
+        if not hasattr(self, "_stage_attributes"):
+            self._stage_attributes = self._stage_attribute_loader[self.type](
+                self._dir_path, self._info_dict
+            )
+        return self._stage_attributes
 
-            assert type(mut_dict["results"]) == list, \
-                "The results entry in the mutations.json file is not a list."
-
-            # Load each of the results entries in a Dataframe
-            for i in range(len(mut_dict["results"])):
-                mut_dict["results"][i] = pd.DataFrame(mut_dict["results"][i])
-
-            # Create the mutations Dataframe
-            self._mutations = pd.DataFrame(mut_dict)
-        return self._mutations
-
-    @property
-    def crossovers(self) -> pd.DataFrame:
-        """The crossover information and statistics that where tracked during the stage.
-
-        A pandas Dataframe with keys `names`, `weights`, `reprs`, `hashes` and 
-        `results`.
-        Each row corresponds to a specific crossover operator.
-        The results entry is a Dataframe with columns `called`, `failed`,
-        `survivor` and `gen`.
-        """
-        # Check if the crossovers where already loaded
-        if not hasattr(self, "_crossovers"):
-            # Load the crossovers dict from the crossovers.json file
-            cross_dict = self.__load_dict_from_file("crossovers.json")
-
-            assert type(cross_dict["results"]) == list, \
-                "The results entry in the crossovers.json file is not a list."
-
-            # Load each of the results entries in a Dataframe
-            for i in range(len(cross_dict["results"])):
-                cross_dict["results"][i] = pd.DataFrame(cross_dict["results"][i])
-
-            # Create the crossovers Dataframe
-            self._crossovers = pd.DataFrame(cross_dict)
-
-        return self._crossovers
-
-    def __load_dict_from_file(
-        self, file_name: str
-    ) -> dict[str, list | str | int]:
-        """Load a dictionary from a json file with name :data:`file_name` from
-        the stage directory :attr:`StageResults.dir_path`
-
-        :param file_name: Name of the file that should be loaded.
-
-        :raises AssertionError: If the file does not exist in the stage 
-            directory.
-
-        :return: The loaded dictionary.
-        """
-        file_path = os.path.join(self.dir_path, file_name)
-        assert os.path.exists(file_path), \
-            f"File {file_name} does not exist in {self.dir_path}."
-
-        with open(file_path, "r") as f:
-            stage_dict = json.load(f)
-        return stage_dict
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                     Analysis Methods                     ║
 # ╚══════════════════════════════════════════════════════════╝
 
 
-def get_fitness_overview(stage_data: StageData) -> pd.DataFrame:
-    """Creates an overview table of the fitness operators with their index,
-    names and representations.
-
-    :param stage_data: Data of the stage that should be analysed.
-
-    :return: Overview table as string.
-    """
-    info_df = pd.DataFrame(
-        stage_data.fitnesses,
-        columns=["names", "reprs"] # type: ignore
-    )
-    results_dfs = stage_data.fitnesses["results"]
-
-    # For each fitness operator, get the absolute maximum and minimum fitness 
-    # for all generations
-    for i in range(len(info_df)):
-        results_df = results_dfs[i]
-        info_df.loc[i, "absolute_max"] = np.max(results_df["max"])
-        info_df.loc[i, "absolute_min"] = np.min(results_df["min"])
-
-    return info_df
-
-
-def plot_fitness_statistics(
-    stage_data: StageData,
-    row: int,
-    ax: Axes | None = None,
-    x_key: str = "gen",
-    x_label: str = "Generation",
-    y_keys: list[str] = ["max", "min", "avg"],
-    y_label: str = "Fitness Value"
-) -> None:
-    """Analyse the fitness data of a specific fitness operator.
-
-    :param stage_data: Data of the stage that should be analysed.
-    :param ax: Matplotlib axis object to plot on.
-    :param row: Index of the row in the fitness results dataframe of
-        which the results data should be plotted. Use::
-
-            print(show_fitness_overview(stage_data))
-
-        to show the names and representations of the fitness operators.
-    :param x_key: Key of the x-axis data. Normally the generation is used
-        as x-axis, with the key "gen".
-    :param y_keys: List of keys of the y-axis data that should be plotted.
-    :param y_label: Label of the y-axis.
-    """
-    # Get the name and results entry of the selected fitness operator
-    name = stage_data.fitnesses.at[row, "names"]
-    results_df = stage_data.fitnesses.loc[row, "results"]
-
-    # Create a new figure to plot on if no axis is given
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    # Plot the selected results data
-    results_df.plot(
-        ax=ax,
-        x=x_key,
-        y=y_keys,
-        title=f"Fitnesses: {name}"
-    )
-
-    # Set labels of the plot
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
-
-
 def get_modification_overview(
-    stage_data: StageData, modification_type: str
+    stage_data: StageData, modification_type: Literal["Mutation", "Crossover"]
 ) -> pd.DataFrame:
     """Creates an overview table of the operators with their index, names
     and representations.
@@ -290,141 +212,50 @@ def get_modification_overview(
 
     :return: Overview table as DataFrame.
     """
-    if modification_type == "Mutation":
-        info_df = pd.DataFrame(
-            stage_data.mutations,
-            columns=["names", "reprs"] # type: ignore
-        )
-        results_dfs = stage_data.mutations["results"]
-    elif modification_type == "Crossover":
-        info_df = pd.DataFrame(
-            stage_data.crossovers,
-            columns=["names", "reprs"] # type: ignore
-        )
-        results_dfs = stage_data.crossovers["results"]
-    else:
-        raise ValueError(
-            "The given modification type is not valid for this Stage.\n"
-        )
+    data = stage_data.stage_attributes[f"{modification_type.lower()}s"]
 
-    # Calculate the total number of calls, failed calls and survivors for 
-    # each operator
-    for i in range(len(info_df)):
-        results_df = results_dfs[i]
+    info_df = data[["names", "reprs"]].copy()
 
-        # Sum up the total statistics
-        total_called = results_df["called"].sum()
-        total_failed = results_df["failed"].sum()
-        total_survivor = results_df["survivor"].sum()
-
-        # Calculate the rates. If no calls where made, the rates are 0
-        if total_called == 0:
-            survivor_rate = 0
-            failed_rate = 0
-        else:
-            survivor_rate = total_survivor / total_called
-            failed_rate = total_failed / total_called
-
-        # Add the statistics to the info_df
-        info_df.loc[i, "total_calls"] = total_called
-        info_df.loc[i, "total_failed"] = total_failed
-        info_df.loc[i, "total_survivors"] = total_survivor
-        info_df.loc[i, "survivor_rate"] = survivor_rate
-        info_df.loc[i, "failed_rate"] = failed_rate
-
-    return info_df
-
-
-def plot_modification_statistics(
-    stage_data: StageData,
-    modification_type: str,
-    row: int,
-    ax: Axes | None = None, 
-    x_key: str = "gen",
-    x_label: str = "Generation",
-    y_keys: list[str] | None = None,
-    y_label: str = "Number of Calls"
-) -> None:
-    """Performs the analysis for the desired analysis type.
-
-    :param stage_data: Data class of the stage that should be analysed.
-    :param modification_type: Type of modification that should be analysed.
-        Possible are "Mutation" and "Crossover".
-    :param row: Index of the row in the mutation or crossover results 
-        dataframe of which the results data should be plotted. Use::
-
-            print(get_modification_overview(stage_data, modification_type))
-
-        to show the names and representations of the fitness operators.
-    :param ax: Matplotlib axis object to plot on. If None, a new figure
-        is created.
-    :param x_key: Key of the x-axis data. Normally the generation is used
-        as x-axis, with the key "gen".
-    :param y_keys: List of keys of the y-axis data that should be plotted.
-        If None, all columns of the results dataframe are plotted.
-        To get the column names use
-        :code:`self.stage_results.crossovers.loc[row, "results"].columns`.
-
-    :raises IndexError: If the given crossover index is out of range.
-    """
-    # Load name and results_df depending on the analysis type
-    if modification_type == "Mutation":
-        name = stage_data.mutations.at[row, "names"]
-        results_df: pd.DataFrame = stage_data.mutations.loc[
-            row, "results"
-        ]
-
-    elif modification_type == "Crossover":
-        name = stage_data.crossovers.at[row, "names"]
-        results_df: pd.DataFrame = stage_data.crossovers.loc[
-            row, "results"
-        ]
-
-    else:
-        raise ValueError(
-            "The given modification type is not valid for this Stage.\n"
+    stats = []
+    for results_df in data["results"]:
+        called = results_df["called"].sum()
+        failed = results_df["failed"].sum()
+        survivor = results_df["survivor"].sum()
+        stats.append(
+            {
+                "total_calls": called,
+                "total_fails": failed,
+                "total_survivors": survivor,
+                "survivor_rate": 0.0 if called == 0 else survivor / called,
+                "failed_rate": 0.0 if called == 0 else failed / called,
+            }
         )
 
-    # Create a new figure to plot on if no axis is given
-    if ax is None:
-        fig, ax = plt.subplots()
-
-    # Plot the selected results data
-    results_df.plot(
-        ax=ax,
-        x=x_key,
-        y=y_keys,
-        title=f"{modification_type}: {name}"
-    )
-
-    # Set labels of the plot
-    ax.set_xlabel(x_label)
-    ax.set_ylabel(y_label)
+    return pd.concat([info_df.reset_index(drop=True), pd.DataFrame(stats)], axis=1)
 
 
-def get_stage_overview(stage_data: StageData) -> pd.DataFrame:
+def get_stage_overview(stage_data: StageData) -> pd.Series:
     """Creates an overview table of the stage data.
 
     :param stage_data: Data of the stage that should be analysed.
 
     :return: Overview table as DataFrame.
     """
-    stage_overview = pd.DataFrame(
+    stage_overview = pd.Series(
         {
             "Name": stage_data.name,
             "Description": stage_data.description,
             "Type": stage_data.type,
             "N_generations": stage_data.n_generations,
-            "Parent Selection": stage_data.parent_selection,
-            "Survivor Selection": stage_data.survivor_selection,
-            "Break Condition": stage_data.break_condition,
+            "Parent Selection": stage_data.stage_attributes["parent_selection"],
+            "Survivor Selection": stage_data.stage_attributes["survivor_selection"],
+            "Break Condition": stage_data.stage_attributes["break_condition"],
             "Parent Ratio": stage_data._info_dict["parent_ratio"],
-            "N_fit": len(stage_data.fitnesses),
-            "N_mut": len(stage_data.mutations),
-            "N_cross": len(stage_data.crossovers),
+            "N_fit": len(stage_data.fitness_statistics),
+            "N_mut": len(stage_data.stage_attributes["mutations"]),
+            "N_cross": len(stage_data.stage_attributes["crossovers"]),
             "Total Runtime": stage_data.total_runtime,
         },
-        index=[0] # type: ignore
     )
 
     return stage_overview

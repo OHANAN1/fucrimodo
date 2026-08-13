@@ -39,6 +39,8 @@ the terminal to see the help message.
 
 TODO: Add installation with virtual env
 
+To fully customize fucrimodo refere to :doc:`development/index`
+
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
@@ -47,7 +49,9 @@ TODO: Add installation with virtual env
    getting_started/index
    tutorials/index
    fucrimodo/index
+   development/index
    citation
+
 
 
 Indices and tables

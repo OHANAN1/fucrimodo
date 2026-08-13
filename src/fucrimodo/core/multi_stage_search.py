@@ -52,7 +52,7 @@ class MultiStageSearch:
 
     def __init__(
         self,
-        save_dir: str,
+        save_dir: str | os.PathLike,
         target_features: np.ndarray,
         descriptor_object,
         descriptive_name: str | None = None,
@@ -305,7 +305,7 @@ class MultiStageSearch:
 
         return mstats
 
-    def __create_run_dir(self, save_dir: str) -> str:
+    def __create_run_dir(self, save_dir: str | os.PathLike) -> str:
         """Method to create a directory to store the data of the run.
 
         It is created as a subdir of the `save_dir` and named after the run

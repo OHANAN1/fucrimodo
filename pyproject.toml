@@ -55,6 +55,9 @@ where = ["src"]
 # Setup of pytest tests
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: tests that take a long time (> 10s).",
+]
 
 # High verbosity and short tracebacks
 addopts = "-v --tb=short"
