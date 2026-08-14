@@ -9,6 +9,8 @@ import numpy as np
 from ase import db
 from ase.db.core import Database
 from deap import tools
+from pathlib import Path
+import shutil
 
 from .individual import Individual
 from .population import Population
@@ -60,6 +62,7 @@ class MultiStageSearch:
         global_statistics_dict: dict[str, Callable[[Individual], float]] | None = None,
         log_level: int = logging.INFO,
         verbose: bool = True,
+        n_jobs: int = 1,
     ) -> None:
         # If no descriptive name is given, use the current time and date.
         if descriptive_name is None:
@@ -70,6 +73,8 @@ class MultiStageSearch:
         self._description = description
         self._target_features = target_features
         self._descriptor_object = descriptor_object
+        self.n_jobs = n_jobs
+        self.max_number_of_parallel_jobs = n_jobs
 
         # Create the dictionary to store the data of the run
         self._run_dir = self.__create_run_dir(save_dir)
@@ -95,6 +100,13 @@ class MultiStageSearch:
         }
 
         self.logger.info(f"Initialized run {self.name}")
+
+        # Check node on which the script runs for debug purposes of run fails
+        value = os.environ.get("SLURMD_NODENAME", "Not set")
+        if value != "Not set":
+            self.logger.info(f"Running on: {value}")
+        else:
+            self.logger.info("Not running on slurm.")
 
     @property
     def name(self) -> str:
@@ -417,6 +429,27 @@ class MultiStageSearch:
         )
 
         return stage_dir
+
+    def store_file(
+        self, original_file_path: str | os.PathLike, new_name: str | None = None
+    ) -> Path:
+        """Copy a file into ``self.run_dir``.
+
+        :param original_file_path: Path to the existing file to copy.
+        :param new_name: Optional name for the copied file inside ``self.run_dir``.
+            If omitted, the original file name is preserved.
+
+        :returns: The path of the copied file inside ``self.run_dir``.
+        """
+        assert os.path.isfile(original_file_path)
+
+        src = Path(original_file_path)
+        dst_name = new_name if new_name is not None else src.name
+        dst = Path(self.run_dir) / dst_name
+
+        shutil.copy2(src, dst)
+
+        return dst
 
     def save_results(self):
         """Method to save the results of the run in a JSON file.

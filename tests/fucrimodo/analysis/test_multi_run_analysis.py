@@ -52,6 +52,7 @@ class TestMultiRunData:
         )
 
 
+@pytest.mark.slow
 def test_get_all_global_statistics_overview(multi_run_data: MultiRunData):
     overview = get_all_global_statistics_overview(multi_run_data=multi_run_data)
 
@@ -61,6 +62,7 @@ def test_get_all_global_statistics_overview(multi_run_data: MultiRunData):
     assert "Volume_min_max" in overview
 
 
+@pytest.mark.slow
 def test_get_multi_run_overview(multi_run_data: MultiRunData):
     overview = get_multi_run_overview(multi_run_data=multi_run_data)
 

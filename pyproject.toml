@@ -32,7 +32,8 @@ dependencies = [
     "spglib>=1.15.0",
     "pyxtal>=1.0.6",
     "dscribe==2.1.1",
-    "ase-ga>=1.0.3"
+    "ase-ga>=1.0.3",
+    "click>=8.4.2"
 ]
 # also add "dscribe>=2.1.1", this currently clashed with matid and needs to be installed with conda instead, see environment.yml
 requires-python = ">=3.12"
@@ -50,6 +51,17 @@ fucrimodo = "fucrimodo.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+myproject = [
+  "lab_template/*.py",
+  "lab_template/*.md",
+  "lab_template/**/.*py",
+  "lab_template/**/**/*.py",
+  "lab_template/**/**/**/*.py",
+  "lab_template/data/raw/*.xyz",
+  "lab_template/scripts/*.sh"
+]
 
 
 # Setup of pytest tests

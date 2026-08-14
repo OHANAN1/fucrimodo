@@ -1,76 +1,84 @@
 import os
-import sys
-
-class CLICommand:
-    """Initialize a new fucrimodo lab to brew the potion that will revert
-    descriptors to structures.
-
-    This utility initializes a new fucrimodo lab. The lab is a directory
-    structure that contains files and directories that are used to store
-    the results of the inversion process. 
-    To run fucrimodo, no lab is needed. However, it is recommended to use
-    a lab to keep the results organized and to make it easier to create
-    new runs and configure how fucrimodo should work.
-    """
-    @staticmethod
-    def add_arguments(parser):
-        add = parser.add_argument
-        add('-v', '--verbose', action='store_true', help='More output.')
-        add(
-            '-s', '--save_dir',
-            help=('Directory where the lab should be created'
-                'If not provided, it is set to the current working directory.')
-        )
-
-    @staticmethod
-    def run(args):
-        runner = Runner()
-        runner.parse(args)
-        runner.run()
+from pathlib import Path
+import click
 
 
 class Runner:
-    def __init__(self):
-        self.args = None
-
-    def parse(self, args):
-        self.args = args
-        self.verbose = args.verbose
-
-        if args.save_dir is not None:
-            if not os.path.exists(args.save_dir):
-                print("The Path to the save-dir does not exist.")
-                sys.exit(1)
-            self.save_dir = args.save_dir
-        else:
-            self.save_dir = os.getcwd()
+    def __init__(self, save_dir: Path, verbose: bool, skip_user_confirm: bool = False):
+        self.save_dir = save_dir.resolve()
+        self.verbose = verbose
+        self.skip_user_confirm = skip_user_confirm
 
     def run(self):
         """Copy the fucrimodo_lab template to the desired location."""
-        # User needs to confirm that the lab should be created at the given 
-        # location.
-        confirmation = input(f"Create fucrimodo lab in {self.save_dir})[y/n]: ")
-        if confirmation.lower() != 'y':
-            print("Aborted.")
-            sys.exit(0)
 
-        fucrimodo_lab_dir = os.path.join(self.save_dir, 'fucrimodo_lab')
-        # Check if the directory already exists.
-        if os.path.exists(fucrimodo_lab_dir):
-            print(f"The directory {fucrimodo_lab_dir} already exists.")
-            sys.exit(1)
+        # Check if dir already exists
+        fucrimodo_lab_dir = self.save_dir / "fucrimodo_lab"
+        if os.path.isdir(fucrimodo_lab_dir):
+            raise click.ClickException(
+                f"The directory {fucrimodo_lab_dir} already exists."
+            )
 
-        # Get the location of the lab template.
-        import importlib.resources as pkg_resources
-        lab_template = str(pkg_resources.files('fucrimodo').joinpath('lab_template'))
+        # User has to confirm that dir is created
+        if not self.skip_user_confirm:
+            if not click.confirm(f"Create fucrimodo lab in {self.save_dir}?"):
+                raise click.ClickException("Aborted.")
 
-        # Copy the lab template to the desired location.
-        import shutil
-        shutil.copytree(lab_template, fucrimodo_lab_dir)
+        from importlib.resources import files
 
-        # Print a message to the user.
-        print(f"Lab created in {fucrimodo_lab_dir}.")
-        print("You can configure the lab by editing the config files in the lab.")
-        print("For more information, see the documentation.")
-        print("Brew the potion that reverts the descriptor to its atomic form!")
+        lab_template_path = files("fucrimodo") / "lab_template"
+        self._copy_tree(lab_template_path, fucrimodo_lab_dir)
 
+        click.echo(f"Success!")
+        click.echo(f"Lab created in {fucrimodo_lab_dir}.")
+        click.echo()
+        click.echo("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        click.echo("                      Fucrimodo Lab                         ")
+        click.echo("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        click.echo("Configure, run, store, and analyse reproducible multi-stage")
+        click.echo("     optimization experiments with ease and fishes.        ")
+        click.echo("        Quick! Go to the lab: `cd fucrimodo_lab.`          ")
+        click.echo("    For more information, please check the README.md.      ")
+        click.echo()
+        click.echo(r"""
+                                           .
+                Max   /\            .     .
+                    _/./            .     .
+                 ,-'    `-:..-'/     .     .
+                : o )      _  (     .     .
+                "`-....,--; `-.\    .    .
+                    `'             .    /mlb""")
+        click.echo(" Brew a potion that reverts the descriptors to atomic form!")
+
+    def _copy_tree(self, source, dest: Path) -> None:
+        """Recursively copy a Traversable package-data tree to the filesystem."""
+        dest.mkdir(parents=True, exist_ok=True)
+
+        for item in source.iterdir():
+            dest_item = dest / item.name
+            if item.is_dir():
+                self._copy_tree(item, dest_item)
+            else:
+                # read_bytes/write_bytes works whether the package is installed
+                # as a regular directory or inside a zip/wheel
+                dest_item.write_bytes(item.read_bytes())
+
+
+@click.command(help="Generate a fucrimodo_lab directory with default configs.")
+@click.option(
+    "-s",
+    "--save_dir",
+    type=click.Path(exists=True, path_type=Path),
+    default=Path.cwd(),
+    help="Path to where the fucrimodo_lab directory should be created. Defaults to current dir.",
+)
+@click.option(
+    "-y",
+    "--yes",
+    is_flag=True,
+    help="Create the directory without asking for confirmation.",
+)
+@click.option("-v", "--verbose", is_flag=True, help="More output.")
+def cli(save_dir, yes, verbose):
+    runner = Runner(save_dir=save_dir, verbose=verbose, skip_user_confirm=yes)
+    runner.run()

@@ -1,18 +1,36 @@
 import os
+import click
 import matplotlib.pyplot as plt
+import numpy as np
 from fucrimodo.analysis.stage_analysis import (
     get_stage_overview,
-    get_fitness_overview,
     get_modification_overview,
-    plot_fitness_statistics,
-    plot_modification_statistics,
-    StageData
+    StageData,
 )
+from fucrimodo.analysis.utils import get_statistics_overview
+
+
+def _plot_fitness_stats(stage_data: StageData, row: int):
+    fig, ax = plt.subplots()
+
+    results_df = stage_data.fitness_statistics.loc[row, "results"]
+    fitness_name = stage_data.fitness_statistics.loc[row, "names"]
+    results_df.plot(
+        ax=ax,
+        x="gen",
+        y=["min", "max", "avg"],
+        linewidth=2.0,
+    )
+    ax.set_xlabel("Generation")
+    ax.set_ylabel(f"fitness_title")
+
+    ax.set_ylim(0, 1)
+    ax.set_xlim(0, stage_data.n_generations)
+
 
 def main(
     stage_dir: str,
     row: int | None = None,
-    analysis_type: str | None = None,
     save_dir: str | None = None,
     show: bool = False,
     verbose: bool = False,
@@ -20,81 +38,30 @@ def main(
     # Load the stage data
     stage_data = StageData(stage_dir)
 
-    print(f"{analysis_type} Overview:")
+    click.echo("Stage Overview:")
+    click.echo(get_stage_overview(stage_data).T)
+    click.echo()
 
-    # Depending on the analysis type, set a different overview dataframe and
-    # plot a different plot function
-    if analysis_type is not None:
-        # Set the row to 0 if it is None
-        if row is None:
-            print("Row: 0 (default)")
-            row = 0
+    click.echo("-------------------")
+    click.echo("Fitness Overview:")
+    click.echo(get_statistics_overview(stage_data.fitness_statistics))
+    click.echo()
+
+    click.echo("-------------------")
+    click.echo("Mutation Overview:")
+    click.echo(get_modification_overview(stage_data, "Mutation"))
+    click.echo()
+
+    click.echo("-------------------")
+    click.echo("Crossover Overview:")
+    click.echo(get_modification_overview(stage_data, "Crossover"))
+    click.echo()
+
+    # If row is given show the plot or save them to a file
+    if row is not None:
+        _plot_fitness_stats(stage_data, row)
+
+        if save_dir is not None:
+            plt.savefig(f"{save_dir}/stage_stats_{row}_overview.png")
         else:
-            print(f"Row: {row}")
-        print()
-
-        if analysis_type == "Fitness":
-            # Get the fitness overview dataframe
-            print("Fitness Overview:")
-            print()
-            print(get_fitness_overview(stage_data))
-            plot_fitness_statistics(
-                stage_data = stage_data,
-                row = row
-            )
-            print()
-
-        elif analysis_type == "Mutation" or analysis_type == "Crossover":
-            print(f"{analysis_type} Overview:")
-            print()
-            print(get_modification_overview(stage_data, analysis_type))
-            print()
-            plot_modification_statistics(
-                stage_data = stage_data,
-                row = row,
-                modification_type = analysis_type
-            )
-
-        else:
-            raise ValueError(
-                "The given analysis type is not valid for this stage. "
-                "Possible are 'Fitness', 'Mutation' and 'Crossover'. "
-                    "(Upper case is required)"
-            )
-
-        # Show the plot or save them to a file
-        if show:
             plt.show()
-        else:
-            if save_dir is not None:
-                if not os.path.exists(save_dir):
-                    os.makedirs(save_dir)
-                plt.savefig(f"{save_dir}/{analysis_type}_{row}_overview.png")
-
-            else:
-                plt.savefig(f"{analysis_type}_{row}_overview.png")
-                plt.close()
-
-
-    else:
-        print("No analysis type given. Displaying general overview.")
-        print("Stage Overview:")
-        print(get_stage_overview(stage_data).T)
-        print()
-
-        print("-------------------")
-        print("Fitness Overview:")
-        print(get_fitness_overview(stage_data))
-        print()
-
-        print("-------------------")
-        print("Mutation Overview:")
-        print(get_modification_overview(stage_data, "Mutation"))
-        print()
-
-        print("-------------------")
-        print("Crossover Overview:")
-        print(get_modification_overview(stage_data, "Crossover"))
-        print()
-
-

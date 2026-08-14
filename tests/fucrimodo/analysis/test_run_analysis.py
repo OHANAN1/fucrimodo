@@ -1,3 +1,4 @@
+import os
 from fucrimodo.analysis.stage_analysis import StageData
 from fucrimodo.core.individual import Individual
 import pytest
@@ -30,6 +31,8 @@ class TestRunData:
         assert run_data.total_runtime_ms == pytest.approx(
             (run_data.end_time - run_data.start_time).total_seconds() * 1000, abs=10
         ), "Should work later tho"
+
+        assert os.path.isfile(os.path.join(run_data.dir_path, "input_file.json"))
 
     def test_global_statistics(self, run_data: RunData):
         statistics = run_data.global_statistics.loc[0, "results"]

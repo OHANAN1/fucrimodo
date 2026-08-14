@@ -1,6 +1,4 @@
-# This config is used during the pytest testing
-# It is similar to the one used in the paper but
-# parameters are set so it should run much faster
+# Description: Main script for running the multi-stage search
 
 import logging
 import os
@@ -8,8 +6,9 @@ import warnings
 import random
 
 import numpy as np
-from fucrimodo.core import multi_stage_search as multi_stage
+from fucrimodo.core import MultiStageSearch
 from fucrimodo.core import utils as core_utils
+from fucrimodo.utils.target_file_parser import load_target_file
 from fucrimodo.core.abstracts import PopulationGenerator
 from fucrimodo.core.utils import reproducability as reprod
 from fucrimodo.customs import fitness_functions as ff
@@ -42,11 +41,10 @@ n_gen_optimize = 500  # 500
 n_gen_exploit = 2000  # 2000
 N_IND = 50  # 500
 n_iterations = 7  # 7
-N_JOBS = 4
 
 
 def get_population_generator(
-    multi_stage_search: multi_stage.MultiStageSearch,
+    multi_stage_search: MultiStageSearch,
     closest_distances: core_utils.CustomClosestDistances,
     n_atoms: int,
     n_samples: int = 1000,
@@ -86,7 +84,7 @@ def get_population_generator(
 
 
 def get_exploration_stage(
-    multi_stage_search: multi_stage.MultiStageSearch,
+    multi_stage_search: MultiStageSearch,
     closest_distances: core_utils.CustomClosestDistances,
     closest_distances_strict: core_utils.CustomClosestDistances,
     cell_bound: core_utils.CustomCellBounds,
@@ -94,6 +92,7 @@ def get_exploration_stage(
     name: str = "Exploration GA",
     n_generations: int = 500,
     species_specific_fitness_rbf_gamma: float = 1.0,
+    n_jobs: int = 1,
 ) -> GAStage:
     """Generates stage to eplore many structures."""
 
@@ -103,6 +102,7 @@ def get_exploration_stage(
         rbf_gammas=[0.1],
         function_titles=["ref_soap_sim"],
         round_result=None,
+        n_jobs=n_jobs,
     )
     fitness_func_list += get_species_specific_soap_sim_fitness_list(
         target_soap_features=multi_stage_search.target_features,
@@ -110,6 +110,7 @@ def get_exploration_stage(
         species=multi_stage_search.descriptor_object.species,
         rbf_gamma=species_specific_fitness_rbf_gamma,
         round_result=None,
+        n_jobs=n_jobs,
     )
     fitness_func_list += [
         ff.PhysicalityFitness(closest_distances_strict),
@@ -231,13 +232,14 @@ def get_exploration_stage(
 
 
 def get_optimization_stage(
-    multi_stage_search: multi_stage.MultiStageSearch,
+    multi_stage_search: MultiStageSearch,
     closest_distances: core_utils.CustomClosestDistances,
     closest_distances_strict: core_utils.CustomClosestDistances,
     cell_bound: core_utils.CustomCellBounds,
     global_break_condition: break_conditions.BreakCondition,
     name: str = "Optimization GA",
     n_generations: int = 500,
+    n_jobs: int = 1,
 ) -> GAStage:
     """Generates stage to only slightly optimize structures."""
 
@@ -247,6 +249,7 @@ def get_optimization_stage(
         rbf_gammas=[0.1],
         function_titles=["ref_soap_sim"],
         round_result=None,
+        n_jobs=n_jobs,
     )
     fitness_func_list += get_species_specific_soap_sim_fitness_list(
         target_soap_features=multi_stage_search.target_features,
@@ -254,6 +257,7 @@ def get_optimization_stage(
         species=multi_stage_search.descriptor_object.species,
         rbf_gamma=0.1,
         round_result=2,
+        n_jobs=n_jobs,
     )
     fitness_func_list += [
         ff.PhysicalityFitness(closest_distances_strict),
@@ -396,13 +400,14 @@ def get_optimization_stage(
 
 
 def get_exploitation_stage(
-    multi_stage_search: multi_stage.MultiStageSearch,
+    multi_stage_search: MultiStageSearch,
     closest_distances: core_utils.CustomClosestDistances,
     closest_distances_strict: core_utils.CustomClosestDistances,
     cell_bound: core_utils.CustomCellBounds,
     global_break_condition: break_conditions.BreakCondition,
     name: str = "Fine Optimization GA",
     n_generations: int = 100,
+    n_jobs: int = 1,
 ) -> GAStage:
     """Generates stage to only slightly optimize structures."""
 
@@ -412,6 +417,7 @@ def get_exploitation_stage(
         rbf_gammas=[0.1],
         function_titles=["ref_soap_sim"],
         round_result=None,
+        n_jobs=n_jobs,
     )
     fitness_func_list += [
         ff.PhysicalityFitness(closest_distances_strict),
@@ -538,13 +544,37 @@ def get_exploitation_stage(
     )
 
 
-def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
+def main(
+    name: str | None,
+    save_dir: str,
+    target_file_path: str,
+    n_parallel: int,
+    verbose: bool,
+    *args,
+):
     """Main function to run the multi-stage search."""
+    descriptor_obj, target_features, additional_notes = load_target_file(
+        target_file_path
+    )
+
+    multi_stage_search = MultiStageSearch(
+        save_dir=save_dir,
+        target_features=np.array(target_features),
+        descriptor_object=descriptor_obj,
+        descriptive_name=name,
+        log_level=logging.INFO,
+        n_jobs=n_parallel,
+    )
     multi_stage_search.logger.info(f"{multi_stage_search.name}: Starting setup.")
 
-    last_commit_msg = reprod.get_last_commit_msg(os.getcwd())
-    multi_stage_search.description = f"Last commit msg of lab: {last_commit_msg}"
-    multi_stage_search.log_level = logging.INFO
+    multi_stage_search.description = (
+        f"Last commit msg of lab: {reprod.get_last_commit_msg(os.getcwd())}"
+    )
+    multi_stage_search.store_file(__file__, "run_config.py")
+    multi_stage_search.store_file(target_file_path, "input_file.json")
+
+    if verbose:
+        multi_stage_search.logger.setLevel(logging.DEBUG)
 
     # Check node on which the script runs for debug purposes of run fails
     value = os.environ.get("SLURMD_NODENAME", "Not set")
@@ -553,10 +583,6 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
     else:
         multi_stage_search.logger.info("Not running on slurm.")
 
-    # Save this current script for reproducability
-    reprod.save_run_script(
-        __file__, os.path.join(multi_stage_search.run_dir, "run_config.py")
-    )
     # ── Global Setup ───────────────────────────────────────────────────
     soap_species = multi_stage_search.descriptor_object.species
 
@@ -605,7 +631,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
         n_atoms=n_atoms,
         n_samples=n_samples,
         closest_distances=closest_distances,
-        n_jobs=N_JOBS,
+        n_jobs=multi_stage_search.n_jobs,
     )
     population = population_generator.generate_population(N_IND)
 
@@ -664,6 +690,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
             name=f"Exploration GA {i}",
             n_generations=n_gen_explore,
             species_specific_fitness_rbf_gamma=species_spec_fit_rbf_gamma,
+            n_jobs=multi_stage_search.n_jobs,
         )
         multi_stage_search.run(population=population, stage=explore_ga_stage)
         # If good enough individuals are found, break loop
@@ -679,6 +706,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
             global_break_condition=global_break_condition,
             name=f"Optimization GA {i}",
             n_generations=n_gen_optimize,
+            n_jobs=multi_stage_search.n_jobs,
         )
         multi_stage_search.run(population=population, stage=optimize_ga_stage)
         # If good enough individuals are found, break loop
@@ -711,6 +739,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
             global_break_condition=global_break_condition,
             name=f"Fine Optimization GA {i}",
             n_generations=n_gen_exploit,
+            n_jobs=multi_stage_search.n_jobs,
         )
         multi_stage_search.run(population=population, stage=fine_optimize_ga_stage)
 
@@ -745,6 +774,7 @@ def main(multi_stage_search: multi_stage.MultiStageSearch, additional_notes):
             global_break_condition=global_break_condition,
             name="Final Optimization GA",
             n_generations=n_gen_exploit,
+            n_jobs=multi_stage_search.n_jobs,
         )
         multi_stage_search.run(population=population, stage=exploitation_ga_stage)
 

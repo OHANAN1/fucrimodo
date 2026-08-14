@@ -8,6 +8,9 @@ from deap import tools
 from ase.db.core import Database
 from typing import Callable
 import numpy as np
+from importlib.resources import files
+from importlib import import_module
+from importlib.util import spec_from_file_location, module_from_spec
 
 from fucrimodo.core.abstracts import Stage, FitnessFunction, PopulationSelection
 from fucrimodo.core import Individual, Population
@@ -245,11 +248,6 @@ def mutation_reproducability_assessment():
     return assess
 
 
-# @pytest.fixture
-# def run_data_path():
-#     return os.path.join("data", "results", "example_run")
-
-
 @pytest.fixture(scope="session")
 def run_data_path(tmp_path_factory):
     """Generate run data once and reuse it for all tests.
@@ -259,22 +257,29 @@ def run_data_path(tmp_path_factory):
 
     """
     save_dir = tmp_path_factory.mktemp("save_dir")
-    from fucrimodo.core import MultiStageSearch
-    from fucrimodo.utils import target_file_parser
 
-    target_file_path = os.path.join("data", "raw", "test_target_file.json")
-    soap_obj, target_features, additional_notes = target_file_parser.load_target_file(
-        target_file_path
+    atoms_path = (
+        files("fucrimodo") / "lab_template" / "data" / "raw" / "test-target.xyz"
     )
 
-    multi_stage_search = MultiStageSearch(
+    # Create target_file
+    target_file_path = os.path.join(save_dir, "test-target-file.json")
+    create_target_file_data = import_module(
+        "fucrimodo.lab_template.configs.utils.create_target_file_data"
+    )
+    create_target_file_data.main(
+        atoms_path=atoms_path,
+        save_path=target_file_path,
+        verbose=False,
+    )
+
+    module = import_module("fucrimodo.lab_template.configs.run.test_run_config")
+    module.main(
+        name="test_run",
         save_dir=save_dir,
-        target_features=np.array(target_features),
-        descriptor_object=soap_obj,
-        descriptive_name="test_run",
+        target_file_path=target_file_path,
+        n_parallel=4,
+        verbose=False,
     )
 
-    from fucrimodo.utils.test_run_config import main
-
-    main(multi_stage_search=multi_stage_search, additional_notes=additional_notes)
     return os.path.join(save_dir, "test_run")

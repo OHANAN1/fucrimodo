@@ -15,6 +15,8 @@ import numpy as np
 
 random.seed(42)
 np.random.seed(42)
+
+rng = np.random.default_rng(42)
 #+end_src
 
 #+RESULTS:
@@ -29,7 +31,7 @@ print(tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_khw42las
+: /tmp/fucrimodo_example_5ebo76p3
 
 ** Target Files Definition
 Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
@@ -38,9 +40,10 @@ Target files are used as the main input of a fucrimodo run. They store the targe
 In a real application of fucrimodo the target structure is unknown. However, for testing we can create a target file from a known compound.
 #+begin_src jupyter-python
 import ase
+from fucrimodo.core import Individual
 
 # For testing we generate an simple example stucture
-target_structure = ase.Atoms(
+target_structure = Individual(
      numbers=[26],
      positions=[[0, 0, 0]],
      cell = [
@@ -78,18 +81,19 @@ target_file_parser.save_to_target_file(
     descriptor_name = "GlobalSOAP",
     descriptor_parameters = kwargs,
     save_path = target_file_path,
-    additional_notes = "",
+    additional_notes = f"Number of atoms: {len(target_structure)}",
 )
 #+end_src
 
 #+RESULTS:
-
 To show that the original structure is not needed for the inversion it can be deleted.
 #+begin_src jupyter-python
 del target_structure
+print(target_file_path)
 #+end_src
 
 #+RESULTS:
+: /tmp/fucrimodo_example_5ebo76p3/target_file.json
 
 *** Load file
 From here on we can pretend the target structure never existed. We now parse the target file without any knowledge about the target structure.
@@ -108,7 +112,6 @@ The GA algorithm needs an initial population to start. To get this population fu
 We first need to set up some hyper parameters:
 #+begin_src jupyter-python
 import fucrimodo.core.utils as core_utils
-from fucrimodo.customs import fitness_functions as ff
 
 # Defines smallest allowed distance between
 #  two neighboring atoms based on their coval radii.
@@ -130,17 +133,12 @@ cell_bound = core_utils.CustomCellBounds(
 
 # The RBF similarity is the most important metric to analyse how close
 # each candidate resembles the target descriptor.
-from fucrimodo.customs.global_soap_target import SOAPSimilarity, RBFSimilarity
-soap_sim = RBFSimilarity(
-    target_features,
-    descriptor_object = soap_obj,
-    rbf_gamma = 0.01,
-)
-similarity_fitnesses = ff.SimilarityToTargetSOAPFitness(
+from fucrimodo.customs.fitness_functions import SoapRbfSimilarityFitness
+similarity_fitnesses = SoapRbfSimilarityFitness(
     target_features,
     soap_object = soap_obj,
-    soap_similarity = soap_sim,
-    db_title = "small_rbf_sim_fitness"
+    db_title = "small_rbf_sim_fitness",
+    rbf_gamma = 0.01,
 )
 
 # Set an estimated number of atoms as hyper param.
@@ -155,17 +153,18 @@ n_cores = 16
 
 #+begin_src jupyter-python
 # Generate a population with estimates based on the SOAP descriptor
-from fucrimodo.customs import population_generator as pop_gen
-population_generator = pop_gen.RandomSampleCrystalPopulation(
+from fucrimodo.customs.population_generators import RandomSampleCrystalPopulation
+population_generator = RandomSampleCrystalPopulation(
     soap_obj=soap_obj,
     target_features=target_features,
     closest_distances=closest_distances,
     fitness_functions=similarity_fitnesses,
     n_atoms=n_atoms,
     n_jobs=n_cores,
+    rng=rng,
 )
 
-population = population_generator.generate_population(100)
+population = population_generator.generate_population(50)
 #+end_src
 
 #+RESULTS:
@@ -176,25 +175,28 @@ The individuals of the start population can now be investigated.
 from ase.visualize import view
 
 view(population.individuals)
+
+from ase.visualize.plot import plot_atoms
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots()
+plot_atoms(population.individuals[0], ax, rotation=('45x, 45y, 0z'))
 #+end_src
 
 #+RESULTS:
-: <Popen: returncode: None args: ['/home/loois/Programs/miniconda3/envs/fucrim...>
-
+:RESULTS:
+: <Axes: >
+[[file:./.ob-jupyter/1ff3c78b1725acd3809bf951ba6153534564fee4.png]]
+:END:
 ** Set up the Multi-Stage Genetic Algorithm
 #+begin_src jupyter-python
 save_dir = tmp_dir
 
 # Define a global statistic that should be tracked during all runs.
 # Here the SOAP similarity of the candidate to the target is used.
-rbf_similarity_fitness = ff.SimilarityToTargetSOAPFitness(
+rbf_similarity_fitness = SoapRbfSimilarityFitness(
     target_soap_features=target_features,
     soap_object=soap_obj,
-    soap_similarity=RBFSimilarity(
-        target_feature_vector=target_features,
-        rbf_gamma=0.1,
-        adjust_gamma=False,
-    ),
+    rbf_gamma=0.1,
     db_title="rbf",
     round_result=None,
 )
@@ -215,12 +217,13 @@ multi_stage_search = MultiStageSearch(
 
 #+RESULTS:
 : Initialized run notebook_example_run
+: Not running on slurm.
 
 
 Set a global break condition that should be used during and after each stage.
 In this case the first fitness function (set to S$_{0.1}$) should not excede 0.99.
 #+begin_src jupyter-python
-from fucrimodo.customs.ga_stage import break_conditions
+from fucrimodo.customs import break_conditions
 global_break_condition = break_conditions.MaxFitnessBreak(0, 0.99)
 #+end_src
 
@@ -238,10 +241,6 @@ from fucrimodo.customs.ga_stage import (
     GAStage,
     crossovers,
     mutations,
-)
-from fucrimodo.customs.utils import (
-    get_soap_similarity_fitness_list,
-    get_species_specific_soap_fitness_list,
 )
 from fucrimodo.customs import population_selections
 #+end_src
@@ -265,38 +264,55 @@ mutation_list = [
         closest_distances=closest_distances,
         rattle_strength=0.5,
         rattle_prop=0.8,
+        rng=rng,
     ),
     mutations.cell_mut.StrainMutation(
         closest_distances=closest_distances,
         n_variable_cell_vectors=3,
         stddev=0.1,
+        rng=rng,
     ),
     mutations.cell_mut.StrainMutation(
         closest_distances=closest_distances,
         n_variable_cell_vectors=1,
         stddev=0.3,
+        rng=rng,
     ),
     mutations.sym_mut.GetConventionalCellMutation(
-        closest_distances=closest_distances, symmetry_tol=0.3
+        closest_distances=closest_distances,
+        symmetry_tol=0.3,
+        rng=rng,
     ),
-    mutations.cell_mut.MinimizeTiltMutation(closest_distances),
+    mutations.cell_mut.MinimizeTiltMutation(
+        closest_distances=closest_distances,
+        rng=rng
+    ),
 ]
 mutation_list.append(
     mutations.multi_mut.MultipleMutations(
-        mutation_list, closest_distances, 2
+        mutation_list,
+        closest_distances,
+        2,
+        rng=rng
     )
 )
 
 crossover_list = [
     crossovers.CutAndSpliceCrossover(
-        closest_distances=closest_distances, cell_bounds=cell_bound
+        closest_distances=closest_distances,
+        cell_bounds=cell_bound,
+        rng=rng
     ),
     crossovers.CutAndSpliceCrossover(
         closest_distances=closest_distances,
         cell_bounds=cell_bound,
         number_of_variable_cell_vectors=3,
+        rng=rng,
     ),
-    crossovers.UnitCellCrossover(closest_distances=closest_distances),
+    crossovers.UnitCellCrossover(
+        closest_distances=closest_distances,
+        rng=rng
+    ),
 ]
 
 break_condition = break_conditions.MultipleOrBreak(
@@ -306,7 +322,7 @@ break_condition = break_conditions.MultipleOrBreak(
     ]
 )
 
-parent_selection = population_selections.TournamentSelection(5)
+parent_selection = population_selections.TournamentSelection(5, rng=rng)
 
 survivor_selection = population_selections.NSGA2Selection()
 
@@ -323,6 +339,7 @@ explore_ga_stage = GAStage(
     parent_ratio=0.5,
     description=description,
     save_n_structures=10,
+    rng=rng
 )
 #+end_src
 
@@ -346,43 +363,61 @@ mutation_list = [
         closest_distances=closest_distances,
         rattle_strength=0.1,
         rattle_prop=0.8,
+        rng=rng,
     ),
     mutations.pos_mut.RattleMutation(
         closest_distances=closest_distances,
         rattle_strength=0.2,
         rattle_prop=0.8,
+        rng=rng,
     ),
     mutations.cell_mut.StrainMutation(
         closest_distances=closest_distances,
         n_variable_cell_vectors=3,
         stddev=0.1,
+        rng=rng,
     ),
     mutations.cell_mut.StrainMutation(
         closest_distances=closest_distances,
         n_variable_cell_vectors=1,
         stddev=0.2,
+        rng=rng,
     ),
     mutations.sym_mut.GetConventionalCellMutation(
-        closest_distances=closest_distances, symmetry_tol=0.3
+        closest_distances=closest_distances,
+        symmetry_tol=0.3,
+        rng=rng,
     ),
-    mutations.cell_mut.MinimizeTiltMutation(closest_distances),
+    mutations.cell_mut.MinimizeTiltMutation(
+        closest_distances=closest_distances,
+        rng=rng,
+    ),
 ]
 mutation_list.append(
     mutations.multi_mut.MultipleMutations(
-        mutation_list, closest_distances, 2
+        mutation_list,
+        closest_distances,
+        2,
+        rng=rng,
     )
 )
 
 crossover_list = [
     crossovers.CutAndSpliceCrossover(
-        closest_distances=closest_distances, cell_bounds=cell_bound
+        closest_distances=closest_distances,
+        cell_bounds=cell_bound,
+        rng=rng,
     ),
     crossovers.CutAndSpliceCrossover(
         closest_distances=closest_distances,
         cell_bounds=cell_bound,
         number_of_variable_cell_vectors=3,
+        rng=rng,
     ),
-    crossovers.UnitCellCrossover(closest_distances=closest_distances),
+    crossovers.UnitCellCrossover(
+        closest_distances=closest_distances,
+        rng=rng,
+    ),
 ]
 
 break_condition = break_conditions.MultipleOrBreak(
@@ -392,7 +427,7 @@ break_condition = break_conditions.MultipleOrBreak(
     ]
 )
 
-parent_selection = population_selections.TournamentSelection(3)
+parent_selection = population_selections.TournamentSelection(3, rng=rng,)
 
 survivor_selection = population_selections.NSGA2Selection()
 
@@ -409,6 +444,7 @@ optimize_ga_stage = GAStage(
     parent_ratio=0.5,
     description=description,
     save_n_structures=10,
+    rng=rng,
 )
 #+end_src
 
@@ -424,9 +460,8 @@ multi_stage_search.run(population=population, stage=explore_ga_stage)
 :RESULTS:
 : Run notebook_example_run: Running stage: explore_ga, ID: 1
 : Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.modules.population.Population at 0x7f596001b800>
+: <fucrimodo.core.population.Population at 0x7faa6853de20>
 :END:
-
 The population after the exploration can now be analysed.
 #+begin_src jupyter-python
 view(population.individuals)
@@ -436,7 +471,7 @@ print("Max fitness:", max(all_fitness_values))
 #+end_src
 
 #+RESULTS:
-: Max fitness: 0.9563468880045508
+: Max fitness: 0.7676514214498812
 
 
 Now the optimization stage can be run:
@@ -446,8 +481,9 @@ multi_stage_search.run(population=population, stage=optimize_ga_stage)
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: optimize_ga, ID: 2Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.modules.population.Population at 0x7f596001b800>
+: Run notebook_example_run: Running stage: optimize_ga, ID: 2
+: Run notebook_example_run: Finished stage: optimize_ga, ID: 2
+: <fucrimodo.core.population.Population at 0x7faa6853de20>
 :END:
 ** Analyse Run
 
@@ -457,7 +493,7 @@ multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_khw42las/notebook_example_run
+: /tmp/fucrimodo_example_5ebo76p3/notebook_example_run
 
 *** Retrieving Structures
 
@@ -477,7 +513,7 @@ view(first_structure)
 
 #+RESULTS:
 :RESULTS:
-: Atoms(symbols='Fe', pbc=True, cell=[[2.9907642031908765, 0.0, 0.0], [-0.040566512199669384, 3.0541750743203795, 0.0], [0.18225302706787572, -0.11957858675359524, 2.9568626066641928]])
+: Atoms(symbols='Fe', pbc=True, cell=[2.998353193222532, 2.9983531932225325, 2.9983531932225316])
 : <Popen: returncode: None args: ['/home/loois/Programs/miniconda3/envs/fucrim...>
 :END:
 *** Analyse Run Metrics
@@ -486,7 +522,8 @@ To make analysis of metrics simple, `fucrimodo` comes with some helper classes t
 The run directory of a finished run can be loaded into the `RunData` class.
 
 #+begin_src jupyter-python
-from fucrimodo.analysis.run_analysis import RunData, get_global_statistics_overview
+from fucrimodo.analysis.run_analysis import RunData
+from fucrimodo.analysis.utils import get_statistics_overview
 run_data = RunData(multi_stage_search.run_dir)
 #+end_src
 
@@ -494,7 +531,7 @@ run_data = RunData(multi_stage_search.run_dir)
 
 From this you can get some information.
 #+begin_src jupyter-python
-print("Total number of generations:", run_data.total_generations)
+print("Total number of generations:", run_data.n_generations)
 print("Number of stages performed:", run_data.n_stages)
 print()
 
@@ -503,16 +540,16 @@ structure_list = run_data.structures
 
 # Or use a helper to get an overview of all global metrics (Here only one metric was used)
 print("Global Metric Statistics:")
-print(get_global_statistics_overview(run_data))
+print(get_statistics_overview(run_data.global_statistics))
 #+end_src
 
 #+RESULTS:
-: Total number of generations: 226
+: Total number of generations: 162
 : Number of stages performed: 2
 :
 : Global Metric Statistics:
-:             names            functions       max            min
-: 0  RBF_Similarity  evaluate_individual  0.994237  7.853240e-190
+:             names       max           min
+: 0  RBF_Similarity  0.999748  6.774732e-45
 
 
 Finally you can also plot the statistics.
@@ -542,6 +579,6 @@ ax.set_xlim([0, len(stage_ids)])
 
 #+RESULTS:
 :RESULTS:
-| 0.0 | 227.0 |
-[[file:./.ob-jupyter/d9d8470d10c255b4fdaac0319b6a39eb673029c7.png]]
+| 0.0 | 162.0 |
+[[file:./.ob-jupyter/031cf7767ab945baba1949732431ec17994c4c68.png]]
 :END:
