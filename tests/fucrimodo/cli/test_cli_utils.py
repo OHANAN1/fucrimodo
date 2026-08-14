@@ -98,7 +98,7 @@ class TestCli:
         mock_config_script_class.return_value = mock_config_script
 
         runner = CliRunner()
-        result = runner.invoke(cli)
+        result = runner.invoke(cli, ["-a", "some_args=1"])
 
         assert result.exit_code == 0
         expected_default = os.path.join(

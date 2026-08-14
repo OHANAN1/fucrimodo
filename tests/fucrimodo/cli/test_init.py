@@ -36,6 +36,10 @@ def test_run_init(runner, tmp_path):
     assert (lab_path / "data" / "raw").exists()
     assert (lab_path / "data" / "raw" / "example-target.xyz").exists()
 
+    assert (lab_path / "scripts").exists()
+    assert (lab_path / "scripts" / "perform_test_run.sh").exists()
+    assert (lab_path / "scripts" / "run_slurm_array.sh").exists()
+
 
 def test_run_init_with_error(runner, tmp_path):
     # If provided dir does not exist

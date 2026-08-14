@@ -194,7 +194,7 @@ class TestCli:
         mock_runner_class.assert_called_once_with(
             input_file_path=input_file,
             verbose=True,
-            save_dir=str(save_dir),
+            save_dir=save_dir,
             name="my_run",
             n_parallel=4,
             config_path=dummy_config,
