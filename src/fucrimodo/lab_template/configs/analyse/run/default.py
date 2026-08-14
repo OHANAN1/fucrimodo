@@ -29,13 +29,13 @@ def _plot_global_stats(run_data: RunData, row: int):
 
 
 def main(
-    run_dir: str,
+    dir_path: str,
     row: int | None = None,
     save_dir: str | None = None,
     show: bool = True,
     verbose: bool = False,
 ) -> None:
-    run_data = RunData(run_dir)
+    run_data = RunData(dir_path)
 
     run_overview = get_run_overview(run_data)
     global_stats_overview = get_statistics_overview(run_data.global_statistics)
@@ -56,7 +56,10 @@ def main(
         _plot_global_stats(run_data, row)
 
         if save_dir is not None:
-            plt.savefig(f"{save_dir}/global_statistic_{row}.png")
+            file_path = f"{save_dir}/global_statistic_{row}.png"
+            plt.savefig(file_path)
             plt.close()
+            if verbose:
+                click.echo(f"Stored file at {file_path}.")
         else:
             plt.show()

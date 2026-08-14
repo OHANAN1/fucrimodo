@@ -4,19 +4,19 @@ CLI Run
 The ``run`` CLI performs a multi-stage search on a provided input file.
 
 The search is configured through a configuration script loaded via
-:py:class:`~fucrimodo.utils.import_helper.ConfigScript`.  Results are
-saved to a directory that can be specified with ``--save_dir``; if not
-given, the current working directory is used.
+:py:class:`~fucrimodo.utils.import_helper.ConfigScript`. An example config
+script can be found in the default fucrimodo lab at ``configs/run/default.py``.
+Results are saved to a directory that can be specified with ``--save_dir``; if
+not given, the current working directory is used.
 
-Command reference
------------------
+---------
+Arguments
+---------
 
 .. code-block:: text
 
     fucrimodo run [OPTIONS] INPUT_FILE
 
-Arguments
-~~~~~~~~~
 
 .. list-table::
    :widths: 20 80
@@ -27,8 +27,9 @@ Arguments
    * - ``INPUT_FILE``
      - Path to the input/target file to process.  Must exist.
 
+-------
 Options
-~~~~~~~
+-------
 
 .. list-table::
    :widths: 20 80
@@ -50,16 +51,21 @@ Options
    * - ``-v, --verbose``
      - Enable verbose output.
 
+-------
 Example
-~~~~~~~
+-------
 
 .. code-block:: bash
 
-    fucrimodo run targets.csv -c configs/run/default.py -s results/run_1 -n my_run -p 4 -v
+    fucrimodo run \
+        -s data/results/ \
+        data/raw/test-target.json
 
+More examples can be found in :ref:`cli-tutorials`.
 
+------
 Runner
-~~~~~~
+------
 
 .. autoclass:: fucrimodo.cli.run.Runner
    :members:

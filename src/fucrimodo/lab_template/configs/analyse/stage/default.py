@@ -29,14 +29,14 @@ def _plot_fitness_stats(stage_data: StageData, row: int):
 
 
 def main(
-    stage_dir: str,
+    dir_path: str,
     row: int | None = None,
     save_dir: str | None = None,
     show: bool = False,
     verbose: bool = False,
 ):
     # Load the stage data
-    stage_data = StageData(stage_dir)
+    stage_data = StageData(dir_path)
 
     click.echo("Stage Overview:")
     click.echo(get_stage_overview(stage_data).T)
@@ -62,6 +62,9 @@ def main(
         _plot_fitness_stats(stage_data, row)
 
         if save_dir is not None:
-            plt.savefig(f"{save_dir}/stage_stats_{row}_overview.png")
+            file_path = f"{save_dir}/stage_statistic_{row}.png"
+            plt.savefig(file_path)
+            if verbose:
+                click.echo(f"Stored file at {file_path}.")
         else:
             plt.show()

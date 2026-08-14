@@ -562,7 +562,7 @@ def main(
         target_features=np.array(target_features),
         descriptor_object=descriptor_obj,
         descriptive_name=name,
-        log_level=logging.INFO,
+        log_level=logging.WARN,  # Use log level warn to avoid generating unnecessary files
         n_jobs=n_parallel,
     )
     multi_stage_search.logger.info(f"{multi_stage_search.name}: Starting setup.")
@@ -574,7 +574,7 @@ def main(
     multi_stage_search.store_file(target_file_path, "input_file.json")
 
     if verbose:
-        multi_stage_search.logger.setLevel(logging.DEBUG)
+        multi_stage_search.logger.setLevel(logging.INFO)
 
     # Check node on which the script runs for debug purposes of run fails
     value = os.environ.get("SLURMD_NODENAME", "Not set")

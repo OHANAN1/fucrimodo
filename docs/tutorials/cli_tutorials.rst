@@ -1,3 +1,5 @@
+.. _cli-tutorials:
+
 =============
 CLI Tutorials
 =============
@@ -74,6 +76,7 @@ For all fucrimodo commands (appart from ``init``) there is the option -c with cu
 .. code-block:: bash
 
    fucrimodo run \
+       -v \
        -c configs/run/test_run_config.py \
        -s data/results/ \
        -n test_run \
@@ -164,10 +167,34 @@ Now you can open the run config with your editor of choice (Nvim, Emacs, VS Code
 
     edit configs/run/custom_run_config.py
 
-Now look. Look for the :meth:``main`` method. For more information on how the individual components of fucrimodo work look at :doc:`../../tutorials/fucrimodo_as_a_library.ipynb`
+Now look. Look for the :meth:``main`` method. For more information on how the individual components of fucrimodo work look at :doc:`../../tutorials/fucrimodo_as_a_library.ipynb`.
+
+Next please locate the entry ``global_rng = np.random.default_rng(42)`` and change the seed ``42`` to ``43``
+
+.. code-block:: bash
+
+    fucrimodo run -p 8 -c configs/run/custom_run_config.py -s data/results/ -n custom_config_run data/raw/test-target.json
+
+
+Congrats, you ran your first custom inversion. Now please check the results at ``data/results/custom_config_run`` and analyse them like explained above. E.g.:
+
+.. code-block:: bash
+
+    fucrimodo analyse run -r 0 data/results/custom_config_run
 
 
 For more info about the concept of configs in the ``fucrimodo_lab`` look at :doc:`../fucrimodo/lab/index`.
+
+---------------------
+Analyse Multiple Runs
+---------------------
+
+This is now
+
+.. code-block::
+
+    fucrimodo analyse multi_run data/results/
+
 
 ---------------------
 Perform Multiple Runs
@@ -175,14 +202,13 @@ Perform Multiple Runs
 
 To test how to analyse
 
+Run on different files by using a bash for loop.
+Create a bash script to run multiple files:
+
+Lets say there exists another target file we want to invert.
+
+
 [TODO: MISSING]
-
----------------------
-Analyse Multiple Runs
----------------------
-
-[TODO: MISSING]
-
 
 ---------------
 Analyse With jq

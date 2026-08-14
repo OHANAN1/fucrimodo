@@ -2,7 +2,6 @@
 CLI Utils
 =========
 
-
 The ``utils`` CLI provides a easy way to run small utility scripts
 defined by configuration files.
 
@@ -10,18 +9,20 @@ Each utility is executed through a configuration script that is loaded through
 :py:class:`~fucrimodo.utils.import_helper.ConfigScript`.  Parameters are passed
 as ``key=value`` pairs from the command line and forwarded to the configuration
 script as keyword arguments. The config script then has to accept these named
-parameters and perform the utility. An example can be found in the default
-fucrimodo lab at ``configs/utils/create_target_file.py``.
+parameters and perform the utility. An example config script can be found in the
+default fucrimodo lab at ``configs/utils/create_target_file.py``.
 
-Command reference
------------------
+---------
+Arguments
+---------
 
 .. code-block:: text
 
     fucrimodo utils [OPTIONS]
 
+-------
 Options
-~~~~~~~
+-------
 
 .. list-table::
    :widths: 40 60
@@ -39,8 +40,9 @@ Options
    * - ``-v, --verbose``
      - Enable verbose output.
 
+-------
 Example
-~~~~~~~
+-------
 
 .. code-block:: bash
 
@@ -48,8 +50,11 @@ Example
        -a atoms_path=data/raw/test-target.xyz \
        -a save_path=data/raw/test-target.json
 
+More examples can be found in :ref:`cli-tutorials`.
+
+------
 Runner
-~~~~~~
+------
 
 .. autoclass:: fucrimodo.cli.utils.Runner
    :members:

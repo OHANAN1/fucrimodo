@@ -48,50 +48,27 @@ class Runner:
         Dispatches to the analysis method that matches
         :attr:`analysis_object`.
         """
-        if self.analysis_object == "run":
-            self._analyse_run()
-        elif self.analysis_object == "stage":
-            self._analyse_stage()
-        elif self.analysis_object == "multi_run":
-            self._analyse_multi_run()
-        else:
-            raise ValueError(
-                "Provided analysis object not found, "
-                "only 'notebook', 'run', 'stage', 'multi_run' are allowed."
+
+        try:
+            self.config.run(
+                dir_path=self.dir_path,
+                verbose=self.verbose,
+                row=self.row,
+                show=self.show,
+                save_dir=self.save_dir,
+            )
+        except TypeError:
+            # TODO: Add this error message to config.run
+            click.ClickException(
+                "Could not load the config."
+                f"Check that the file at {self.config.path} contains a method called `main()` that accepts the arguments `dir_path`, `verbose`, `row`, `show`, `save_dir`."
             )
 
-    def _analyse_run(self):
-        """Analyse a single run."""
-        self.config.run(
-            run_dir=self.dir_path,
-            verbose=self.verbose,
-            row=self.row,
-            show=self.show,
-            save_dir=self.save_dir,
-        )
 
-    def _analyse_stage(self):
-        """Analyse a stage."""
-        self.config.run(
-            stage_dir=self.dir_path,
-            verbose=self.verbose,
-            row=self.row,
-            show=self.show,
-            save_dir=self.save_dir,
-        )
-
-    def _analyse_multi_run(self):
-        """Analyse multiple runs."""
-        self.config.run(
-            multi_run_dir=self.dir_path,
-            verbose=self.verbose,
-            row=self.row,
-            show=self.show,
-            save_dir=self.save_dir,
-        )
-
-
-@click.command()
+@click.command(
+    no_args_is_help=True,
+    epilog=("Example: fucrimodo analyse -r 0 stage data/results/example-run/stage_1"),
+)
 @click.argument(
     "analysis_object",
     type=click.Choice(["run", "stage", "multi_run"]),
@@ -105,13 +82,16 @@ class Runner:
     "-s",
     "--save_dir",
     type=click.Path(exists=True, file_okay=False),
-    help="Save the analysis results to this directory instead of displaying them.",
+    help=(
+        "Save analysis results to this directory instead of displaying them. "
+        "The directory is created if it does not exist."
+    ),
 )
 @click.option(
     "-r",
     "--row",
     type=int,
-    help="Row index to analyse. If not provided, all rows are analysed.",
+    help="Analyse only this row index of the statistics (default: only overview over all stats).",
 )
 @click.option(
     "-c",
@@ -119,15 +99,15 @@ class Runner:
     type=click.Path(exists=True, dir_okay=False),
     help=(
         "Path to a custom analysis configuration script. "
-        "Default configs are located under configs/analysis/<object>/default.py."
+        "Defaults to configs/analysis/<analysis_object>/default.py."
     ),
 )
 def cli(analysis_object, dir_path, verbose, save_dir, row, config):
-    """Analyse collected run or stage data.
+    """Analyse run or stage data.
 
-    ANALYSIS_OBJECT is one of: notebook, run, stage, multi_run.
+    ANALYSIS_OBJECT is the type of object to analyse: run, stage, or multi_run.
 
-    DIR_PATH is the directory where the results of the run or stage are saved.
+    DIR_PATH is the directory containing the saved run or stage results.
     """
     runner = Runner(
         analysis_object=analysis_object,

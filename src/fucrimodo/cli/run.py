@@ -1,10 +1,11 @@
 import os
 import click
 from ..utils.import_helper import ConfigScript
+from pathlib import Path
 
 
 class Runner:
-    """Coordinate a single execution run.
+    """Perform an inversion run on a target file.
 
     :param input_file_path: Path to the input/target file to process.
     :param verbose: Whether to enable verbose logging/output.
@@ -15,7 +16,7 @@ class Runner:
     :param config_path: Path to the configuration script/file used to
         build the run configuration.
 
-    The constructor creates ``save_dir`` if it does not already exist.
+    The class creates ``save_dir`` if it does not already exist.
     """
 
     def __init__(
@@ -28,10 +29,8 @@ class Runner:
         config_path: str,
     ):
         save_path = save_dir if save_dir else os.getcwd()
-        try:
-            os.mkdir(save_path)
-        except FileExistsError:
-            pass
+        os.makedirs(save_path, exist_ok=True)
+
         self.save_dir = save_path
 
         self.input_file_path = input_file_path
@@ -56,27 +55,47 @@ class Runner:
         )
 
 
-@click.command(help="Perform a multi stage search on the provided input file.")
+@click.command(
+    no_args_is_help=True,
+    epilog=("Example: fucrimodo run -s 'data' -n 'run_01' ./data/raw/target_file.json"),
+)
 @click.argument("input_file", type=click.Path(exists=True))
-@click.option("-v", "--verbose", is_flag=True, help="More output.")
 @click.option(
     "-c",
     "--config",
     type=click.Path(exists=True, dir_okay=False),
     default=os.path.join("configs", "run", "default.py"),
+    show_default=True,
     help="Path to the run configuration script.",
 )
 @click.option(
     "-s",
     "--save_dir",
-    type=click.Path(file_okay=False),
-    help="Directory where the run outputs are saved.",
+    type=click.Path(file_okay=False, dir_okay=True, writable=True, path_type=Path),
+    help="Directory where run outputs are saved. Created if it does not exist.",
 )
-@click.option("-n", "--name")
 @click.option(
-    "-p", "--parallel", type=click.IntRange(min=1), default=1, show_default=True
+    "-n",
+    "--name",
+    help="Name of the run. Used for output files and logging. Defaults to the current time and date.",
 )
+@click.option(
+    "-p",
+    "--parallel",
+    type=click.IntRange(min=1),
+    default=1,
+    show_default=True,
+    help="Number of parallel workers to use.",
+)
+@click.option("-v", "--verbose", is_flag=True, help="More output.")
 def cli(input_file, verbose, config, save_dir, name, parallel):
+    """Perform a multi-stage search run on the provided input file.
+
+    INPUT_FILE is the path to the target file to process.
+
+    The run configuration is loaded from CONFIG and executed with the
+    specified number of parallel workers. Results are saved to SAVE_DIR.
+    """
     runner = Runner(
         input_file_path=input_file,
         verbose=verbose,

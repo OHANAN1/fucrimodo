@@ -28,6 +28,7 @@ class ConfigScript:
         assert os.path.isfile(
             path
         ), f"Could not find the config at {path}. Did you give the correct path and are you in the fucrimodo_lab directory?"
+        self.path = path
 
         # (`[..] fucli_config klingt witzig`~/mlb)
         module = import_from_path(path, "fucli_config")

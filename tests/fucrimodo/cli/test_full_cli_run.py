@@ -5,6 +5,7 @@ from fucrimodo.cli.main import cli
 from pathlib import PosixPath
 from click.testing import CliRunner
 import pytest
+import os
 
 
 @pytest.fixture(scope="session")
@@ -52,7 +53,7 @@ def test_structure_to_target_file_convertion(target_file_path):
 
 @pytest.mark.slow
 def test_run(runner, fucrimodo_lab, target_file_path):
-    config_path = fucrimodo_lab / "configs" / "run" / "test_run_config.py"
+    run_config = fucrimodo_lab / "configs" / "run" / "test_run_config.py"
     save_dir = fucrimodo_lab / "data" / "results"
 
     results = runner.invoke(
@@ -62,10 +63,69 @@ def test_run(runner, fucrimodo_lab, target_file_path):
             "-p",
             1,
             "-c",
-            str(config_path),
+            str(run_config),
             "-s",
             str(save_dir),
+            "-n",
+            "test_run",
             str(target_file_path),
         ],
     )
     assert results.exit_code == 0, results.output
+
+    # Analyse the run
+    run_dir = save_dir / "test_run"
+    analyse_config = fucrimodo_lab / "configs" / "analyse" / "run" / "default.py"
+    results = runner.invoke(
+        cli, ["analyse", "run", "-c", str(analyse_config), str(run_dir)]
+    )
+    assert results.exit_code == 0, results.output
+
+    # Create global stats plot
+    results = runner.invoke(
+        cli,
+        [
+            "analyse",
+            "run",
+            "-c",
+            str(analyse_config),
+            "-r",
+            "0",
+            "-s",
+            str(run_dir),
+            str(run_dir),
+        ],
+    )
+    assert results.exit_code == 0, results.output
+    assert os.path.isfile(run_dir / "global_statistic_0.png")
+
+    # Analyse stages
+    analyse_config = fucrimodo_lab / "configs" / "analyse" / "stage" / "default.py"
+    results = runner.invoke(
+        cli,
+        [
+            "analyse",
+            "stage",
+            "-c",
+            str(analyse_config),
+            str(run_dir / "stage_1"),
+        ],
+    )
+    assert results.exit_code == 0, results.output
+
+    results = runner.invoke(
+        cli,
+        [
+            "analyse",
+            "stage",
+            "-r",
+            "0",
+            "-s",
+            str(run_dir / "stage_1"),
+            "-c",
+            str(analyse_config),
+            str(run_dir / "stage_1"),
+        ],
+    )
+    assert results.exit_code == 0, results.output
+    assert os.path.isfile(run_dir / "stage_1" / "stage_statistic_0.png")

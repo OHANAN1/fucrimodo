@@ -4,13 +4,22 @@ import click
 
 
 class Runner:
+    """Create a new fucrimodo_lab directory from the package template.
+
+    :param save_dir: Existing directory where the ``fucrimodo_lab`` folder
+        will be created.
+    :param verbose: Whether to enable verbose output.
+    :param skip_user_confirm: If ``True``, skip the interactive confirmation
+        prompt before creating the directory.
+    """
+
     def __init__(self, save_dir: Path, verbose: bool, skip_user_confirm: bool = False):
         self.save_dir = save_dir.resolve()
         self.verbose = verbose
         self.skip_user_confirm = skip_user_confirm
 
     def run(self):
-        """Copy the fucrimodo_lab template to the desired location."""
+        """Copy the fucrimodo_lab template into :attr:`save_dir`."""
 
         # Check if dir already exists
         fucrimodo_lab_dir = self.save_dir / "fucrimodo_lab"
@@ -64,13 +73,13 @@ class Runner:
                 dest_item.write_bytes(item.read_bytes())
 
 
-@click.command(help="Generate a fucrimodo_lab directory with default configs.")
+@click.command()
 @click.option(
     "-s",
     "--save_dir",
     type=click.Path(exists=True, path_type=Path),
     default=Path.cwd(),
-    help="Path to where the fucrimodo_lab directory should be created. Defaults to current dir.",
+    help="Directory where the fucrimodo_lab folder will be created. Defaults to current working dir.",
 )
 @click.option(
     "-y",
@@ -80,5 +89,15 @@ class Runner:
 )
 @click.option("-v", "--verbose", is_flag=True, help="More output.")
 def cli(save_dir, yes, verbose):
+    """Generate a fucrimodo_lab directory with default configs.
+
+    Creates a copy of the fucrimodo lab template shipped with the library at
+    SAVE_DIR/fucrimodo_lab. The lab contains default configuration files for
+    reproducible multi-stage optimization experiments. Please refer to the
+    documentation.
+
+    Run without flags to create the lab in the current directory after
+    confirming the destination.
+    """
     runner = Runner(save_dir=save_dir, verbose=verbose, skip_user_confirm=yes)
     runner.run()

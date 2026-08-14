@@ -45,21 +45,30 @@ class Runner:
         return parsed
 
 
-@click.command()
+@click.command(
+    no_args_is_help=True,
+)
 @click.option(
     "-c",
     "--config",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(exists=True, dir_okay=False, readable=True),
     default=os.path.join("configs", "utils", "create_target_file_data.py"),
-    help=(
-        "Path to the utility configuration script under "
-        "configs/utils/ inside the `fucrimodo_lab`. More infos can be found in the README.md."
-    ),
+    show_default=True,
+    help="Path to the utility configuration script.",
 )
 @click.option(
-    "-a", "--arg", multiple=True, help="Key=value pair, can be used multiple times"
+    "-a",
+    "--arg",
+    multiple=True,
+    metavar="KEY=VALUE",
+    help="Parameter passed as key=value. Can be used multiple times.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="More output.")
 def cli(config, arg, verbose):
+    """Execute a utility configuration script.
+
+    Runs a configurable utility located at CONFIG, passing any
+    KEY=VALUE arguments to its main() function.
+    """
     runner = Runner(config_path=config, verbose=verbose, params=arg)
     runner.run()
