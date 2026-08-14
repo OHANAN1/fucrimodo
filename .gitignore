@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.ob-jupyter
 
 # Ignore the personal organization .norg file
 fucrimodo.norg
