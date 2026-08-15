@@ -1,6 +1,9 @@
 import json
+from typing import Any
 from fucrimodo.customs.global_soap_target import GlobalSOAP
 import numpy as np
+
+type JSONKey = str | int | float | bool | None
 
 
 def save_to_target_file(
@@ -8,7 +11,7 @@ def save_to_target_file(
     descriptor_name: str,
     descriptor_parameters: dict,
     save_path: str,
-    additional_notes: str | None = None,
+    additional_notes: str | dict[str, Any] | None = None,
 ) -> None:
     """
     Saves the SOAP feature vector as well as the parameters of the SOAP object
@@ -59,7 +62,7 @@ def load_target_file(save_path: str) -> tuple[GlobalSOAP, list, str]:
         'features': list,
             The feature vector that should be inverted
 
-        'additional_notes': str, Optional
+        'additional_notes': str, dict, Optional
             Additional notes that were saved to the file
     }
 

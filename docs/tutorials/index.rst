@@ -4,6 +4,8 @@ Tutorials
 
 Learn how to invert your own feature vectors and how to customize.
 
+
+
 -----------------
 Fucrimodo As CLI
 -----------------
@@ -15,6 +17,8 @@ Fucrimodo As CLI
    cli_tutorials
    fucrimodo_as_library
 
+
+.. _fucrimodo_as_library:
 
 --------------------
 Fucrimodo As Library
