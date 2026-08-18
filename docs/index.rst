@@ -7,14 +7,20 @@
 FUCrIMODo
 =========
 
-.. image:: _static/Fujimoto.jpg
-   :alt: Fujimoto from the Movie Ponyo by Studio Ghibli
+.. image:: _static/Fujimoto_legal.png
+   :alt: Fujimoto from the Movie Ponyo by Studio Ghibli (source: https://www.ghibli.jp/works/ponyo/)
    :width: 200px
    :align: center
 
-FUCrIMODo is a program that aims to retrieve the crystal structure from
-a SOAP descriptor.
+|
+
+**F**\ ind **U**\ nknown **C**\ rystals by **I**\ nversion of **M**\ L **O**\ ptimized **D**\ escriptors
+
+FUCrIMODo is a program that aims to retrieve the atomic structure from
+a descriptor. Its current implementation allows to
 This is done with the help of a novel multi-stage Genetic Algorithm (GA).
+Fucrimodo has a modular design.
+
 
 Information about GAs can be found at various sources. 
 The DEAP library for example provides a very good
