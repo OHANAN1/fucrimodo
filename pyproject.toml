@@ -8,7 +8,7 @@ version = "0.1.1"
 description = "Find Unknown Crystals by Inversion of ML Optimized Descriptors"
 authors = [
   {name = "Louis Böhm", email =  "louis.boehm@gmx.de"},
-  {name = "Martin Kuban", email = "missing@hu-berlin.de"},
+  {name = "Martin Kuban", email = "missing@hu-berlin.de"}, # TODO: Add Martins Email
 ]
 maintainers = [
   {name = "Louis Böhm", email = "louis.boehm@gmx.de"}
@@ -22,20 +22,18 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics"
 ]
 dependencies = [
-    "ase>=3.23.0",
-    "matid>=2.1.5",
-    "numpy>=1.26.4",
-    "matplotlib>=3.9.1",
-    "nbformat>=5.10.1",
-    "pandas>=2.2.3",
-    "deap>=1.4.1",
-    "spglib>=1.15.0",
-    "pyxtal>=1.0.6",
+    "ase==3.25.0",
+    "matid==2.1.5",
+    "numpy==1.26.4",
+    "matplotlib==3.9.1",
+    "pandas==2.2.3",
+    "deap==1.4.1",
+    "spglib==2.5.0",
+    "pyxtal==1.0.6",
     "dscribe==2.1.1",
-    "ase-ga>=1.0.3",
-    "click>=8.4.2"
+    "ase-ga==1.0.3",
+    "click==8.4.2"
 ]
-# also add "dscribe>=2.1.1", this currently clashed with matid and needs to be installed with conda instead, see environment.yml
 requires-python = ">=3.12"
 
 [project.optional-dependencies]
@@ -53,7 +51,7 @@ fucrimodo = "fucrimodo.__main__:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-myproject = [
+fucrimodo = [
   "lab_template/*.py",
   "lab_template/*.md",
   "lab_template/**/.*py",

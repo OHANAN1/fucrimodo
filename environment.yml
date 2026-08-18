@@ -5,9 +5,6 @@ dependencies:
   - python=3.12.2
   - setuptools=69.5.1
   - wheel=0.43.0
-  - notebook
-  - jupyter_contrib_nbextensions # Needed to activate folds in notebook
-  - sparse # I think this is needed by dscribe, but need to check
   - pip=24.0
   - pip:
     - .  # Install project based on the pyproject.toml file
