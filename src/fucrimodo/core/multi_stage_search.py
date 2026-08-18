@@ -99,7 +99,7 @@ class MultiStageSearch:
             "relative_save_path": [],
         }
 
-        self.logger.info(f"Initialized run {self.name}")
+        self.logger.info(f"Initialized run: {self.name}")
 
         # Check node on which the script runs for debug purposes of run fails
         value = os.environ.get("SLURMD_NODENAME", "Not set")

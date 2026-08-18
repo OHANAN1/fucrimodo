@@ -2,6 +2,7 @@ import json
 from typing import Any
 from fucrimodo.customs.global_soap_target import GlobalSOAP
 import numpy as np
+from pathlib import Path
 
 type JSONKey = str | int | float | bool | None
 
@@ -10,7 +11,7 @@ def save_to_target_file(
     features: list | np.ndarray,
     descriptor_name: str,
     descriptor_parameters: dict,
-    save_path: str,
+    save_path: str | Path,
     additional_notes: str | dict[str, Any] | None = None,
 ) -> None:
     """
@@ -25,9 +26,9 @@ def save_to_target_file(
     :param additional_notes: additional notes that should be saved to the file
         e.g. information about the atoms object used to calculate the features
     """
-    assert (
-        save_path[-5:-1] != ".json"
-    ), "Given file path must end with file that has .json extension"
+    path = Path(save_path)
+    if path.suffix != ".json":
+        raise ValueError("Given file path must end with a .json extension")
 
     if additional_notes is None:
         additional_notes = ""

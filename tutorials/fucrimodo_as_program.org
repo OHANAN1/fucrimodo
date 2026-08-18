@@ -1,4 +1,0 @@
-#+title: Fucrimodo As Program
-
-* Fucrimodo As Program
-To use the `fucrimodo` program efficiently it is recomended to first set up the `fucrimodo_lab`.

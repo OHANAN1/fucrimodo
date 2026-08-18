@@ -1,48 +1,60 @@
-#+title: Fucrimodo As Library
+#+title: Fucrimodo As Library Copy
 #+property: header-args:jupyter-python :session py :kernel fucrimodo-env :async yes :exports both
 
-* Fucrimodo As Library
+* Fucrimodo as a Library
 
-Fucrimodo can be used as an independent program, or it can be integrated in form of a python library.
-This notebook shows how a basic Multi-Stage GA can be defined.
+Fucrimodo provides a library for writing the config files for the **fucrimodo lab**
+or integrating it into other programs. This notebook tutorial shows how to define a
+very basic multi-stage GA. Please read the `Getting started` section of the
+documentation before you start.
 
-Since multiple aspects of the algorithm depend on pseudo random numbers, a seed is set to make everything reproducable.
-Note: Please always reset the seed before a rerun of the script, else results are not reproducable!
+** Random Numbers
+
+Since many aspects of GAs depend on stochastic processes, we need to pass a
+pseudo-random number generator to all parts of the algorithm to ensure
+reproducible behaviour. Here we set an rng.
 
 #+begin_src jupyter-python
-import random
 import numpy as np
-
-random.seed(42)
-np.random.seed(42)
-
 rng = np.random.default_rng(42)
 #+end_src
 
 #+RESULTS:
 
-To store and analyse results a temporary dir is used. You can also change this to any other dir.
-(NOTE: Please delete the temp_dir yourself, after you do not need it anymore. Or it will just be deleted after you restart the computer.)
+** Target File Definition
+
+Target files are the main input of a fucrimodo run. They store the target SOAP
+descriptor, the descriptor type, and the parameters needed to calculate it.
+
+We create a temporary directory to store the file in and later the results. You
+can change this to any other directory if you want to store results elsewhere.
+(Note: please delete the `temp_dir` yourself once you no longer need it;
+otherwise it will be deleted automatically when you restart your computer.)
+
 #+begin_src jupyter-python
 import tempfile
-import os
-tmp_dir = tempfile.mkdtemp(prefix="fucrimodo_example_")
-print(tmp_dir)
+from pathlib import Path
+tmp_dir = Path(tempfile.mkdtemp(prefix="fucrimodo_example_"))
+print("Directory created at:", tmp_dir)
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_0ktho51b
+: Directory created at: /tmp/fucrimodo_example_v6okyy07
 
-** Target Files Definition
-Target files are used as the main input of a fucrimodo run. They store the target soap descriptor as well as the descriptor type and its parameters needed to reproduce it.
 
-*** Generate file
-In a real application of fucrimodo the target structure is unknown. However, for testing we can create a target file from a known compound.
+*** Generate the Target File
+
+In a real fucrimodo application the target structure is unknown. However, for
+testing we can create a target file from an example compound.
+The `Individual` class inherits from ASE `Atoms`, so it can be initialized in the
+same way as an ASE `Atoms` structure. Please refer to the docs for more
+information.
+From this mock individual we can then calculate the descriptor.
+
 #+begin_src jupyter-python
-import ase
 from fucrimodo.core import Individual
 
-# For testing we generate an simple example stucture
+# For this test case we generate a very simple example individual
 target_structure = Individual(
      numbers=[26],
      positions=[[0, 0, 0]],
@@ -53,16 +65,10 @@ target_structure = Individual(
      ],
      pbc=True,
 )
-#+end_src
 
-#+RESULTS:
-
-To get the target file we set parameters for the descriptor and calculate the target descriptor features.
-#+begin_src jupyter-python
+# Now we can calculate the descriptor from the target structure
 from fucrimodo.customs.global_soap_target import GlobalSOAP
-from fucrimodo.utils import target_file_parser
-
-kwargs = {
+soap_kwargs = {
     "r_cut": 15.0,
     "n_max": 8,
     "l_max": 8,
@@ -71,55 +77,79 @@ kwargs = {
     "periodic": True,
     "average": "inner"
 }
-soap = GlobalSOAP(**kwargs)
+
+soap = GlobalSOAP(**soap_kwargs)
 target_features = soap.create(target_structure)
 
-target_file_path = os.path.join(tmp_dir, "target_file.json")
+print("Generated target descriptor with shape:", target_features.shape)
 
+del target_structure
+print("Deleted target structure, to show it is not needed for the inversion.")
+#+end_src
+
+#+RESULTS:
+: Generated target descriptor with shape: (324,)
+: Deleted target structure, to show it is not needed for the inversion.
+
+The `utils` module provides a simple function that makes storing the target file
+very easy:
+
+#+begin_src jupyter-python
+from fucrimodo.utils import target_file_parser
+
+target_file_path = tmp_dir / "target_file.json"
 target_file_parser.save_to_target_file(
     features = list(target_features),
     descriptor_name = "GlobalSOAP",
-    descriptor_parameters = kwargs,
+    descriptor_parameters = soap_kwargs,
     save_path = target_file_path,
-    additional_notes = f"Number of atoms: {len(target_structure)}",
+    additional_notes = f"Number of atoms: 1",
 )
+
+print("Created targetfile at", target_file_path)
 #+end_src
 
 #+RESULTS:
-To show that the original structure is not needed for the inversion it can be deleted.
-#+begin_src jupyter-python
-del target_structure
-print(target_file_path)
-#+end_src
+: Created targetfile at /tmp/fucrimodo_example_v6okyy07/target_file.json
 
-#+RESULTS:
-: /tmp/fucrimodo_example_5ebo76p3/target_file.json
+*** Load the Target File
 
-*** Load file
-From here on we can pretend the target structure never existed. We now parse the target file without any knowledge about the target structure.
+From here on we can pretend the target structure never existed. We now parse the
+target file without any knowledge of the target structure.
+Again, fucrimodo provides a simple method for this.
 
 #+begin_src jupyter-python
 soap_obj, target_features, _ = target_file_parser.load_target_file(target_file_path)
-
-species = soap_obj.species
 #+end_src
 
 #+RESULTS:
 
-** Generate start population
-The GA algorithm needs an initial population to start. To get this population fucrimodo includes a few start population generator. Here we use a random sampling approach that is guided by knowledge about the target descriptor.
+Note: If a descriptor other than GlobalSOAP is used, please load the target
+file manually, because currently only the GlobalSOAP descriptor is supported.
+Use the source code of the existing method as a starting point.
 
-We first need to set up some hyper parameters:
+** Generate the Initial Population
+
+The algorithm needs an initial population to start. A population is basically a
+storage container of the individuals at the current state of the algorithm.
+Fucrimodo includes start population generators to create an initial population.
+Here we use a random sampling approach guided by knowledge of the target
+descriptor. Look in the documentation for more details on the generator.
+
+*** Set Up a Population Generator
+
+We first need to set up some hyperparameters:
+
 #+begin_src jupyter-python
 import fucrimodo.core.utils as core_utils
 
-# Defines smallest allowed distance between
-#  two neighboring atoms based on their coval radii.
+# Defines the smallest allowed distance between
+# two neighbouring atoms based on their covalent radii.
 closest_distances = core_utils.CustomClosestDistances(
-    species=species, ratio_of_covalent_radii=0.7
+    species=soap_obj.species, ratio_of_covalent_radii=0.7
 )
 
-# Min. and max. cell size of generated structures
+# Minimum and maximum cell sizes of generated structures
 cell_bound = core_utils.CustomCellBounds(
     {
         "a": [1, 100],
@@ -131,7 +161,7 @@ cell_bound = core_utils.CustomCellBounds(
     }
 )
 
-# The RBF similarity is the most important metric to analyse how close
+# RBF similarity is the most important metric for analysing how closely
 # each candidate resembles the target descriptor.
 from fucrimodo.customs.fitness_functions import SoapRbfSimilarityFitness
 similarity_fitnesses = SoapRbfSimilarityFitness(
@@ -141,18 +171,15 @@ similarity_fitnesses = SoapRbfSimilarityFitness(
     rbf_gamma = 0.01,
 )
 
-# Set an estimated number of atoms as hyper param.
-# If unknown: Repeat the algorithm with different values.
+# Set an estimated number of atoms as a hyperparameter.
+# If unknown, repeat the algorithm with different values.
 n_atoms = 1
 
-# Please specify the number of physical cores that can be used for multiprocessing
+# Please specify the number of physical cores that can be used for
+# multiprocessing.
 n_cores = 16
-#+end_src
 
-#+RESULTS:
-
-#+begin_src jupyter-python
-# Generate a population with estimates based on the SOAP descriptor
+# Generate a population using estimates based on the SOAP descriptor
 from fucrimodo.customs.population_generators import RandomSampleCrystalPopulation
 population_generator = RandomSampleCrystalPopulation(
     soap_obj=soap_obj,
@@ -164,101 +191,145 @@ population_generator = RandomSampleCrystalPopulation(
     rng=rng,
 )
 
-population = population_generator.generate_population(50)
+
 #+end_src
 
 #+RESULTS:
 
-The individuals of the start population can now be investigated.
+*** Generate the Population
+
+The individuals in the initial population can now be investigated.
 
 #+begin_src jupyter-python
-from ase.visualize import view
-
-view(population.individuals)
+population = population_generator.generate_population(50)
+print(f"Generated population with {len(population)} individuals.")
 
 from ase.visualize.plot import plot_atoms
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots()
-plot_atoms(population.individuals[0], ax, rotation=('45x, 45y, 0z'))
+plot_atoms(population.individuals[0], rotation=('45x, 45y, 0z'))
+
+# Uncomment to interactively inspect the generated structures
+# from ase.visualize import view
+# view(population.individuals)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
+: Generated population with 50 individuals.
 : <Axes: >
 [[file:./.ob-jupyter/1ff3c78b1725acd3809bf951ba6153534564fee4.png]]
 :END:
-** Set up the Multi-Stage Genetic Algorithm
-#+begin_src jupyter-python
-save_dir = tmp_dir
+** Set Up a Multi-Stage Search
+*** Initialize the MultiStageSearch Object
 
-# Define a global statistic that should be tracked during all runs.
-# Here the SOAP similarity of the candidate to the target is used.
+To run a multi-stage GA we first need to set up the ``MultiStageSearch`` object.
+This class is used to manage data, time-keeping, and organization of stages
+during a multi-stage search. Please refer to the documentation for more
+information.
+
+#+begin_src jupyter-python
+from fucrimodo.core.multi_stage_search import MultiStageSearch
+multi_stage_search = MultiStageSearch(
+    save_dir=tmp_dir,
+    target_features=target_features,
+    descriptor_object=soap_obj,
+    descriptive_name="example_run",
+)
+
+print("Data will be stored at:", multi_stage_search.run_dir)
+#+end_src
+
+#+RESULTS:
+: Initialized run: example_run
+: Not running on slurm.
+: Data will be stored at: /tmp/fucrimodo_example_v6okyy07/example_run
+
+*** Set Up Global Statistics
+
+To track statistics for the run we can add a global statistics dictionary to
+the ``MultiStageSearch`` object. It is a dictionary whose keys are the names of
+the statistics and whose values are any methods that accept an individual as
+input and return a number.
+
+#+begin_src jupyter-python
+# We can even use lambda functions to define simple statistics.
+global_statistics_dict = {
+    "Volume": lambda ind: ind.get_volume()
+}
+
+# More complex statistics can also be added.
+# Here we use the similarity of a candidate's descriptor to the target.
 rbf_similarity_fitness = SoapRbfSimilarityFitness(
     target_soap_features=target_features,
     soap_object=soap_obj,
     rbf_gamma=0.1,
-    db_title="rbf",
-    round_result=None,
 )
+global_statistics_dict["RBF_Similarity"] = rbf_similarity_fitness.evaluate_individual
 
-global_statistics_dict = {
-    "RBF_Similarity": rbf_similarity_fitness.evaluate_individual,
-}
+# Now we add the global statistics dict to the MultiStageSearch object.
+multi_stage_search.global_statistics_dict = global_statistics_dict
 
-from fucrimodo.core.multi_stage_search import MultiStageSearch
-multi_stage_search = MultiStageSearch(
-    save_dir=save_dir,
-    target_features=target_features,
-    descriptor_object=soap_obj,
-    descriptive_name="notebook_example_run",
-    global_statistics_dict=global_statistics_dict,
-)
+print("Following statistics will be tracked:", [s for s in multi_stage_search.global_statistics])
 #+end_src
 
 #+RESULTS:
-: Initialized run notebook_example_run
-: Not running on slurm.
+: Following statistics will be tracked: ['Volume', 'RBF_Similarity']
 
+*** Define the Exploration GA Stage
 
-Set a global break condition that should be used during and after each stage.
-In this case the first fitness function (set to S$_{0.1}$) should not excede 0.99.
+We can now set up the stages. Each stage is an independent optimisation algorithm.
+For more information please refer to the documentation.
+
+The only stage type currently implemented in fucrimodo is the GA stage. A GA
+optimises a population of individuals (here atomic structures) based on
+evolutionary principles. During each iteration (called a generation) the
+algorithm combines the properties of selected individuals to form a new
+population using the crossover operator. The properties of individuals are also
+randomly changed through the mutation operator. The individuals are then
+evaluated with a fitness function. Finally, individuals are selected based on
+their fitness values and passed on to the next generation. This process is
+repeated until a breaking condition is reached.
+
+Fucrimodo implements a novel kind of GA algorithm: the multi-stage GA. In it,
+different stages of the GA follow different goals. This tutorial introduces an
+exploration stage and an optimisation stage.
+
+We first define the exploration stage. It uses strong mutation and crossover
+operators that allow it to explore novel structures in the search space.
+
 #+begin_src jupyter-python
-from fucrimodo.customs import break_conditions
-global_break_condition = break_conditions.MaxFitnessBreak(0, 0.99)
-#+end_src
-
-#+RESULTS:
-
-*** Define Exploration GA Stage
-
-This stage explores the search space for structure.
-
-First import all necessary libraries:
-
-#+begin_src jupyter-python
-from fucrimodo.customs import fitness_functions as ff
+from fucrimodo.customs import population_selections, break_conditions, fitness_functions
 from fucrimodo.customs.ga_stage import (
     GAStage,
     crossovers,
     mutations,
 )
-from fucrimodo.customs import population_selections
-#+end_src
 
-#+RESULTS:
-
-#+begin_src jupyter-python
 name = "explore_ga"
-
-n_generations = 100
-
 description = "This stage explores the search space for structure."
 
+# Stop when the maximum number of generations is reached
+# or an individual with sufficiently high fitness is found.
+break_condition = break_conditions.MultipleOrBreak(
+    [
+        break_conditions.GenerationBreak(100),
+        break_conditions.MaxFitnessBreak(0, 0.99)
+    ]
+)
+
+# Use the similarity fitness since it is the main optimisation objective.
+# Also use a physicality fitness that penalizes individuals in which atoms are
+# closer than the defined threshold.
 fitness_func_list =  [
     rbf_similarity_fitness,
-    ff.PhysicalityFitness(closest_distances),
+    fitness_functions.PhysicalityFitness(
+        closest_distances = core_utils.CustomClosestDistances(
+            species=soap_obj.species, ratio_of_covalent_radii=0.9
+        )
+    ),
 ]
 
+# Mutations during exploration should change the structures strongly
+# so that new parts of the search space can be explored.
 mutation_list = [
     mutations.pos_mut.RattleMutation(
         closest_distances=closest_distances,
@@ -297,6 +368,8 @@ mutation_list.append(
     )
 )
 
+# The crossovers are set up to handle crossing
+# between very different structures.
 crossover_list = [
     crossovers.CutAndSpliceCrossover(
         closest_distances=closest_distances,
@@ -315,17 +388,17 @@ crossover_list = [
     ),
 ]
 
-break_condition = break_conditions.MultipleOrBreak(
-    [
-        break_conditions.GenerationBreak(n_generations),
-        global_break_condition,
-    ]
-)
-
+# Parent selection chooses the individuals to which the crossover and
+# mutation operators are applied.
+# In tournament selection, the best of 5 randomly sampled individuals is chosen.
 parent_selection = population_selections.TournamentSelection(5, rng=rng)
 
+# Survivor selection chooses which individuals of the population will be
+# passed on to the next generation.
+# NSGA-II selection chooses individuals that are fit and diverse.
 survivor_selection = population_selections.NSGA2Selection()
 
+# All the operators can now be used to create the first GA stage.
 explore_ga_stage = GAStage(
     name=name,
     fitness_functions=fitness_func_list,
@@ -344,19 +417,21 @@ explore_ga_stage = GAStage(
 #+end_src
 
 #+RESULTS:
-*** Define Optimization GA Stage
-This stage optimizes the found structures.
+
+
+For more details on the parameters please refer to the documentation.
+
+*** Define the Optimization GA Stage
+
+We also create a second GA stage. This stage should optimise the structures
+found. This is achieved by using less drastic mutations and applying more
+crossovers.
 
 #+begin_src jupyter-python
 name = "optimize_ga"
-
-n_generations = 500
-
 description = "This stage optimizes the found structure."
 
-fitness_func_list =  [
-    rbf_similarity_fitness,
-]
+fitness_func_list =  [rbf_similarity_fitness]
 
 mutation_list = [
     mutations.pos_mut.RattleMutation(
@@ -422,8 +497,8 @@ crossover_list = [
 
 break_condition = break_conditions.MultipleOrBreak(
     [
-        break_conditions.GenerationBreak(n_generations),
-        global_break_condition,
+        break_conditions.GenerationBreak(500),
+        break_conditions.MaxFitnessBreak(0, 0.99),
     ]
 )
 
@@ -450,135 +525,179 @@ optimize_ga_stage = GAStage(
 
 #+RESULTS:
 
-** Run GA Stages
-Run to exploration stage on the initial population:
+** Run the Multi-Stage Search
+
+Now everything is set up and we can run the algorithm. To run a stage, it must be
+started with the ``MultiStageSearch.run`` method. We first run the exploration GA
+stage.
+
 #+begin_src jupyter-python
 multi_stage_search.run(population=population, stage=explore_ga_stage)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: explore_ga, ID: 1
-: Run notebook_example_run: Finished stage: explore_ga, ID: 1
-: <fucrimodo.core.population.Population at 0x7faa6853de20>
+: Run example_run: Running stage: explore_ga, ID: 1
+: Run example_run: Finished stage: explore_ga, ID: 1
+: <fucrimodo.core.population.Population at 0x7fef0fa8ddc0>
 :END:
-The population after the exploration can now be analysed.
+After this first stage the optimisation is not yet complete, but we can analyse
+the created individuals:
+
 #+begin_src jupyter-python
-view(population.individuals)
+print("Current generation:", population.generation)
+print("N individuals:", len(population))
 
 all_fitness_values = [ind.fitness.values[0] for ind in population.individuals]
 print("Max fitness:", max(all_fitness_values))
+print("Min fitness:", min(all_fitness_values))
+
+# Uncomment to view the population.
+# from ase.visualize import view
+# view(population.individuals)
+
 #+end_src
 
 #+RESULTS:
+: Current generation: 100
+: N individuals: 50
 : Max fitness: 0.7676514214498812
+: Min fitness: 0.7676514214409446
 
+Now the optimisation stage can be run.
 
-Now the optimization stage can be run:
 #+begin_src jupyter-python
 multi_stage_search.run(population=population, stage=optimize_ga_stage)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: Run notebook_example_run: Running stage: optimize_ga, ID: 2
-: Run notebook_example_run: Finished stage: optimize_ga, ID: 2
-: <fucrimodo.core.population.Population at 0x7faa6853de20>
+: Run example_run: Running stage: optimize_ga, ID: 2
+: Run example_run: Finished stage: optimize_ga, ID: 2
+: <fucrimodo.core.population.Population at 0x7fef0fa8ddc0>
 :END:
-** Analyse Run
+Again we can analyse the results and confirm that an individual with high
+similarity to the target has been found.
 
-The directory of the run can be found at the location
+#+begin_src jupyter-python
+print("Current generation:", population.generation)
+all_fitness_values = [ind.fitness.values[0] for ind in population.individuals]
+print("Max fitness:", max(all_fitness_values))
+print("Min fitness:", min(all_fitness_values))
+#+end_src
+
+#+RESULTS:
+: Current generation: 162
+: Max fitness: 0.9997483548505289
+: Min fitness: 0.7676514214454129
+
+** Analyse the Run
+
+Fucrimodo also provides utilities for analysing multi-stage GA runs. All data
+collected during the run is stored in the run directory.
+
 #+begin_src jupyter-python
 multi_stage_search.run_dir
 #+end_src
 
 #+RESULTS:
-: /tmp/fucrimodo_example_5ebo76p3/notebook_example_run
+: /tmp/fucrimodo_example_v6okyy07/example_run
 
-*** Retrieving Structures
+*** Retrieve Structures
 
-All generated structures are stored in the run directory inside of a `ASE` database called `structures.db`.
-Structures can be analysed here or with the cli/web interface provided by `ASE` ((more info in their docs)[https://docs.ase-lib.org/ase/db/db.html])
+Analysis of the generated structures can be done with tools from the ASE
+library.
+
+For each generation, the 10 best structures are stored in the run directory
+inside an ASE database called `structures.db`. Structures can be analysed in
+Python or with the CLI/web interface provided by ASE. More information can be
+found in the [[https://docs.ase-lib.org/ase/db/db.html][ASE documentation]].
+
 #+begin_src jupyter-python
 from ase.db import connect
 
-db_path = os.path.join(multi_stage_search.run_dir, "structures.db")
+db_path = Path(multi_stage_search.run_dir) / "structures.db"
 structure_db = connect(db_path)
 
-# e.g. get first structure of db
-first_structure = structure_db.get_atoms(1)
-print(first_structure)
-view(first_structure)
+print(f"Database contains {structure_db.count()} structures.")
+
+# e.g. get the first structure from the database
+first_structure = structure_db.get_atoms(id = 11, add_additional_information = True)
+print("Structure:\t", first_structure)
+print("RBF Similarity: ", first_structure.info["key_value_pairs"]["RBF_Similarity"])
 #+end_src
 
 #+RESULTS:
-:RESULTS:
-: Atoms(symbols='Fe', pbc=True, cell=[2.998353193222532, 2.9983531932225325, 2.9983531932225316])
-: <Popen: returncode: None args: ['/home/loois/Programs/miniconda3/envs/fucrim...>
-:END:
+: Database contains 20 structures.
+: Structure:	 Atoms(symbols='Fe', pbc=True, cell=[2.999949112617621, 2.999949112617621, 2.999949112617621])
+: RBF Similarity:  0.9997483548738061
+
+
 *** Analyse Run Metrics
 
-To make analysis of metrics simple, `fucrimodo` comes with some helper classes to organize the results.
-The run directory of a finished run can be loaded into the `RunData` class.
+Next we can analyse metrics. ``Fucrimodo`` comes with helper classes to organize
+the results. The run directory of a finished run can be loaded into the
+``RunData`` class.
 
 #+begin_src jupyter-python
 from fucrimodo.analysis.run_analysis import RunData
-from fucrimodo.analysis.utils import get_statistics_overview
 run_data = RunData(multi_stage_search.run_dir)
-#+end_src
 
-#+RESULTS:
-
-From this you can get some information.
-#+begin_src jupyter-python
 print("Total number of generations:", run_data.n_generations)
 print("Number of stages performed:", run_data.n_stages)
-print()
-
-# You can also get the structures
-structure_list = run_data.structures
-
-# Or use a helper to get an overview of all global metrics (Here only one metric was used)
-print("Global Metric Statistics:")
-print(get_statistics_overview(run_data.global_statistics))
 #+end_src
 
 #+RESULTS:
 : Total number of generations: 162
 : Number of stages performed: 2
-:
+
+We can also display the maximum and minimum values of each tracked global
+statistic.
+
+#+begin_src jupyter-python
+from fucrimodo.analysis.utils import get_statistics_overview
+print("Global Metric Statistics:")
+print(get_statistics_overview(run_data.global_statistics))
+#+end_src
+
+#+RESULTS:
 : Global Metric Statistics:
-:             names       max           min
-: 0  RBF_Similarity  0.999748  6.774732e-45
+:             names        max           min
+: 0          Volume  27.762023  2.620252e+01
+: 1  RBF_Similarity   0.999748  6.774732e-45
 
+Finally, we can also plot one of the statistics.
 
-Finally you can also plot the statistics.
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 
-results_df = run_data.global_statistics.loc[0, "results"]
+# Row of the statistic to plot. See overview above.
+# Here index 0 is the volume and index 1 the RBF similarity.
+row_idx = 1
+
+results_df = run_data.global_statistics.loc[row_idx, "results"]
 results_df.plot(
     ax=ax,
     x="gen",
     y=["min", "max", "avg"],
-    linewidth=2.0,
 )
 ax.set_xlabel("Generation")
 ax.set_ylabel("Similarity")
 
-# Plot a line where the stages change
+# We can easily plot vertical lines to show where the stages change.
 stage_ids = results_df["stage_id"].to_numpy()
 change_idx = np.flatnonzero(stage_ids[1:] != stage_ids[:-1])
-ax.vlines(change_idx, -0, 1, "black", zorder=0)
+ax.vlines(change_idx, -100, 100, "black", zorder=0)
 
-ax.set_ylim([0, 1])
-ax.set_xlim([0, len(stage_ids)])
-
+ax.set_xlim(0, run_data.n_generations)
+ax.set_ylim(min(results_df["min"]), max(results_df["max"]))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-| 0.0 | 162.0 |
-[[file:./.ob-jupyter/031cf7767ab945baba1949732431ec17994c4c68.png]]
+| 6.774731871267287e-45 | 0.9997483548738061 |
+[[file:./.ob-jupyter/c6469158f6fc06f0779eb31239bd9bcf9f277423.png]]
 :END:
+** Analyse Stages
+[TODO: Missing]
