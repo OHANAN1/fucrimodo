@@ -18,8 +18,16 @@ of the box, and more descriptors are on the way or can be added by you!
 
 ## Table of Contents
 
-[TOC]
-
+- [Requirements](#requirements)
+- [Install](#install)
+- [Tutorials](#tutorials)
+  - [Use fucrimodo CLI](#use-fucrimodo-cli)
+  - [Use fucrimodo as a library](#use-fucrimodo-as-a-library)
+- [Documentation](#documentation)
+- [Roadmap](#roadmap)
+- [Contact](#contact)
+- [Authors and acknowledgment](#authors-and-acknowledgment)
+- [License](#license)
 
 ## Requirements
 
@@ -119,7 +127,7 @@ firefox _build/html/index.html
 
 ## License
 
-Apache 2.0.
+The program is licensed with the Apache 2.0 license.
 
 ## Little Reward
 
