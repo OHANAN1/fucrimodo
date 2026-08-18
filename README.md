@@ -2,7 +2,7 @@
 
 # FUCrIMODo
 
-<img src="./res/Fujimoto_legal.jpg" width="200" height="200" alt="Fujimoto from the movie Ponyo">
+<img src="./res/Fujimoto_legal.png" width="200" height="200" alt="Fujimoto from the movie Ponyo">
 
 **F**ind **U**nknown **C**rystals by **I**nversion of **M**L **O**ptimized **D**escriptors
 
