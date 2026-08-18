@@ -10,106 +10,138 @@
 
 </div>
 
-**FUCrIMODo** is a program that aims to retrieve the crystal structure from
-a SOAP descriptor.
-This is done with the help of a novel *multi-stage* Genetic Algorithm (GA).
+**FUCrIMODo** is a scientific framework for recovering atomic structures from
+machine-learning descriptors. It is built around a novel multi-stage Genetic
+Algorithm (GA). The method and program are introduced in [TODO: MISSING].
+FUCrIMODo comes with an inversion algorithm for the global SOAP descriptor out
+of the box, and more descriptors are on the way or can be added by you!
 
 ## Table of Contents
 
 [TOC]
 
-## Usage
 
-### Install
+## Requirements
 
-The easiest way to install this program is through `conda`.
-Enter the fucrimodo directory, where the `dependencies.yml` and the 
-`pyproject.toml` is located and run:
-```bash
-conda env create -f ./environment.yml
+- Python 3.12 or later
+- [Numpy](https://numpy.org/doc/stable/) (Handle arrays and calculations.)
+- [Pandas](https://pandas.pydata.org/docs/index.html) (Handle data.)
+- [DEAP](https://deap.readthedocs.io/en/master/) (GA framework.)
+- [ASE-GA](https://dtu-energy.github.io/ase-ga/) (Atomic structure GA Framework.)
+- [Atomic Simulation Environment (ASE)](https://docs.ase-lib.org/index.html)(Atomic structure framework.)
+- [PyXtal](https://pyxtal.readthedocs.io/en/latest/index.html) (Atomic structure sampling.)
+- [MatID](https://singroup.github.io/matid/index.html#) (Perform Atomic symmetry operations.)
+- [DScribe](https://singroup.github.io/dscribe/2.1.x/#) (Descriptor calculator.)
+- [Click](https://click.palletsprojects.com/en/stable/) (CLI backend.)
+- [Matplotlib](https://matplotlib.org/) (2D Plotting.)
+
+## Install
+
+To install the latest release:
+
+``` bash
+pip install fucrimodo
 ```
-This will install all dependencies and adds `fucrimodo` as a command line 
-interface to the path in the conda env `fucrimodo-env`.
-To now use the program run:
-```bash
-conda activate fucrimodo-env
+
+Or to install the development version:
+
+``` bash
+pip install git+git@github.com:OHANAN1/fucrimodo.git
 ```
-In this environment fucrimodo can now be used as described below.
 
-### Tutorials
+For more detailed instructions, including setup with `uv` and `conda`, please refer to the documentation at [TODO: MISSING].
 
-#### Use fucrimodo as a library
+## Tutorials
 
-If you want to use `fucrimodo` as a library, please refer to [this](tutorials/fucrimodo_as_library.ipynb) jupyter notebook. Even if you want to use fucrimodo exclusively as a cli tool it is recommended to do this tutorial to understand the api.
+### Use fucrimodo CLI
 
-#### Use fucrimodo as standalone program
-
-To use fucrimodo as a standalone program it is recommended to work with the `fucrimodo_lab`.
-The `fucrimodo_lab` allows for simple management of configurations, data, analysis, ...
-To set it up simply go to a desired directory (ideally outside the libraries git structure) and run:
+To use fucrimodo as a cli you need to set up a `fucrimodo_lab`.  The
+`fucrimodo_lab` is a human-readable database that allows you to manage 
+configurations, data, analysis and more. To set it up, go to a desired
+directory (ideally outside the library's git structure) and run:
 
 ``` bash
 fucrimodo lab init
 ```
 
-This sets up a directory called 'fucrimodo_lab' and sets up the required directory structure.
-Exemplary raw data is provided to perform test runs.
+This creates a directory called fucrimodo_lab and sets up the required directory
+structure. Example raw data is provided so you can perform test runs. Please set
+it up and refer to the README.md file inside the lab for more info.
 
-....
+### Use fucrimodo as a library
 
+To learn how to configure the CLI tool or use fucrimodo as a library, you can work through [this Jupyter notebook tutorial](tutorials/fucrimodo_as_library.ipynb). Also refer to the documentation for more details.
 
-### Documentation
+## Documentation
 
-Additional info can be found in the Documentation. To generate docs first install the requirements.
-```bash
-pip install "fucrimodo[docs]"
+The documentation is hosted at [TODO: MISSING]. It includes additional tutorials
+and documents the API of fucrimodo.
+
+To build it yourself please install the dependencies:
+
+``` bash
+pip install ".[docs]"
 ```
 
+Now an HTML version of the docs can be generated:
 
-Now an html version of the docs can be generated:
-```bash
+``` bash
 cd docs/
 make html
 ```
 
-The docs will be generated at _build/html/ and can then be opened with the 
+The docs will be generated at _build/html/ and can then be opened with the
 browser of your choice. E.g.:
-```bash
+
+``` bash
 firefox _build/html/index.html
 ```
 
-## Customize
 
 ## Roadmap
 
-MISSING
+- [ ] Implement and test additional descriptors types
+- [ ] Implement new Stage types
+    - [ ] `ParallelGAStage` (Run multiple GA stages parallel.)
+    - [ ] `SwarmSearchStage` (Use a swarm search for the ideal descriptor.)
+    - [ ] `GradientDescentStage` (Follow the descriptor gradients.)
+- [ ] Improve current default run configuration for bigger structures
+
+## Contact
+
+- GitHub issues: https://github.com/OHANAN1/fucrimodo/issues
+- Email: louis.boehm@gmx.de
 
 ## Authors and acknowledgment
 
-- Main Author: Me - Louis
+- Main Author: Louis Böhm
 - Co-Author: Martin Kuban
 
 ## License
 
-MISSING
+Apache 2.0.
 
 ## Little Reward
 
 As a reward that you read the complete README.md file you can now look at this
 cute ASCII-Art. :D
 ```txt
-(\{\             .               ,@@@@                
-{ { \ ,~,  ^  .     ~        __ _ ),\\(\   _,::;
- {   \|`) <*>   +  o------o  .)\)\\_(((\),:::::;
-{ {  /(\  /~      /|     /|   `\`._,)))))::::::`,
- {/{/; ,\/       o------o |     `.__/(((:::::::' 
-    [[ '         | |    | |        \  (`:::::::.
-     \` \        | o----+-o         @**\ `:::::; 
-     (/ \\       |/     |/         /    \ `::'    
-     `)  `\      o------o         '*~*~*~`         
-                                   | //
-                                        \ \\
-                                         `.\\
-                                           \((
+  (\{\             .               ,@@@@                
+  { { \ ,~,  ^  .     ~        __ _ ),\\(\   _,::;
+   {   \|`) <*>   +  o------o  .)\)\\_(((\),:::::;
+  { {  /(\  /~      /|     /|   `\`._,)))))::::::`,
+   {/{/; ,\/       o------o |     `.__/(((:::::::' 
+      [[ '         | |    | |        \  (`:::::::.
+       \` \        | o----+-o         @**\ `:::::; 
+       (/ \\       |/mlp  |/         /    \ `::'    
+ejm    `)  `\      o------o         '*~*~*~`         
+                                      | //
+                                      \ \\
+                                       `.\\
+                                         \((
+                                          ` ` hjw
 ```
-MISSING CREDITS TO ARTISTS
+(`I will be a human, too!`~Ponyo)
+
+
+

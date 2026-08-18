@@ -11,3 +11,11 @@ Try to have the util tree installed. Really helps visualizing
 
 
 Note where to find information on how to run on slurm.
+
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Contents:
+
+   installation
+   structure_of_docs

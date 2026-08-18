@@ -2,10 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.ob-jupyter
 
 # Ignore the personal organization .norg file
 fucrimodo.norg
+*.ob-jupyter
+
+# UV packagemanager
+uv.lock
 
 # C extensions
 *.so

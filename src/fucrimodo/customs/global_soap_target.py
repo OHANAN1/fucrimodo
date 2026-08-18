@@ -1,10 +1,10 @@
-from typing import Literal, overload
 import warnings
+from typing import Literal, overload
 
 import ase
 import numpy as np
-from dscribe.descriptors import SOAP
 from ase.data import chemical_symbols
+from dscribe.descriptors import SOAP
 from fucrimodo.core import Individual
 from numpy.typing import NDArray
 

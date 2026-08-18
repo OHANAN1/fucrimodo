@@ -24,7 +24,7 @@ Fucrimodo has a modular design.
 
 Information about GAs can be found at various sources. 
 The DEAP library for example provides a very good
-`documentation <https://deap.readthedocs.io/en/master/>`_ explaining 
+`documentation <https://deap.readthedocs.io/en/master/>`_ explaining
 concepts but also technical details of such algorithms.
 
 Installation
