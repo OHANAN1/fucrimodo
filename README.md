@@ -131,6 +131,11 @@ qutebrowser _build/html/index.html
 
 The program is licensed with the Apache 2.0 license.
 
+## Citation
+
+If you use this program in a scientific publication please add the following citation:
+[TODO: MISSING]
+
 ## Little Reward
 
 As a reward that you read the complete README.md file you can now look at this

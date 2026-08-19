@@ -25,7 +25,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 autosummary_generate = True  # Erzeugt automatisch Zusammenfassungen
 
 # Führe Notebooks immer aus wenn sie gerendert werden
-nbsphinx_execute = "auto"
+nbsphinx_execute = "never"
 
 # Configuriere Latex
 tikz_tikzlibraries = (
