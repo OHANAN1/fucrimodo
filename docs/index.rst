@@ -53,7 +53,6 @@ To fully customize fucrimodo refere to :doc:`development/index`
 
    about
    getting_started/index
-   tutorials/index
    fucrimodo/index
    development/index
    citation

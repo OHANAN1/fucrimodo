@@ -1,10 +1,10 @@
+.. _tutorials:
+
 =========
 Tutorials
 =========
 
 Learn how to invert your own feature vectors and how to customize.
-
-
 
 -----------------
 Fucrimodo As CLI

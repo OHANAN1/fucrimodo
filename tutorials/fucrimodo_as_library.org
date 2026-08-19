@@ -1,4 +1,4 @@
-#+title: Fucrimodo As Library Copy
+#+title: Fucrimodo As Library
 #+property: header-args:jupyter-python :session py :kernel fucrimodo-env :async yes :exports both
 
 * Fucrimodo as a Library
@@ -8,7 +8,7 @@ or integrating it into other programs. This notebook tutorial shows how to defin
 very basic multi-stage GA. Please read the `Getting started` section of the
 documentation before you start.
 
-** Random Numbers
+* Random Numbers
 
 Since many aspects of GAs depend on stochastic processes, we need to pass a
 pseudo-random number generator to all parts of the algorithm to ensure
@@ -21,7 +21,7 @@ rng = np.random.default_rng(42)
 
 #+RESULTS:
 
-** Target File Definition
+* Target File Definition
 
 Target files are the main input of a fucrimodo run. They store the target SOAP
 descriptor, the descriptor type, and the parameters needed to calculate it.
@@ -42,7 +42,7 @@ print("Directory created at:", tmp_dir)
 : Directory created at: /tmp/fucrimodo_example_v6okyy07
 
 
-*** Generate the Target File
+** Generate the Target File
 
 In a real fucrimodo application the target structure is unknown. However, for
 testing we can create a target file from an example compound.
@@ -112,7 +112,7 @@ print("Created targetfile at", target_file_path)
 #+RESULTS:
 : Created targetfile at /tmp/fucrimodo_example_v6okyy07/target_file.json
 
-*** Load the Target File
+** Load the Target File
 
 From here on we can pretend the target structure never existed. We now parse the
 target file without any knowledge of the target structure.
@@ -128,7 +128,7 @@ Note: If a descriptor other than GlobalSOAP is used, please load the target
 file manually, because currently only the GlobalSOAP descriptor is supported.
 Use the source code of the existing method as a starting point.
 
-** Generate the Initial Population
+* Generate the Initial Population
 
 The algorithm needs an initial population to start. A population is basically a
 storage container of the individuals at the current state of the algorithm.
@@ -136,7 +136,7 @@ Fucrimodo includes start population generators to create an initial population.
 Here we use a random sampling approach guided by knowledge of the target
 descriptor. Look in the documentation for more details on the generator.
 
-*** Set Up a Population Generator
+** Set Up a Population Generator
 
 We first need to set up some hyperparameters:
 
@@ -196,7 +196,7 @@ population_generator = RandomSampleCrystalPopulation(
 
 #+RESULTS:
 
-*** Generate the Population
+** Generate the Population
 
 The individuals in the initial population can now be investigated.
 
@@ -218,8 +218,8 @@ plot_atoms(population.individuals[0], rotation=('45x, 45y, 0z'))
 : <Axes: >
 [[file:./.ob-jupyter/1ff3c78b1725acd3809bf951ba6153534564fee4.png]]
 :END:
-** Set Up a Multi-Stage Search
-*** Initialize the MultiStageSearch Object
+* Set Up a Multi-Stage Search
+** Initialize the MultiStageSearch Object
 
 To run a multi-stage GA we first need to set up the ``MultiStageSearch`` object.
 This class is used to manage data, time-keeping, and organization of stages
@@ -243,7 +243,7 @@ print("Data will be stored at:", multi_stage_search.run_dir)
 : Not running on slurm.
 : Data will be stored at: /tmp/fucrimodo_example_v6okyy07/example_run
 
-*** Set Up Global Statistics
+** Set Up Global Statistics
 
 To track statistics for the run we can add a global statistics dictionary to
 the ``MultiStageSearch`` object. It is a dictionary whose keys are the names of
@@ -274,7 +274,7 @@ print("Following statistics will be tracked:", [s for s in multi_stage_search.gl
 #+RESULTS:
 : Following statistics will be tracked: ['Volume', 'RBF_Similarity']
 
-*** Define the Exploration GA Stage
+** Define the Exploration GA Stage
 
 We can now set up the stages. Each stage is an independent optimisation algorithm.
 For more information please refer to the documentation.
@@ -421,7 +421,7 @@ explore_ga_stage = GAStage(
 
 For more details on the parameters please refer to the documentation.
 
-*** Define the Optimization GA Stage
+** Define the Optimization GA Stage
 
 We also create a second GA stage. This stage should optimise the structures
 found. This is achieved by using less drastic mutations and applying more
@@ -525,7 +525,7 @@ optimize_ga_stage = GAStage(
 
 #+RESULTS:
 
-** Run the Multi-Stage Search
+* Run the Multi-Stage Search
 
 Now everything is set up and we can run the algorithm. To run a stage, it must be
 started with the ``MultiStageSearch.run`` method. We first run the exploration GA
@@ -591,7 +591,7 @@ print("Min fitness:", min(all_fitness_values))
 : Max fitness: 0.9997483548505289
 : Min fitness: 0.7676514214454129
 
-** Analyse the Run
+* Analyse the Run
 
 Fucrimodo also provides utilities for analysing multi-stage GA runs. All data
 collected during the run is stored in the run directory.
@@ -603,7 +603,7 @@ multi_stage_search.run_dir
 #+RESULTS:
 : /tmp/fucrimodo_example_v6okyy07/example_run
 
-*** Retrieve Structures
+** Retrieve Structures
 
 Analysis of the generated structures can be done with tools from the ASE
 library.
@@ -633,7 +633,7 @@ print("RBF Similarity: ", first_structure.info["key_value_pairs"]["RBF_Similarit
 : RBF Similarity:  0.9997483548738061
 
 
-*** Analyse Run Metrics
+** Analyse Run Metrics
 
 Next we can analyse metrics. ``Fucrimodo`` comes with helper classes to organize
 the results. The run directory of a finished run can be loaded into the
@@ -699,5 +699,5 @@ ax.set_ylim(min(results_df["min"]), max(results_df["max"]))
 | 6.774731871267287e-45 | 0.9997483548738061 |
 [[file:./.ob-jupyter/c6469158f6fc06f0779eb31239bd9bcf9f277423.png]]
 :END:
-** Analyse Stages
+* Analyse Stages
 [TODO: Missing]
