@@ -2,31 +2,31 @@
 Development
 ===========
 
-
--------
-Testing
--------
-
+[TODO: MISSING]
 
 ------------------
 New Custom Modules
 ------------------
 
+[TODO: MISSING]
+
 ----------------
 New Core Modules
 ----------------
 
-[MISSING]
+[TODO: MISSING]
 
 ------------
 Contributing
 ------------
 
-[MISSING]
+[TODO: MISSING]
 
 -----------------
 Building The Docs
 -----------------
+
+Install dependencies:
 
 .. code-block::
 

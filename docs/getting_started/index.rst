@@ -1,9 +1,23 @@
+.. _getting-started:
+
 ===============
 Getting Started
 ===============
 
 This page should give you an overview of background knowledge and skills you
 need to use all aspects of FUCrIMODo.
+
+**Descriptors**
+    [TODO: MISSING]
+
+**Genetic Algorithms**
+    To understand the main principles behind the program, it helps to have a basic
+    knowledge of genetic algorithms. The `DEAP library
+    <https://deap.readthedocs.io/en/stable/index.html>`__ (Distributed Evolutionary
+    Algorithms in Python) is a good starting point: its documentation illustrates
+    the main concepts and shows how to implement them in Python. Although fucrimodo
+    uses a more object-oriented design, DEAP remains a nice resource for
+    learning the fundamentals and understanding some design decisions.
 
 **Python**
     Python knowledge is not required for simple use cases. However, you should

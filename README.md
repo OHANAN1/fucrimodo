@@ -114,6 +114,8 @@ qutebrowser _build/html/index.html
     - [ ] `SwarmSearchStage` (Use a swarm search for the ideal descriptor.)
     - [ ] `GradientDescentStage` (Follow the descriptor gradients.)
 - [ ] Improve current default run configuration for bigger structures
+- [ ] Add a proper way to update `fucrimodo_lab` defaults without overwriting
+      existing defaults.
 
 ## Contact
 

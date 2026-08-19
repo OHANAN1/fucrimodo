@@ -4,18 +4,33 @@
 Tutorials
 =========
 
-Learn how to invert your own feature vectors and how to customize.
+Before you begin, make sure you have read the :ref:`getting-started` guide and
+:ref:`installed fucrimodo <installation>`.
+
+The tutorials below introduce you to using fucrimodo:
+
+- :ref:`cli-tutorials`  - run your first descriptor inversion experiment.
+- :ref:`fucrimodo_as_library` - use fucrimodo as a library inside a jupyter
+  notebook to compose, execute and analyse your own multi-stage search
+  algorithms.
+
+The advanced tutorials cover more specialised topics:
+
+- :ref:`run_on_slurm` - run experiments on a SLURM cluster.
+- :ref:`reproduce_publication` - reproduce the results of the original
+  publication in which the library was introduced [TODO: add citation].
+
+
+.. _cli-tutorials:
 
 -----------------
 Fucrimodo As CLI
 -----------------
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Contents:
+   :maxdepth: 2
 
    cli_tutorials
-   fucrimodo_as_library
 
 
 .. _fucrimodo_as_library:
@@ -25,23 +40,37 @@ Fucrimodo As Library
 --------------------
 
 .. toctree::
-    :maxdepth: 2
-    :caption: Contents:
+    :maxdepth: 1
 
     fucrimodo_as_library
 
 
--------------------
-Create Target Files
--------------------
+.. _run_on_slurm:
 
-To create target files from atoms, or from pre-existing descriptors do the following...
+------------
+Run on Slurm
+------------
+
+.. note::
+   The currently provided Slurm script is only experimental and it is not
+   guaranteed to work properly.
+
+`Slurm <https://slurm.schedmd.com/overview.html>`__ is a widely used workload
+manager for HCP cluster.  The Slurm script can be found in
+``fucrimodo_lab/scripts/run_slurm_array.sh``.  Please look at the comments
+inside the file to set it up or create your own (and potentially better) slurm
+scripts. This tutorial will be extended once the Slurm script is properly
+tested.
+
 [TODO: MISSING]
 
-If I create target files for a pre-existing descriptor: Create multiple target files with different numbers of atoms since number of atoms is unclear.
+.. _reproduce_publication:
 
 ---------------------
 Reproduce Publication
 ---------------------
 
-[TODO: MISSING]
+.. toctree::
+    :maxdepth: 1
+
+    reproduce_publication

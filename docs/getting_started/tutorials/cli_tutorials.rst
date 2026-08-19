@@ -1,4 +1,3 @@
-.. _cli-tutorials:
 
 =============
 CLI Tutorials
@@ -19,9 +18,9 @@ The following tutorials are intended to be run in order.
    :local:
    :depth: 1
 
-----------------------
+======================
 Create a Fucrimodo Lab
-----------------------
+======================
 
 To use the fucrimodo CLI, you first need to create a **fucrimodo lab**. A lab is a directory structure used to store runs, configs, and data. For more details, see :doc:`../fucrimodo/lab/index`.
 
@@ -51,9 +50,9 @@ Then enter the lab and inspect its contents:
 
 If ``tree`` is not installed, you can use ``ls -R`` or your file manager instead.
 
----------------------
+=====================
 Generate Target Files
----------------------
+=====================
 
 First, we need a target file containing the descriptor features we want to
 invert.  The following command calculates the global SOAP descriptor features of
@@ -68,9 +67,9 @@ target file (.json):
 
 For details on the **fucrimodo utils** subcommand, see :doc:`../fucrimodo/cli/utils`.
 
--------------
+=============
 Perform a Run
--------------
+=============
 
 Next we can run the descriptor inversion with a custom run config.
 
@@ -123,9 +122,9 @@ At minimum, the run produces the following files and directories. Depending on t
 
 All output files are either human-readable or easy to process with common CLI tools such as ``jq``. See `Analyse With jq`_ for examples. Fucrimodo also ships with dedicated analysis tools, described in the next sections.
 
--------------------
+===================
 Analyse Run Results
--------------------
+===================
 
 For details on the **fucrimodo analyse** subcommand, see :doc:`../fucrimodo/cli/analyse`.
 
@@ -153,9 +152,9 @@ To analyse a single stage:
 
 (`That's the most boring goldfish I've seen in my entire life.`~Kumiko)
 
-------------
+============
 Target Files
-------------
+============
 
 Earlier in the tutorial we created a target file. Let us inspect it with ``jq``. If ``jq`` is not installed, open ``data/raw/simple-target.json`` in any text editor.
 
@@ -201,9 +200,9 @@ entry to 2.  The new file is located at ``data/raw/other-target.json``.  You can
 achive the same by manually editing the JSON, but this example demonstrates how
 workflows can be automated with fucrimodo utilities.
 
---------------
+==============
 Create Configs
---------------
+==============
 
 Now let us create a custom config.
 
@@ -224,9 +223,9 @@ Next, find the line that contains ``global_rng = np.random.default_rng(42)`` (lo
 
 The change is small, but it shows how configs control run behaviour. To understand configs in more depth, see :ref:`fucrimodo_as_library`. Continue with the remaining tutorials first, though.
 
----------------------
+=====================
 Perform Multiple Runs
----------------------
+=====================
 
 In many cases it is necessary to perform multiple runs at once. For example, if the correct number of atoms is unknown, you may need to run targets with different atom counts.
 
@@ -259,9 +258,9 @@ You can monitor progress in another shell by tailing the stage logs:
 
 You can do this for any run and any stage.
 
----------------------
+=====================
 Analyse Multiple Runs
----------------------
+=====================
 
 .. note::
 
@@ -277,9 +276,9 @@ This produces two tables. The first is a multi-run overview showing, for each ru
 
 The second table is a global statistics overview, showing the maximum and minimum values of each tracked statistic.
 
--------------------
+===================
 Analyse with ASE DB
--------------------
+===================
 
 .. code-block:: bash
 
@@ -289,8 +288,8 @@ Analyse with ASE DB
 
 [TODO: MISSING]
 
----------------
+===============
 Analyse With jq
----------------
+===============
 
 [TODO: MISSING]

@@ -3,9 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-=========
-FUCrIMODo
-=========
+.. raw:: html
+
+   <p style="text-align: center; font-size: 2.0em; font-weight: bold;">
+   FUCrIMODo</p>
+
 
 .. image:: _static/Fujimoto_legal.png
    :alt: Fujimoto from the Movie Ponyo by Studio Ghibli (source: https://www.ghibli.jp/works/ponyo/)
@@ -14,38 +16,21 @@ FUCrIMODo
 
 |
 
-**F**\ ind **U**\ nknown **C**\ rystals by **I**\ nversion of **M**\ L **O**\ ptimized **D**\ escriptors
+.. container:: centered
 
-FUCrIMODo is a program that aims to retrieve the atomic structure from
-a descriptor. Its current implementation allows to
-This is done with the help of a novel multi-stage Genetic Algorithm (GA).
-Fucrimodo has a modular design.
+    **F**\ ind **U**\ nknown **C**\ rystals by **I**\ nversion of **M**\ L **O**\ ptimized **D**\ escriptors
 
+---------------
 
-Information about GAs can be found at various sources. 
-The DEAP library for example provides a very good
-`documentation <https://deap.readthedocs.io/en/master/>`_ explaining
-concepts but also technical details of such algorithms.
+FUCrIMODo is a program that is able to retrieve the atomic structure from
+descriptor features. Its current implementation allows the inversion of the
+global SOAP descriptor with the help of a novel multi-stage genetic algorithm
+(GA). The program is part of the publication [TODO: MISSING].
 
-Installation
-============
-The installation of FUCrIMODo is done via conda or pip.
-Since conda is the recommended way to install the dependencies,
-we will use it in the following example. Enter the directory of fucrimodo,
-where the `environment.yml` file is located and run the following commands:
+Please start by reading the :ref:`about` section to learn about the basic
+principles of the program, and then continue to the :ref:`getting-started`
+section for installation instructions and tutorials.
 
-.. code-block:: bash
-
-    conda env create -f environment.yml
-    conda activate fucrimodo-env
-
-In this conda environment, `fucrimodo` is installed and added to the path as
-a command line client. You can now run the program by typing `fucrimodo` in
-the terminal to see the help message.
-
-TODO: Add installation with virtual env
-
-To fully customize fucrimodo refere to :doc:`development/index`
 
 .. toctree::
    :maxdepth: 1
@@ -58,10 +43,8 @@ To fully customize fucrimodo refere to :doc:`development/index`
    citation
 
 
-
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
