@@ -85,7 +85,7 @@ To learn how to configure the CLI tool or use fucrimodo as a library, you can wo
 The documentation is hosted at [TODO: MISSING]. It includes additional tutorials
 and documents the API of fucrimodo.
 
-To build it yourself please install the dependencies:
+To build it yourself, first install the dependencies:
 
 ``` bash
 pip install ".[docs]"
@@ -102,7 +102,7 @@ The docs will be generated at _build/html/ and can then be opened with the
 browser of your choice. E.g.:
 
 ``` bash
-firefox _build/html/index.html
+qutebrowser _build/html/index.html
 ```
 
 

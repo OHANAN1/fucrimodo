@@ -55,9 +55,10 @@ If ``tree`` is not installed, you can use ``ls -R`` or your file manager instead
 Generate Target Files
 ---------------------
 
-For details on the **fucrimodo utils** subcommand, see :doc:`../fucrimodo/cli/utils`.
-
-The following command converts a structure file (.xyz) into a fucrimodo target file (.json):
+First, we need a target file containing the descriptor features we want to
+invert.  The following command calculates the global SOAP descriptor features of
+a structure (stored in a structure file: *.xyz) and stores them in a fucrimodo
+target file (.json):
 
 .. code-block:: bash
 
@@ -65,17 +66,23 @@ The following command converts a structure file (.xyz) into a fucrimodo target f
        -a atoms_path=data/raw/simple-target.xyz \
        -a save_path=data/raw/simple-target.json
 
+For details on the **fucrimodo utils** subcommand, see :doc:`../fucrimodo/cli/utils`.
+
 -------------
 Perform a Run
 -------------
 
-For details on the **fucrimodo run** subcommand, see :doc:`../fucrimodo/cli/run`.
+Next we can run the descriptor inversion with a custom run config.
 
-Use the ``-c`` flag to specify a custom run config. If no config is provided, the default run is performed. The default config can be found at ``configs/run/default.py``.
+Use the ``-c`` flag to specify a custom run config. If no config is provided,
+the default run is performed. The default config can be found at
+``configs/run/default.py``.
 
-For all fucrimodo commands except ``init``, you can use ``-c`` to load a custom config from a file. Later you will learn how to create such files.
+For all fucrimodo commands except ``init``, you can use ``-c`` to load a custom
+config from a file. Later you will learn how to create such files.
 
-The following command will perform a run on the selected config found at ``configs/run/test_run_config.py``.
+The following command will perform a run on the selected config found at
+``configs/run/test_run_config.py``.
 
 .. code-block:: bash
 
@@ -85,6 +92,8 @@ The following command will perform a run on the selected config found at ``confi
        -s data/results/ \
        -n test_run \
        data/raw/simple-target.json
+
+For details on the **fucrimodo run** subcommand, see :doc:`../fucrimodo/cli/run`.
 
 The dir where results are stored is given by the specified save directory ("-s")
 and name ("-n"). The results are therefore stored in ``data/results/test_run``::
