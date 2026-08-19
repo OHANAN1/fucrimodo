@@ -1,11 +1,10 @@
-from .abstract import Mutation
+from . import cell_mutations as cell_mut
 from . import element_mutations as elem_mut
 from . import energy_optimisation_mutations as energy_mut
 from . import multi_mutation as multi_mut
 from . import position_mutations as pos_mut
-from . import cell_mutations as cell_mut
 from . import symmetry_mutations as sym_mut
-
+from .abstract import Mutation
 
 __all__ = [
     "Mutation",

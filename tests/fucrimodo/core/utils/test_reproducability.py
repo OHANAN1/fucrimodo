@@ -1,6 +1,7 @@
 # This comment is for testing
-from fucrimodo.core.utils import reproducability
 import os
+
+from fucrimodo.core.utils import reproducability
 
 
 def test_get_last_commig_msg():

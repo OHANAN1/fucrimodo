@@ -1,5 +1,7 @@
 import os
+
 import click
+
 from ..utils.import_helper import ConfigScript
 
 

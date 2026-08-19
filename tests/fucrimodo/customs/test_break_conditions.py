@@ -1,14 +1,15 @@
 import pytest
+
+from fucrimodo.core.utils.fitness_utils import assign_fitness_to_population
 from fucrimodo.customs.break_conditions import (
-    NeverBreak,
+    GenerationBreak,
     MaxFitnessBreak,
     MinFitnessBreak,
-    GenerationBreak,
     MultipleAndBreak,
     MultipleOrBreak,
+    NeverBreak,
     NotBreak,
 )
-from fucrimodo.core.utils.fitness_utils import assign_fitness_to_population
 
 
 class TestNeverBreak:

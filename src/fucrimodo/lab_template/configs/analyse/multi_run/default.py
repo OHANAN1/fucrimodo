@@ -1,9 +1,10 @@
+import click
+
 from fucrimodo.analysis.multi_run_analysis import (
     MultiRunData,
-    get_multi_run_overview,
     get_all_global_statistics_overview,
+    get_multi_run_overview,
 )
-import click
 
 
 def main(

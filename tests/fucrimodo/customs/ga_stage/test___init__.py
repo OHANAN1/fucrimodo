@@ -1,4 +1,5 @@
 import pytest
+
 from fucrimodo.customs.ga_stage import GAStage
 
 

@@ -1,4 +1,5 @@
 import pytest
+
 from fucrimodo.core.utils import fitness_utils
 
 

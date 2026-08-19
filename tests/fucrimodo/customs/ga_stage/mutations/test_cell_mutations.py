@@ -1,10 +1,10 @@
 from fucrimodo.customs.ga_stage.mutations.cell_mutations import (
+    EnlargeMutation,
+    MinimizeTiltMutation,
+    NiggliReduceMutation,
+    RotationMutation,
     ScaleUnitCellMutation,
     StrainMutation,
-    EnlargeMutation,
-    NiggliReduceMutation,
-    MinimizeTiltMutation,
-    RotationMutation,
 )
 
 

@@ -1,10 +1,12 @@
-import ase
-from fucrimodo.customs.global_soap_target import GlobalSOAP
-from fucrimodo.core import Individual
-from fucrimodo.utils.target_file_parser import save_to_target_file
-from ase.io import read
 import os
+
+import ase
 import click
+from ase.io import read
+
+from fucrimodo.core import Individual
+from fucrimodo.customs.global_soap_target import GlobalSOAP
+from fucrimodo.utils.target_file_parser import save_to_target_file
 
 
 def main(atoms_path: str, save_path: str, verbose: bool) -> None:

@@ -1,17 +1,17 @@
 import os
 import warnings
-import ase
-from typing import Callable
 from datetime import datetime
-from .utils import get_start_time_from_info, get_end_time_from_info
-from ..customs.ga_stage.analysis import load_ga_stage_attributes
-from ..core import Individual
-from ..utils import ase_tools
-from typing import Any
+from typing import Any, Callable
+
+import ase
 import numpy as np
 import pandas as pd
+
+from ..core import Individual
+from ..customs.ga_stage.analysis import load_ga_stage_attributes
+from ..utils import ase_tools
 from .stage_analysis import StageData
-from .utils import load_dict_from_file
+from .utils import get_end_time_from_info, get_start_time_from_info, load_dict_from_file
 
 
 class RunData:

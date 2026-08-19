@@ -1,11 +1,13 @@
 # Here I perform an example run with the cli
 # From atomic structure to descriptor and then back to atomic structure
 
-from fucrimodo.cli.main import cli
-from pathlib import PosixPath
-from click.testing import CliRunner
-import pytest
 import os
+from pathlib import PosixPath
+
+import pytest
+from click.testing import CliRunner
+
+from fucrimodo.cli.main import cli
 
 
 @pytest.fixture(scope="session")

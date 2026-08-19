@@ -2,9 +2,9 @@ import logging
 import os
 
 from fucrimodo.core.utils.log_utils import (
+    clear_existing_handlers,
     setup_run_logger,
     setup_stage_logger,
-    clear_existing_handlers,
 )
 
 

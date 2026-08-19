@@ -15,14 +15,14 @@ author = "Louis Boehm, Martin Kuban"
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",  # Optional, für automatisch generierte Zusammenfassungen
+    "sphinx.ext.autosummary",  # Optional, automatic summaries
     "nbsphinx",  # For Jupyter Notebooks
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-autosummary_generate = True  # Erzeugt automatisch Zusammenfassungen
+autosummary_generate = True
 
 # Führe Notebooks immer aus wenn sie gerendert werden
 nbsphinx_execute = "auto"

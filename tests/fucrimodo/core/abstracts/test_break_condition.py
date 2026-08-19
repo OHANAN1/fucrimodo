@@ -1,6 +1,7 @@
 import pytest
-from fucrimodo.core.abstracts import BreakCondition
+
 from fucrimodo.core import Population
+from fucrimodo.core.abstracts import BreakCondition
 
 
 class MockBreakCondition(BreakCondition):

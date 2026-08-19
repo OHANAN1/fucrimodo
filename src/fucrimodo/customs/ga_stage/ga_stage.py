@@ -1,17 +1,13 @@
 import json
 import os
 from typing import Any, Callable, Sequence
-import numpy as np
 
+import numpy as np
 from ase.db.core import Database
 from deap import tools
-from ...core.abstracts import (
-    FitnessFunction,
-    PopulationSelection,
-    Stage,
-)
-from ...core import Individual, Population
 
+from ...core import Individual, Population
+from ...core.abstracts import FitnessFunction, PopulationSelection, Stage
 from ..break_conditions import BreakCondition
 from .crossovers import Crossover
 from .genetic_algorithm import GeneticAlgorithm

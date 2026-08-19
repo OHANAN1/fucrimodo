@@ -1,7 +1,9 @@
 import os
-import click
-from ..utils.import_helper import ConfigScript
 from pathlib import Path
+
+import click
+
+from ..utils.import_helper import ConfigScript
 
 
 class Runner:

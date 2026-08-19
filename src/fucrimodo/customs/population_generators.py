@@ -6,15 +6,16 @@ from typing import Sequence
 
 import ase
 import numpy as np
-from ..core import utils as core_utils
-from ..core import Individual
-from ..core.abstracts import PopulationGenerator, FitnessFunction
-from ..core.utils import CustomClosestDistances
-from .global_soap_target import GlobalSOAP
-from . import population_selections
 from pyxtal import pyxtal
 from pyxtal.symmetry import Group
 from pyxtal.tolerance import Tol_matrix
+
+from ..core import Individual
+from ..core import utils as core_utils
+from ..core.abstracts import FitnessFunction, PopulationGenerator
+from ..core.utils import CustomClosestDistances
+from . import population_selections
+from .global_soap_target import GlobalSOAP
 
 logger = logging.getLogger("run_logger")
 

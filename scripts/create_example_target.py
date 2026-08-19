@@ -1,8 +1,10 @@
+import os
+
 from ase.build import bulk
 from ase.io import write
-from fucrimodo.core.utils.soap_parser import save_to_soap_features_file
+
 from fucrimodo.core.utils.custom_soap import CustomSOAP
-import os
+from fucrimodo.core.utils.soap_parser import save_to_soap_features_file
 
 # ── Initialize path to example data ─────────────────────────────────────
 data_dir_path = os.path.abspath("data")
@@ -15,11 +17,9 @@ if not os.path.isdir(example_data_dir_path):
 
 
 # ── Create example target crystal ───────────────────────────────────────
-target_cry_save_path = os.path.join(
-    example_data_dir_path, "example_target_crystal.xsf"
-)
+target_cry_save_path = os.path.join(example_data_dir_path, "example_target_crystal.xsf")
 
-target_crystal = bulk('Cu', 'fcc', a=3.6, cubic=True)
+target_crystal = bulk("Cu", "fcc", a=3.6, cubic=True)
 write(target_cry_save_path, target_crystal)
 
 print(f"Created and saved target crystal at {target_cry_save_path}.")
@@ -37,13 +37,11 @@ soap_obj = CustomSOAP(
     l_max=8,
     sigma=0.5,
     average="inner",
-    periodic=True
+    periodic=True,
 )
 features = soap_obj.create(target_crystal)
 save_to_soap_features_file(
-    soap_object=soap_obj,
-    features=features,
-    save_path=target_features_save_path
+    soap_object=soap_obj, features=features, save_path=target_features_save_path
 )
 
 print(f"Saved example target file at {target_features_save_path}.")

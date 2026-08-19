@@ -1,13 +1,14 @@
-import numpy as np
 import ase
-from fucrimodo.customs.utils import (
-    get_soap_similarity_fitness_list,
-    get_species_specific_soap_sim_fitness_list,
-)
+import numpy as np
+
 from fucrimodo.core import Individual
 from fucrimodo.customs.fitness_functions import (
     SoapRbfSimilarityFitness,
     SpeciesSpecificSoapRbfSimFitness,
+)
+from fucrimodo.customs.utils import (
+    get_soap_similarity_fitness_list,
+    get_species_specific_soap_sim_fitness_list,
 )
 
 

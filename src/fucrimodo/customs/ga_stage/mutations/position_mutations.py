@@ -1,8 +1,9 @@
-from .abstract import Mutation
-from ....core import Individual
-from ....core.utils.closest_distances_class import CustomClosestDistances
 import ase_ga.standardmutations as ase_standard_mut
 import numpy as np
+
+from ....core import Individual
+from ....core.utils.closest_distances_class import CustomClosestDistances
+from .abstract import Mutation
 
 
 class RattleMutation(Mutation):

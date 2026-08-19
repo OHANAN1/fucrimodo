@@ -1,5 +1,6 @@
-import pytest
 import os
+
+import pytest
 
 from fucrimodo.analysis.stage_analysis import (
     StageData,

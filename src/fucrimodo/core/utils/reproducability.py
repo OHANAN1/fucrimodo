@@ -1,5 +1,5 @@
-import subprocess
 import shutil
+import subprocess
 
 
 def get_last_commit_msg(run_path: str) -> str:

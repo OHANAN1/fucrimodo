@@ -1,5 +1,7 @@
 import importlib
+
 import click
+
 from fucrimodo import __version__
 
 

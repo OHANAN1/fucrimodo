@@ -2,21 +2,20 @@ import datetime
 import json
 import logging
 import os
+import shutil
+from pathlib import Path
 from typing import Callable
 
-from deap.tools.crossover import warnings
 import numpy as np
 from ase import db
 from ase.db.core import Database
 from deap import tools
-from pathlib import Path
-import shutil
+from deap.tools.crossover import warnings
 
+from .abstracts import Stage
 from .individual import Individual
 from .population import Population
 from .utils.log_utils import setup_run_logger, setup_stage_logger
-
-from .abstracts import Stage
 
 
 class MultiStageSearch:

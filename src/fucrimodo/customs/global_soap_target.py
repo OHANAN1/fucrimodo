@@ -5,8 +5,9 @@ import ase
 import numpy as np
 from ase.data import chemical_symbols
 from dscribe.descriptors import SOAP
-from fucrimodo.core import Individual
 from numpy.typing import NDArray
+
+from fucrimodo.core import Individual
 
 
 class GlobalSOAP:

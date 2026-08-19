@@ -1,20 +1,21 @@
-from fucrimodo.core.abstracts.fitness_function import FitnessFunction
-from fucrimodo.core.population import Population
-import pytest
-import numpy as np
 import copy
 
-from fucrimodo.customs.ga_stage.genetic_algorithm import GeneticAlgorithm, norm_weights
-from fucrimodo.customs.ga_stage.mutations import pos_mut
+import numpy as np
+import pandas as pd
+import pytest
+from deap import tools
+
+from fucrimodo.core.abstracts.fitness_function import FitnessFunction
+from fucrimodo.core.population import Population
+from fucrimodo.customs.break_conditions import GenerationBreak
+from fucrimodo.customs.fitness_functions import PhysicalityFitness
 from fucrimodo.customs.ga_stage.crossovers import (
     OnePointElementCrossover,
     OnePointPositionCrossover,
 )
+from fucrimodo.customs.ga_stage.genetic_algorithm import GeneticAlgorithm, norm_weights
+from fucrimodo.customs.ga_stage.mutations import pos_mut
 from fucrimodo.customs.population_selections import TournamentSelection
-from fucrimodo.customs.break_conditions import GenerationBreak
-from fucrimodo.customs.fitness_functions import PhysicalityFitness
-from deap import tools
-import pandas as pd
 
 
 def test_norm_weights():

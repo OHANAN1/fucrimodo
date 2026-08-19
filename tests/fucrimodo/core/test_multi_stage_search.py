@@ -1,16 +1,17 @@
-import pytest
-
-import logging
-import os
-import numpy as np
-from fucrimodo.core import MultiStageSearch
-from fucrimodo.core.abstracts import Stage
-import ase.db
-from ase.db.core import Database
-from deap import tools
 import datetime
 import json
+import logging
+import os
 import time
+
+import ase.db
+import numpy as np
+import pytest
+from ase.db.core import Database
+from deap import tools
+
+from fucrimodo.core import MultiStageSearch
+from fucrimodo.core.abstracts import Stage
 
 
 # Do not use pytest fixture, to ensure temp paths

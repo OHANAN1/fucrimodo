@@ -1,11 +1,11 @@
-from typing import Any, Callable, Literal
-import pandas as pd
 import warnings
-
 from datetime import datetime
+from typing import Any, Callable, Literal
 
-from .utils import get_end_time_from_info, get_start_time_from_info, load_dict_from_file
+import pandas as pd
+
 from ..customs.ga_stage.analysis import load_ga_stage_attributes
+from .utils import get_end_time_from_info, get_start_time_from_info, load_dict_from_file
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║                        Data Class                        ║

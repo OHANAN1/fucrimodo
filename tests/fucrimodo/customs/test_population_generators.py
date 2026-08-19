@@ -1,10 +1,11 @@
-import pytest
-from fucrimodo.customs.population_generators import (
-    create_random_crystal,
-    RandomSampleCrystalPopulation,
-)
 import ase
 import numpy as np
+import pytest
+
+from fucrimodo.customs.population_generators import (
+    RandomSampleCrystalPopulation,
+    create_random_crystal,
+)
 
 
 def test_create_random_structure(closest_distances):

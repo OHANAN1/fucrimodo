@@ -1,12 +1,12 @@
+import re
 from collections.abc import Sequence
+from io import StringIO
 
 import ase
 import numpy as np
-import re
-from io import StringIO
 
-from ..core.abstracts import FitnessFunction
 from ..core import Individual
+from ..core.abstracts import FitnessFunction
 from . import fitness_functions as ff
 from .fitness_functions import FitnessFunction
 from .global_soap_target import GlobalSOAP

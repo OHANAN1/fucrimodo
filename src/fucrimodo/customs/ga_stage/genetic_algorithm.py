@@ -1,14 +1,16 @@
 import copy
 import functools
-from ...core.abstracts import FitnessFunction, PopulationSelection
-from ...core import Population, Individual
-from .mutations import Mutation
-from .crossovers import Crossover
-from ..break_conditions import BreakCondition
-from typing import Any, Sequence
-from deap import tools
-import numpy as np
 import logging
+from typing import Any, Sequence
+
+import numpy as np
+from deap import tools
+
+from ...core import Individual, Population
+from ...core.abstracts import FitnessFunction, PopulationSelection
+from ..break_conditions import BreakCondition
+from .crossovers import Crossover
+from .mutations import Mutation
 
 
 def norm_weights(weights) -> np.ndarray:

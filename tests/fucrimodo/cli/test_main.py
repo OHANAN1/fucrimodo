@@ -1,8 +1,9 @@
-import pytest
 import click
+import pytest
 from click.testing import CliRunner
-from fucrimodo.cli.main import cli
+
 from fucrimodo import __version__
+from fucrimodo.cli.main import cli
 
 
 @pytest.fixture

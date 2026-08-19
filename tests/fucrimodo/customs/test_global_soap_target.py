@@ -1,7 +1,7 @@
+import numpy as np
 import pytest
 
 from fucrimodo.customs.global_soap_target import GlobalSOAP
-import numpy as np
 
 
 class TestGlobalSOAP:

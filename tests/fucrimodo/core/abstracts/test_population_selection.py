@@ -1,4 +1,5 @@
 import pytest
+
 from fucrimodo.core.abstracts import PopulationSelection
 
 

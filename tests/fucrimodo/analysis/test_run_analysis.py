@@ -1,12 +1,14 @@
 import os
-from fucrimodo.analysis.stage_analysis import StageData
-from fucrimodo.core.individual import Individual
+
 import pytest
+
 from fucrimodo.analysis.run_analysis import (
     RunData,
     get_best_individual,
     get_run_overview,
 )
+from fucrimodo.analysis.stage_analysis import StageData
+from fucrimodo.core.individual import Individual
 
 
 @pytest.fixture

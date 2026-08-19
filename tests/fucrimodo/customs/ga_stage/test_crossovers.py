@@ -1,14 +1,15 @@
-import pytest
 import numpy as np
+import pytest
+
+from fucrimodo.core import Individual
 from fucrimodo.customs.ga_stage.crossovers import (
     Crossover,
-    UnitCellCrossover,
-    StackCellsCrossover,
+    CutAndSpliceCrossover,
     OnePointElementCrossover,
     OnePointPositionCrossover,
-    CutAndSpliceCrossover,
+    StackCellsCrossover,
+    UnitCellCrossover,
 )
-from fucrimodo.core import Individual
 
 
 def reproducability_assesment(

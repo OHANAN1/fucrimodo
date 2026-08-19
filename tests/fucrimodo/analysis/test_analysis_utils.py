@@ -1,8 +1,8 @@
+import os
+
 import pytest
 
 from fucrimodo.analysis.run_analysis import RunData
-import os
-
 from fucrimodo.analysis.stage_analysis import StageData
 from fucrimodo.analysis.utils import get_statistics_overview, load_dict_from_file
 

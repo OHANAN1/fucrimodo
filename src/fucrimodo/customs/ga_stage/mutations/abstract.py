@@ -1,11 +1,14 @@
-from abc import ABC, abstractmethod
-import numpy as np
-import ase
-from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
-from fucrimodo.core import Individual
-from ...utils import LegacyRNGAdapter
 import logging
+from abc import ABC, abstractmethod
 from copy import deepcopy
+
+import ase
+import numpy as np
+
+from fucrimodo.core import Individual
+from fucrimodo.core.utils.closest_distances_class import CustomClosestDistances
+
+from ...utils import LegacyRNGAdapter
 
 # ╔══════════════════════════════════════════════════════════╗
 # ║            Abstract Base Class for Mutations             ║

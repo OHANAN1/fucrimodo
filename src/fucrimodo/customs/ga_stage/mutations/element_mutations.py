@@ -1,10 +1,11 @@
-from .abstract import Mutation
-from ....core.utils import CustomClosestDistances
-from ....core import Individual
-from ...utils import LegacyRNGAdapter
-import ase_ga.standardmutations as ase_standard_mut
 import ase.data as ase_data
+import ase_ga.standardmutations as ase_standard_mut
 import numpy as np
+
+from ....core import Individual
+from ....core.utils import CustomClosestDistances
+from ...utils import LegacyRNGAdapter
+from .abstract import Mutation
 
 
 class ReplaceAtomsMutation(Mutation):

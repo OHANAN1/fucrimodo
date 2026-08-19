@@ -1,8 +1,9 @@
+import click
 import matplotlib.pyplot as plt
 import numpy as np
-from fucrimodo.analysis.run_analysis import get_run_overview, RunData
+
+from fucrimodo.analysis.run_analysis import RunData, get_run_overview
 from fucrimodo.analysis.utils import get_statistics_overview
-import click
 
 
 def _plot_global_stats(run_data: RunData, row: int):

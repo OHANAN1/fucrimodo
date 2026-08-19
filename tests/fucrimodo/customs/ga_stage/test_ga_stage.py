@@ -1,10 +1,11 @@
-from fucrimodo.customs.ga_stage.genetic_algorithm import GeneticAlgorithm
+import numpy as np
 import pytest
-from fucrimodo.customs.ga_stage.ga_stage import GAStage
+from deap import tools
+
 from fucrimodo.customs.break_conditions import GenerationBreak
 from fucrimodo.customs.fitness_functions import PhysicalityFitness
-from deap import tools
-import numpy as np
+from fucrimodo.customs.ga_stage.ga_stage import GAStage
+from fucrimodo.customs.ga_stage.genetic_algorithm import GeneticAlgorithm
 
 
 @pytest.fixture

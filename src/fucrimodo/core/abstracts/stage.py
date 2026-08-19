@@ -1,13 +1,14 @@
+import logging
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime
-import os
+from typing import Callable
+
+from ase.db.core import Database
+from deap import tools
 
 from ..individual import Individual
 from ..population import Population
-from ase.db.core import Database
-from deap import tools
-from typing import Callable
-import logging
 
 
 class Stage(ABC):

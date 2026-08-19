@@ -1,7 +1,8 @@
-from ase_ga.utilities import CellBounds
-from ..individual import Individual
-from ase.cell import Cell
 import numpy as np
+from ase.cell import Cell
+from ase_ga.utilities import CellBounds
+
+from ..individual import Individual
 
 
 class CustomCellBounds:

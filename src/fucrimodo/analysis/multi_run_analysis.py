@@ -1,6 +1,7 @@
 import os
-import pandas as pd
 from typing import Callable
+
+import pandas as pd
 
 from ..customs.ga_stage.analysis import load_ga_stage_attributes
 from .run_analysis import RunData

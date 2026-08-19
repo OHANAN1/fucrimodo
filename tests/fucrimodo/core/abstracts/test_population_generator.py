@@ -1,6 +1,7 @@
 import pytest
-from fucrimodo.core.abstracts import PopulationGenerator
+
 from fucrimodo.core import Individual, Population
+from fucrimodo.core.abstracts import PopulationGenerator
 
 
 class MockPopulationGenerator(PopulationGenerator):

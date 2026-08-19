@@ -1,6 +1,6 @@
 from fucrimodo.customs.ga_stage.mutations.element_mutations import (
-    ReplaceAtomsMutation,
     PermutationMutation,
+    ReplaceAtomsMutation,
 )
 
 

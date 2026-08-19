@@ -1,9 +1,10 @@
-import ase
-from operator import mul, truediv
-import sys
-import numpy as np
 import datetime
+import sys
+from operator import mul, truediv
 from typing import Self
+
+import ase
+import numpy as np
 
 
 class FitnessStorage(object):

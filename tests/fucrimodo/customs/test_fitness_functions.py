@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
-from fucrimodo.customs import fitness_functions as ff
+
+from fucrimodo.core import Individual
 from fucrimodo.core.abstracts import FitnessFunction
 from fucrimodo.core.utils import CustomClosestDistances
-from fucrimodo.core import Individual
+from fucrimodo.customs import fitness_functions as ff
 from fucrimodo.customs.global_soap_target import GlobalSOAP
 
 

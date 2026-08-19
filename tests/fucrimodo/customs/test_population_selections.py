@@ -1,12 +1,13 @@
+import numpy as np
 import pytest
+
+from fucrimodo.core.utils.fitness_utils import assign_fitness_to_individuals
 from fucrimodo.customs.population_selections import (
-    TournamentSelection,
-    TournamentDCDSelection,
     NSGA2Selection,
     RandomSelection,
+    TournamentDCDSelection,
+    TournamentSelection,
 )
-from fucrimodo.core.utils.fitness_utils import assign_fitness_to_individuals
-import numpy as np
 
 
 class TestRandomSelection:

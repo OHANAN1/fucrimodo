@@ -1,8 +1,10 @@
 import json
 import os
-import click
-from fucrimodo.customs.utils import get_n_atoms_from_additional_notes
 import re
+
+import click
+
+from fucrimodo.customs.utils import get_n_atoms_from_additional_notes
 
 
 def main(origin: str, out: str, n_atoms, verbose: bool) -> None:

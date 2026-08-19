@@ -2,29 +2,26 @@
 
 import logging
 import os
-import warnings
 import random
+import warnings
 
 import numpy as np
+
 from fucrimodo.core import MultiStageSearch
 from fucrimodo.core import utils as core_utils
-from fucrimodo.utils.target_file_parser import load_target_file
 from fucrimodo.core.abstracts import PopulationGenerator
 from fucrimodo.core.utils import reproducability as reprod
+from fucrimodo.customs import break_conditions
 from fucrimodo.customs import fitness_functions as ff
 from fucrimodo.customs import population_generators as pop_gen
 from fucrimodo.customs import population_selections as pop_sel
-from fucrimodo.customs.ga_stage import (
-    GAStage,
-    crossovers,
-    mutations,
-)
+from fucrimodo.customs.ga_stage import GAStage, crossovers, mutations
 from fucrimodo.customs.utils import (
+    get_n_atoms_from_additional_notes,
     get_soap_similarity_fitness_list,
     get_species_specific_soap_sim_fitness_list,
-    get_n_atoms_from_additional_notes,
 )
-from fucrimodo.customs import break_conditions
+from fucrimodo.utils.target_file_parser import load_target_file
 
 np.random.seed(42)
 random.seed(42)

@@ -1,5 +1,6 @@
-from .individual import Individual
 from typing import Self
+
+from .individual import Individual
 
 
 class Population:

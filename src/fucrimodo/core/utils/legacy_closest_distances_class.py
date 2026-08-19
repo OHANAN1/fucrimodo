@@ -1,8 +1,9 @@
+import warnings
+
 import ase
 import numpy as np
 from ase import data as ase_data
 from ase_ga import utilities as ase_utilities
-import warnings
 
 warnings.warn(
     "Please do not use the legacy ClosestDistancesClass. It contains minor bugs."

@@ -1,6 +1,6 @@
 from fucrimodo.customs.ga_stage.mutations.position_mutations import (
-    RattleMutation,
     MirrorMutation,
+    RattleMutation,
 )
 
 

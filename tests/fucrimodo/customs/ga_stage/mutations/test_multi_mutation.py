@@ -1,8 +1,8 @@
-from fucrimodo.customs.ga_stage.mutations.multi_mutation import MultipleMutations
 from fucrimodo.customs.ga_stage.mutations.cell_mutations import (
     EnlargeMutation,
     RotationMutation,
 )
+from fucrimodo.customs.ga_stage.mutations.multi_mutation import MultipleMutations
 
 
 class TestMultiMutation:

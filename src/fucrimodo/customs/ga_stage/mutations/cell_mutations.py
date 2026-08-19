@@ -5,7 +5,6 @@ from ase.cell import Cell
 
 from ....core import Individual
 from ....core.utils import CustomCellBounds, CustomClosestDistances
-
 from .abstract import Mutation
 
 

@@ -1,10 +1,10 @@
 def test_imports():
     from fucrimodo.core.abstracts import (
+        BreakCondition,
         FitnessFunction,
         PopulationGenerator,
         PopulationSelection,
         Stage,
-        BreakCondition,
     )
 
 

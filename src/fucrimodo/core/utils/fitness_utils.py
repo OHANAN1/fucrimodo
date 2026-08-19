@@ -1,8 +1,10 @@
 from collections.abc import Sequence
+
+import numpy as np
+
 from ..abstracts.fitness_function import FitnessFunction
 from ..individual import Individual
 from ..population import Population
-import numpy as np
 
 
 def _seperate_fitness_and_weights(

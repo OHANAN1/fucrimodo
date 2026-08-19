@@ -1,23 +1,24 @@
-import time
-import pytest
 import logging
-import tempfile
-import uuid
 import os
-from deap import tools
-from ase.db.core import Database
-from typing import Callable
-import numpy as np
-from importlib.resources import files
+import tempfile
+import time
+import uuid
 from importlib import import_module
-from importlib.util import spec_from_file_location, module_from_spec
+from importlib.resources import files
+from importlib.util import module_from_spec, spec_from_file_location
+from typing import Callable
 
-from fucrimodo.core.abstracts import Stage, FitnessFunction, PopulationSelection
+import numpy as np
+import pytest
+from ase.db.core import Database
+from deap import tools
+
 from fucrimodo.core import Individual, Population
-from fucrimodo.customs.global_soap_target import GlobalSOAP
-from fucrimodo.core.utils import CustomClosestDistances, CustomCellBounds
+from fucrimodo.core.abstracts import FitnessFunction, PopulationSelection, Stage
+from fucrimodo.core.utils import CustomCellBounds, CustomClosestDistances
 from fucrimodo.customs.ga_stage.crossovers import Crossover
 from fucrimodo.customs.ga_stage.mutations import Mutation
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 
 
 @pytest.fixture

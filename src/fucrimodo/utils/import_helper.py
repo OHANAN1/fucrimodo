@@ -1,7 +1,8 @@
 import importlib.util
 import os
-import click
 import sys
+
+import click
 
 
 def import_from_path(file_path: str, module_name: str):

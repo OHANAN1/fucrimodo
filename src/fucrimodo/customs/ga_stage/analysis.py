@@ -1,5 +1,6 @@
-from ...analysis.utils import load_dict_from_file
 import pandas as pd
+
+from ...analysis.utils import load_dict_from_file
 
 
 def load_ga_stage_attributes(

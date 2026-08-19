@@ -1,11 +1,13 @@
 import os
+
 import click
 import matplotlib.pyplot as plt
 import numpy as np
+
 from fucrimodo.analysis.stage_analysis import (
-    get_stage_overview,
-    get_modification_overview,
     StageData,
+    get_modification_overview,
+    get_stage_overview,
 )
 from fucrimodo.analysis.utils import get_statistics_overview
 

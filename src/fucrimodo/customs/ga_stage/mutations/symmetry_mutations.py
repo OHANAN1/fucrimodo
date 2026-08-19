@@ -17,7 +17,6 @@ import numpy as np
 
 from ....core import Individual
 from ....core.utils import CustomClosestDistances
-
 from .abstract import Mutation
 
 

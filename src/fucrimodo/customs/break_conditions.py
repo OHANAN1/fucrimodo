@@ -1,5 +1,5 @@
-from fucrimodo.core.abstracts import BreakCondition
 from fucrimodo.core import Population
+from fucrimodo.core.abstracts import BreakCondition
 
 
 class NeverBreak(BreakCondition):

@@ -1,12 +1,14 @@
 import logging
 import os
-import pytest
-from fucrimodo.core.abstracts import Stage
-from fucrimodo.core import Individual, Population
-from ase.db.core import Database
-from typing import Callable
-from deap import tools
 from time import sleep
+from typing import Callable
+
+import pytest
+from ase.db.core import Database
+from deap import tools
+
+from fucrimodo.core import Individual, Population
+from fucrimodo.core.abstracts import Stage
 
 
 class MockStage(Stage):

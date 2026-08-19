@@ -1,8 +1,9 @@
-from ..individual import Individual
+import ase
 import numpy as np
 from ase import data as ase_data
-import ase
 from ase_ga import utilities as ase_utilities
+
+from ..individual import Individual
 
 
 class CustomClosestDistances(dict[tuple[int, int], float]):

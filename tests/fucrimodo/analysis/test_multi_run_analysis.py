@@ -1,8 +1,9 @@
-import pytest
-import os
-from pathlib import Path
-import shutil
 import json
+import os
+import shutil
+from pathlib import Path
+
+import pytest
 
 from fucrimodo.analysis.multi_run_analysis import (
     MultiRunData,

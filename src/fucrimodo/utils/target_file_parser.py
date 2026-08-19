@@ -1,8 +1,10 @@
 import json
-from typing import Any
-from fucrimodo.customs.global_soap_target import GlobalSOAP
-import numpy as np
 from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from fucrimodo.customs.global_soap_target import GlobalSOAP
 
 type JSONKey = str | int | float | bool | None
 

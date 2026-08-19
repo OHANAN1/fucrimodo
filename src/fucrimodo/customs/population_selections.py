@@ -1,12 +1,11 @@
+from operator import attrgetter
 from typing import Any, Callable, Literal
 
 import numpy as np
 from deap import tools
-from operator import attrgetter
+
 from ..core import Individual
-from ..core.abstracts import (
-    PopulationSelection,
-)
+from ..core.abstracts import PopulationSelection
 
 
 class RandomSelection(PopulationSelection):

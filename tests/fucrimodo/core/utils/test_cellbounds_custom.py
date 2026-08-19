@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
 
-import numpy as np
 from fucrimodo.core.utils.cellbounds_custom import CustomCellBounds
 
 

@@ -1,6 +1,7 @@
-from .abstract import Mutation
-from ....core import Individual
 from ase_ga import soft_mutation as ase_soft_mut
+
+from ....core import Individual
+from .abstract import Mutation
 
 
 class SoftMutation(Mutation):
