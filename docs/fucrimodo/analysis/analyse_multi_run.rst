@@ -15,7 +15,7 @@ loaded with the :class:`MultiRunData` class.
     multi_run_data = MultiRunData('path/to/run/dir')
 
 Tutorials to explain analysis and visualization of the loaded data can be found here:
-[TODO: Add missing tutorials].
+:ref:`fucrimodo_as_library`.
 
 -----------
 Data Loader

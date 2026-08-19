@@ -17,8 +17,8 @@ The tutorials below introduce you to using fucrimodo:
 The advanced tutorials cover more specialised topics:
 
 - :ref:`run_on_slurm` - run experiments on a SLURM cluster.
-- :ref:`reproduce_publication` - reproduce the results of the original
-  publication in which the library was introduced [TODO: add citation].
+- :ref:`reproduce_publication` - reproduce the results of the
+  :ref:`publication<citation>` in which the library was introduced.
 
 
 .. _cli-tutorials:
@@ -62,7 +62,7 @@ inside the file to set it up or create your own (and potentially better) slurm
 scripts. This tutorial will be extended once the Slurm script is properly
 tested.
 
-[TODO: MISSING]
+[MISSING]
 
 .. _reproduce_publication:
 

@@ -8,7 +8,13 @@ This page should give you an overview of background knowledge and skills you
 need to use all aspects of FUCrIMODo.
 
 **Descriptors**
-    [TODO: MISSING]
+    If you want to understand how to invert a descriptor with FUCrIMODo it is of
+    course important that you know what a descriptor is. Basically descriptors
+    encode atomic structures in a fixed-size fingerprint for machine learning,
+    similarity analysis, and visualization. The `DScribe library
+    <https://singroup.github.io/dscribe/2.1.x/>`_ provides python
+    implementations for multiple atomic structure descriptors. Please check
+    their documentation for more information.
 
 **Genetic Algorithms**
     To understand the main principles behind the program, it helps to have a basic

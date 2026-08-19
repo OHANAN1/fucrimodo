@@ -9,7 +9,7 @@ Reproduce Publication
 
 
 The following tutorials will explain how to recreate some of the main results of
-the publication (Can be found here: [TODO: MISSING]). Currently only the
+the :ref:`publication<citation>` that introduced the library. Currently only the
 Tutorial for :ref:`three_example_inversions` is implemented. The rest is coming
 soon.
 
@@ -51,10 +51,10 @@ Next the runs can be performed. We use the default config, assuming it is unchan
 1000 Inversions
 ===============
 
-[TODO: MISSING]
+[MISSING]
 
 ===============
 Robustness Test
 ===============
 
-[TODO: MISSING]
+[MISSING]

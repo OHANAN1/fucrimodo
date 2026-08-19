@@ -11,8 +11,8 @@ The data can be loaded with the :class:`RunData` class.
 
     run_data = RunData('path/to/run/dir')
 
-Tutorials to explain analysis and visualization of the loaded data can be found here:
-[TODO: Add missing tutorials].
+Tutorials to explain analysis and visualization of the loaded data can be found
+here: :ref:`fucrimodo_as_library`.
 
 -----------
 Data Loader

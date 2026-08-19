@@ -11,13 +11,13 @@ The :mod:`fucrimodo.core` module contains the framework and utilities to impleme
 
    multi_stage_search
 
-A multi stage GA workflow to invert the global SOAP descriptor is published in the paper [TODO: Add paper ref]. Its implementation can be found here: [TODO: Add ref to workflow implementation].
+A multi stage GA workflow to invert the global SOAP descriptor is published in the :ref:`paper<citation>`. Its python implementation is included when generating the fucrimodo lab (see :ref:`fucrimodo_lab_docs`).
 
 ---------
 Solutions
 ---------
 
-Possible candidate solutions of the optimization algorithms are so-called individuals. These get optimized to fullfill a given objective which is measured with the fitness value. All individuals used in fucrimodo are atomic structures. A collection of multiple individuals that simultaneously get optimized is called the population.
+Possible candidate solutions of the optimization algorithms are so-called individuals. These get optimized to fulfill a given objective which is measured with the fitness value. All individuals used in fucrimodo are atomic structures. A collection of multiple individuals that simultaneously get optimized is called the population.
 
 .. toctree::
    :maxdepth: 1

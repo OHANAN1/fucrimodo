@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "FUCrIMODo"
-copyright = "2024, Louis Boehm"
+copyright = "2026, Louis Boehm"
 author = "Louis Boehm, Martin Kuban"
 
 # -- General configuration ---------------------------------------------------
@@ -26,11 +26,6 @@ autosummary_generate = True  # Erzeugt automatisch Zusammenfassungen
 
 # Führe Notebooks immer aus wenn sie gerendert werden
 nbsphinx_execute = "auto"
-
-# Configuriere Latex
-tikz_tikzlibraries = (
-    "arrows, shapes.geometric, positioning, shapes.multipart, arrows.meta, fit"
-)
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

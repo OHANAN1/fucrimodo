@@ -1,5 +1,8 @@
+.. _cli-run-documentation:
+
+=======
 CLI Run
-===========
+=======
 
 The ``run`` CLI performs a multi-stage search on a provided input file.
 

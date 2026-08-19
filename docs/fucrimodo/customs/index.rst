@@ -4,7 +4,7 @@ Fucrimodo Customs
 
 This module implements concrete classes and functions that are used in an
 multi-stage genetic algorithm. All components were used to create the workflow
-discussed in the paper [TODO: Add link to paper]. Below more information about the
+discussed in the :ref:`original research paper<citation>`. Below more information about the
 Genetic Algorithm and how it is implemented in a genetic algorithm stage can be found.
 
 The :mod:`fucrimodo.customs` module includes the following submodules:

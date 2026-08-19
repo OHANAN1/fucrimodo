@@ -2,25 +2,25 @@
 Development
 ===========
 
-[TODO: MISSING]
+[MISSING]
 
 ------------------
 New Custom Modules
 ------------------
 
-[TODO: MISSING]
+[MISSING]
 
 ----------------
 New Core Modules
 ----------------
 
-[TODO: MISSING]
+[MISSING]
 
 ------------
 Contributing
 ------------
 
-[TODO: MISSING]
+[MISSING]
 
 -----------------
 Building The Docs

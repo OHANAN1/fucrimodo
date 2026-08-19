@@ -3,7 +3,7 @@
 CLI Tutorials
 =============
 
-This guide walks through the **fucrimodo** command-line interface (CLI). To install the library and CLI, see :doc:`../fucrimodo/getting_started/index`. For technical details about the CLI, see :doc:`../fucrimodo/cli/index`.
+This guide walks through the **fucrimodo** command-line interface (CLI). To install the library and CLI, see :ref:`installation`. For technical details about the CLI, see :ref:`cli-documentation`.
 
 All commands and subcommands include built-in help, which you can access like this:
 
@@ -22,7 +22,7 @@ The following tutorials are intended to be run in order.
 Create a Fucrimodo Lab
 ======================
 
-To use the fucrimodo CLI, you first need to create a **fucrimodo lab**. A lab is a directory structure used to store runs, configs, and data. For more details, see :doc:`../fucrimodo/lab/index`.
+To use the fucrimodo CLI, you first need to create a **fucrimodo lab**. A lab is a directory structure used to store runs, configs, and data. For more details, see  :ref:`fucrimodo_lab_docs`.
 
 A typical lab looks like this::
 
@@ -56,7 +56,7 @@ Generate Target Files
 
 First, we need a target file containing the descriptor features we want to
 invert.  The following command calculates the global SOAP descriptor features of
-a structure (stored in a structure file: *.xyz) and stores them in a fucrimodo
+a structure (stored in a structure file: .xyz) and stores them in a fucrimodo
 target file (.json):
 
 .. code-block:: bash
@@ -65,7 +65,7 @@ target file (.json):
        -a atoms_path=data/raw/simple-target.xyz \
        -a save_path=data/raw/simple-target.json
 
-For details on the **fucrimodo utils** subcommand, see :doc:`../fucrimodo/cli/utils`.
+For details on the **fucrimodo utils** subcommand, see :ref:`cli-utils-documentation`.
 
 =============
 Perform a Run
@@ -92,7 +92,7 @@ The following command will perform a run on the selected config found at
        -n test_run \
        data/raw/simple-target.json
 
-For details on the **fucrimodo run** subcommand, see :doc:`../fucrimodo/cli/run`.
+For details on the **fucrimodo run** subcommand, see :ref:`cli-run-documentation`.
 
 The dir where results are stored is given by the specified save directory ("-s")
 and name ("-n"). The results are therefore stored in ``data/results/test_run``::
@@ -126,7 +126,7 @@ All output files are either human-readable or easy to process with common CLI to
 Analyse Run Results
 ===================
 
-For details on the **fucrimodo analyse** subcommand, see :doc:`../fucrimodo/cli/analyse`.
+For details on the **fucrimodo analyse** subcommand, see :ref:`cli-analyse-documentation`.
 
 You can analyse a full run, a single stage, or multiple runs at once. Multi-run analysis is covered later in this tutorial.
 
@@ -150,7 +150,7 @@ To analyse a single stage:
 
    fucrimodo analyse stage -r 0 data/results/test_run/stage_1/
 
-(`That's the most boring goldfish I've seen in my entire life.`~Kumiko)
+(`That\'s the most boring goldfish I\'ve seen in my entire life.` ~Kumiko)
 
 ============
 Target Files
@@ -286,10 +286,10 @@ Analyse with ASE DB
 
    ase db data/results/test_run/structures.db -w
 
-[TODO: MISSING]
+[MISSING]
 
 ===============
 Analyse With jq
 ===============
 
-[TODO: MISSING]
+[MISSING]

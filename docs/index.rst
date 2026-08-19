@@ -25,7 +25,7 @@
 FUCrIMODo is a program that is able to retrieve the atomic structure from
 descriptor features. Its current implementation allows the inversion of the
 global SOAP descriptor with the help of a novel multi-stage genetic algorithm
-(GA). The program is part of the publication [TODO: MISSING].
+(GA). The program was released as part of a :ref:`research paper<citation>`.
 
 Please start by reading the :ref:`about` section to learn about the basic
 principles of the program, and then continue to the :ref:`getting-started`

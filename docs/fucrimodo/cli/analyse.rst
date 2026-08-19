@@ -1,3 +1,5 @@
+.. _cli-analyse-documentation:
+
 ===========
 CLI Analyse
 ===========

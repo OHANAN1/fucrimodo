@@ -10,8 +10,8 @@ algorithm.
 
 The data-loader class :class:`StageData`, :class:`RunData` and
 :class:`MultiRunData` load the recorded data. Tutorials are provided to explain
-how the classes work and how data can be analysed and visualized with these [
-TODO: Add Missing Tutorials. ].
+how the classes work and how data can be analysed and visualized with these (see
+:ref:`fucrimodo_as_library`).
 
 More detailed information as well as some utility classes can be found here:
 
