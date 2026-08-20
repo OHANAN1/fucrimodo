@@ -311,7 +311,7 @@ class RunData:
 
         try:
             info_dict = load_dict_from_file(dir_path, "info.json")
-        except AssertionError:
+        except FileNotFoundError:
             return False, "File info.json could not be loaded. Not a run dir."
 
         if "stage_history" not in info_dict:

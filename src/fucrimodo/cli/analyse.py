@@ -40,7 +40,7 @@ class Runner:
             self.config = ConfigScript(config_path)
         else:
             default_path = os.path.join(
-                "configs", "analysis", analysis_object, "default.py"
+                "configs", "analyse", analysis_object, "default.py"
             )
             self.config = ConfigScript(default_path)
 

@@ -11,7 +11,7 @@ def load_dict_from_file(dir: str | os.PathLike, file_name: str) -> dict:
 
     :param file_name: Name of the file that should be loaded.
 
-    :raises AssertionError: If the file does not exist in the fiven
+    :raises FileNotFoundError: If the file does not exist in the given
         directory.
 
     :return: The loaded dictionary.
