@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fucrimodo"
-version = "0.1.1"
+version = "1.0.0"
 description = "Find Unknown Crystals by Inversion of ML Optimized Descriptors"
 authors = [
   {name = "Louis Böhm", email =  "louis.boehm@gmx.de"},
-  {name = "Martin Kuban", email = "missing@hu-berlin.de"}, # TODO: Add Martins Email
+  {name = "Martin Kuban", email = "kuban@physik.hu-berlin.de"},
 ]
 maintainers = [
   {name = "Louis Böhm", email = "louis.boehm@gmx.de"}
@@ -42,6 +42,7 @@ dev = ['isort >= 8.0.1', 'black >= 26.5.1', 'pyright >= 1.1.411']
 
 [project.urls]
 Repository = "https://git.physik.hu-berlin.de/boehmlou/fucrimodo"
+Documentation = "https://fucrimodo.readthedocs.io"
 
 # Adds fucrimodo.__main__() in the executables path
 [project.scripts]
