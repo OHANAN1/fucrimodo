@@ -4,8 +4,8 @@ Welcome to the **fucrimodo lab**. Here you can run, organize, and reproduce
 FUCrIMODo experiments. The tutorial below shows how to create your
 first target file and invert it to an atomic structure. 
 
-For more tutorials and a detailed documentation check out the Fucrimodo Docs
-[TODO: MISSING]. 
+For more tutorials and a detailed documentation check out the Fucrimodo Docs at
+<https://fucrimodo.readthedocs.io/en/latest/index.html>.
 
 This guide assumes you have already read the README of the main fucrimodo
 library and that you are familiar with Genetic Algorithms.
