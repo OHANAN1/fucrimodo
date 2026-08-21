@@ -47,14 +47,35 @@ Next the runs can be performed. We use the default config, assuming it is unchan
            "$f"
    done
 
-===============
-1000 Inversions
-===============
+=======================
+Analyse 1000 Inversions
+=======================
 
-[MISSING]
+To analyse the data generated for the big run with 1000 inversions from the
+:ref:`publication<citation>`, please first download the generated data from
+`Zenodo <https://doi.org/10.5281/zenodo.22031213>`__.  After downloading, unzip
+the file ``1000-targets-mp-20-max-10-atoms.zip`` and place the folder inside the
+fucrimodo lab at ``data/results/``.  The analysis config script is shipped  with
+the default fucrimodo lab and can be found at
+``config/analyse/multi_run/matching_per_n_atoms.py``.  This script requires the
+additional dependency ``seaborn``. Please install it in the environment with
+``pip install seaborn``. Now you can perform the analysis with:
 
-===============
-Robustness Test
-===============
+.. code-block:: bash
 
-[MISSING]
+   fucrimodo analyse multi_run \
+       -c configs/analyse/multi_run/matching_per_n_atoms.py \
+       data/results/100-targets-mp-20-max-10-atoms-multi-seed
+
+Note that the runs ``None_id_21``, ``None_id_368`` and ``None_id_859`` are the
+inversions of the three example structures from the publication. Please refer to
+the :ref:`cli-tutorials` to analyse the runs individually.
+
+
+=======================
+Analyse Robustness Test
+=======================
+
+The robustness analysis from the :ref:`publication<citation>` can be performed
+in the same way as `Analyse 1000 Inversions`__. This is because all 10
+structures have a different number of atoms.
