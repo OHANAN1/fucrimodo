@@ -9,9 +9,8 @@ Reproduce Publication
 
 
 The following tutorials will explain how to recreate some of the main results of
-the :ref:`publication<citation>` that introduced the library. Currently only the
-Tutorial for :ref:`three_example_inversions` is implemented. The rest is coming
-soon.
+the :ref:`publication<citation>` that introduced the library. Currently only a few
+tutorial are provided. The rest is coming soon.
 
 .. _three_example_inversions:
 
@@ -77,5 +76,5 @@ Analyse Robustness Test
 =======================
 
 The robustness analysis from the :ref:`publication<citation>` can be performed
-in the same way as `Analyse 1000 Inversions`__. This is because all 10
+in the same way as in the section before. This is because all 10
 structures have a different number of atoms.
